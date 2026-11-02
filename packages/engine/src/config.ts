@@ -32,15 +32,21 @@ export interface MatchConfig {
   // rules.md "Tower HP" / "Tower config"
   towerStages: TowerStage[];
   towerRegenPerRound: number;
+  // "byHits": Max HP is Max HP Hits and every hit lowers it by 1 (combat.md "HP Types").
+  towerHpType: "normal" | "byHits";
 
   // rules.md "Before the Game Starts"
-  bansPerPlayer: number; // banned at the same time
+  banOrder: Seat[]; // one ban at a time
   pickOrder: Seat[];
   skipBans: boolean; // Custom room only
   defaultTimeOfDay: TimeOfDay;
 
   // rules.md "Combat Phase": later rounds start with whoever went out first.
   firstRoundStarter: Seat;
+
+  // board.md "Movement": "none" = any number of steps per Turn, only mana limits them (prototype);
+  // "move" = at most the unit's Move stat per Turn.
+  stepLimit: "none" | "move";
 
   // rules.md "Preparation Phase"
   manaPerRound: number;
@@ -59,7 +65,7 @@ export interface MatchConfig {
   // Seconds. The server runs the clocks; the engine only gets the time-up actions.
   timers: {
     timeOfDay: number;
-    banPhase: number;
+    ban: number;
     pick: number;
     firstPrep: number;
     majorPrep: number;
@@ -87,14 +93,16 @@ export const normalConfig: MatchConfig = {
     { fromRound: 6, maxHp: 20, shieldByHits: 0, maxDrop: clamp },
   ],
   towerRegenPerRound: 1,
+  towerHpType: "normal",
 
-  bansPerPlayer: 2,
+  banOrder: ["A", "B", "A", "B"],
   pickOrder: ["A", "B", "B", "A", "A", "B", "A", "B"],
   skipBans: false,
   defaultTimeOfDay: "Morning",
 
   firstRoundStarter: "B",
 
+  stepLimit: "none",
   manaPerRound: 12,
   startGold: 800,
   goldPerRound: 300,
@@ -108,7 +116,7 @@ export const normalConfig: MatchConfig = {
 
   timers: {
     timeOfDay: 8,
-    banPhase: 16, // 8 seconds per ban
+    ban: 8,
     pick: 8,
     firstPrep: 45,
     majorPrep: 20,
@@ -141,6 +149,16 @@ export function checkConfig(c: MatchConfig): string[] {
   }
 
   return errors;
+}
+
+// A B A B ... until one side has all its heroes, then the other side picks the rest.
+export function alternatingOrder(a: number, b: number): Seat[] {
+  const order: Seat[] = [];
+  for (let i = 0; i < Math.max(a, b); i++) {
+    if (i < a) order.push("A");
+    if (i < b) order.push("B");
+  }
+  return order;
 }
 
 // The tower stage in effect in this round.

@@ -11,6 +11,7 @@ const ready = (seat: Seat) => ({ type: "Ready", seat }) as const;
 const step = (seat: Seat, unitId: string, x: number, y: number) =>
   ({ type: "Step", seat, unitId, to: { x, y } }) as const;
 const endTurn = (seat: Seat) => ({ type: "EndTurn", seat }) as const;
+const endRound = (seat: Seat) => ({ type: "EndRound", seat }) as const;
 
 const match = (seed = 7) =>
   newMatchWithUnits(normalConfig, seed, [unit("v", "A", 0, 0), unit("s", "A", 0, 0), unit("b", "B", 0, 0), unit("e", "B", 0, 0)]);
@@ -73,8 +74,14 @@ describe("End Turn and round end (combat.md Turn Flow, rules.md Combat Phase)", 
     expect(play(s, endTurn("A")).activeSeat).toBe("B");
   });
 
-  it("End Turn takes the player out; the other keeps taking Turns alone", () => {
+  it("End Turn only passes the Turn", () => {
     const s = play(twoUnits(), step("A", "v", 4, 5), endTurn("A"));
+    expect(s.activeSeat).toBe("B");
+    expect(s.outOfRound).toEqual([]);
+  });
+
+  it("End Round takes the player out; the other keeps taking Turns alone", () => {
+    const s = play(twoUnits(), endRound("A"));
     expect(s.outOfRound).toEqual(["A"]);
     expect(s.activeSeat).toBe("B");
     const next = structuredClone(s);
@@ -83,7 +90,7 @@ describe("End Turn and round end (combat.md Turn Flow, rules.md Combat Phase)", 
   });
 
   it("ends the Round when both are out; the first out starts next round", () => {
-    const s = play(twoUnits(), step("A", "v", 4, 5), endTurn("A"), step("B", "e", 4, 7), endTurn("B"));
+    const s = play(twoUnits(), step("A", "v", 4, 5), endRound("A"), step("B", "e", 4, 7), endRound("B"));
     expect(s.round).toBe(3);
     expect(s.phase).toBe("prep");
     expect(s.nextStarter).toBe("A");
@@ -101,7 +108,7 @@ describe("End Turn and round end (combat.md Turn Flow, rules.md Combat Phase)", 
   it("a new Round resets mana and the Melee free step", () => {
     let s = play(twoUnits(), step("A", "v", 4, 5));
     s.units[0]!.remainingMove = 1;
-    s = play(s, step("A", "v", 4, 6), endTurn("A"), step("B", "e", 4, 7), endTurn("B"));
+    s = play(s, step("A", "v", 4, 6), endRound("A"), step("B", "e", 4, 7), endRound("B"));
     expect(s.players.A.mana).toBe(12);
     expect(s.units[0]!.freeStepUsed).toBe(false);
   });

@@ -10,7 +10,7 @@ describe("content", () => {
   });
 
   it("has enough heroes for a Normal draft (bans + picks)", () => {
-    const needed = normalConfig.bansPerPlayer * 2 + normalConfig.pickOrder.length;
+    const needed = normalConfig.banOrder.length + normalConfig.pickOrder.length;
     expect(heroes.length).toBeGreaterThanOrEqual(needed);
   });
 

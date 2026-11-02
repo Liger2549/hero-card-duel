@@ -36,7 +36,7 @@ Magic Armor : 1
 - Ult Points gained: 1
 - Hit form: 
 ```
-Rotating (8 directions) | Hit: All
+Rotating (8 directions) | Hit: All | No lock
 X
 C
 ```
@@ -51,7 +51,7 @@ C
 - Effect: None
 - Hit form:
 ```
-Rotating (8 directions) | Hit: All
+Rotating (8 directions) | Hit: All | No lock
 X
 C
 ```
@@ -66,7 +66,7 @@ C
 - Effect: Giuramento d'Avorio
 - Hit form:
 ```
-Hit: Allies
+Hit: Allies | No lock
 X X X
 X C X
 X X X
@@ -82,7 +82,7 @@ X X X
 - Effect: Vendetta della Cittadella
 - Hit form:
 ```
-Rotating (4 directions <N, E, S, W>) | Hit: All
+Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
 X
 X
 C
@@ -96,6 +96,7 @@ Bianca and all allies within 1 tile of her gain +2 Armor and +1 Magic Armor for 
   - If the attacker is within 1 tile of Bianca, she hits the attacker.
   - Otherwise, she hits the nearest enemy within 1 tile of her. Heroes are chosen first.
   - If no enemy is within 1 tile of her, she does not counter.
+  - Counter-attacks are **Lock-on**: they skip units in Stealth, even when they are shown (`statuses.md`).
 - Counter-attacks do not give Ult Points.
 - Up to 2 counter-attacks per cast.
 - Does not stack. Casting Giuramento d'Avorio or Vendetta della Cittadella while either is active replaces it and resets the duration and the counter-attack count.

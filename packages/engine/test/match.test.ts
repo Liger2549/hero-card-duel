@@ -81,18 +81,20 @@ describe("draft (rules.md Before the Game Starts)", () => {
   const ban = (seat: "A" | "B", heroId: string): Action => ({ type: "Ban", seat, heroId });
   const pick = (seat: "A" | "B", heroId: string): Action => ({ type: "Pick", seat, heroId });
 
-  it("A chooses the time of day, then both ban at the same time", () => {
+  it("A chooses the time of day, then bans go A, B, A, B", () => {
     let s = start();
     expect(apply(s, { type: "ChooseTimeOfDay", seat: "B", time: "Night" }, draftFixtures)).toMatchObject({ ok: false });
-    s = run(s, draftFixtures, { type: "ChooseTimeOfDay", seat: "A", time: "Night" }, ban("B", "h0"), ban("A", "h1"));
+    s = run(s, draftFixtures, { type: "ChooseTimeOfDay", seat: "A", time: "Night" }, ban("A", "h0"));
     expect(TimesOfDay[s.timeOfDay]).toBe("Night");
-    expect(apply(s, ban("A", "h0"), draftFixtures)).toMatchObject({ ok: false, error: "already banned" });
-    s = run(s, draftFixtures, ban("A", "h2"), ban("B", "h3"));
+    expect(apply(s, ban("A", "h1"), draftFixtures)).toMatchObject({ ok: false, error: "not your ban" });
+    expect(apply(s, ban("B", "h0"), draftFixtures)).toMatchObject({ ok: false, error: "already banned" });
+    s = run(s, draftFixtures, ban("B", "h1"), ban("A", "h2"), ban("B", "h3"));
     expect(s.draft!.stage).toBe("pick");
   });
 
   it("picks follow the pick order; after the last pick round 1 starts with 5 cards in hand", () => {
-    let s = run(start(), draftFixtures, { type: "DraftTimeUp" }, { type: "DraftTimeUp" }); // Morning, no bans
+    const timeUp = { type: "DraftTimeUp" } as const;
+    let s = run(start(), draftFixtures, timeUp, timeUp, timeUp, timeUp, timeUp); // Morning, 4 blank bans
     expect(apply(s, pick("B", "h0"), draftFixtures)).toMatchObject({ ok: false, error: "not your pick" });
     const order = normalConfig.pickOrder;
     s = run(s, draftFixtures, ...order.map((seat, i) => pick(seat, `h${i}`)));
@@ -104,8 +106,9 @@ describe("draft (rules.md Before the Game Starts)", () => {
   });
 
   it("time up on a pick gives a random hero, the same one for the same seed", () => {
-    const s1 = run(start(), draftFixtures, { type: "DraftTimeUp" }, { type: "DraftTimeUp" }, { type: "DraftTimeUp" });
-    const s2 = run(start(), draftFixtures, { type: "DraftTimeUp" }, { type: "DraftTimeUp" }, { type: "DraftTimeUp" });
+    const ups = Array.from({ length: 6 }, () => ({ type: "DraftTimeUp" }) as const); // time, 4 bans, 1 pick
+    const s1 = run(start(), draftFixtures, ...ups);
+    const s2 = run(start(), draftFixtures, ...ups);
     expect(s1.draft!.picks.A).toHaveLength(1);
     expect(s1.draft!.picks.A).toEqual(s2.draft!.picks.A);
   });
@@ -172,11 +175,19 @@ describe("time of day (rules.md)", () => {
     const s = play(
       state([unit("a", "A", 4, 4), unit("b", "B", 4, 8)]),
       { type: "Step", seat: "A", unitId: "a", to: { x: 4, y: 5 } },
-      { type: "EndTurn", seat: "A" },
+      { type: "EndRound", seat: "A" },
       { type: "Step", seat: "B", unitId: "b", to: { x: 4, y: 7 } },
-      { type: "EndTurn", seat: "B" },
+      { type: "EndRound", seat: "B" },
     );
     expect(s.round).toBe(3);
     expect(TimesOfDay[s.timeOfDay]).toBe("Day");
+  });
+});
+
+describe("tower HP by Hits (rules.md Tower config)", () => {
+  it("every hit takes exactly 1, whatever the damage", () => {
+    const s = state([unit("a", "A", 4, 8), unit("b", "B", 0, 7)], { config: { ...normalConfig, towerHpType: "byHits" } });
+    s.towers.B[1]!.shieldByHits = 0;
+    expect(play(s, { type: "UseAbility", seat: "A", unitId: "a", ability: "normal", aim: { tiles: [{ x: 4, y: 9 }] } }).towers.B[1]!.hp).toBe(29);
   });
 });

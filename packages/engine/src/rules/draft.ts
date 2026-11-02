@@ -1,4 +1,4 @@
-// rules.md "Before the Game Starts": time of day, simultaneous bans, one-at-a-time picks.
+// rules.md "Before the Game Starts": time of day, then bans and picks one at a time.
 import type { ActionOf } from "../actions.ts";
 import { TimesOfDay, type MatchConfig, type Seat } from "../config.ts";
 import type { Content } from "../content.ts";
@@ -11,7 +11,7 @@ import { baseState, startFirstRound } from "./turn.ts";
 export function newMatch(config: MatchConfig, seed: number, decks: Record<Seat, string[]>): GameState {
   const s = baseState(config, seed);
   s.phase = "draft";
-  s.draft = { stage: "timeOfDay", bans: { A: [], B: [] }, picks: { A: [], B: [] }, pickIndex: 0 };
+  s.draft = { stage: "timeOfDay", bans: { A: [], B: [] }, picks: { A: [], B: [] }, banIndex: 0, pickIndex: 0 };
   for (const seat of Seats) s.players[seat].deck = [...decks[seat]];
   return s;
 }
@@ -33,7 +33,7 @@ export function applyChooseTimeOfDay(s: GameState, a: ActionOf<"ChooseTimeOfDay"
 
 export function validateBan(c: Content, s: GameState, a: ActionOf<"Ban">): string | null {
   if (s.draft?.stage !== "ban") return "not the ban phase";
-  if (s.draft.bans[a.seat].length >= s.config.bansPerPlayer) return "no bans left";
+  if (s.config.banOrder[s.draft.banIndex] !== a.seat) return "not your ban";
   if (!c.heroes.some((h) => h.id === a.heroId)) return "no such hero";
   return taken(s, a.heroId) ? "already banned" : null;
 }
@@ -41,7 +41,12 @@ export function validateBan(c: Content, s: GameState, a: ActionOf<"Ban">): strin
 export function applyBan(s: GameState, a: ActionOf<"Ban">, events: GameEvent[]): void {
   s.draft!.bans[a.seat].push(a.heroId);
   events.push({ type: "HeroBanned", seat: a.seat, heroId: a.heroId });
-  if (Seats.every((seat) => s.draft!.bans[seat].length >= s.config.bansPerPlayer)) s.draft!.stage = "pick";
+  nextBan(s);
+}
+
+function nextBan(s: GameState): void {
+  s.draft!.banIndex += 1;
+  if (s.draft!.banIndex >= s.config.banOrder.length) s.draft!.stage = "pick";
 }
 
 export function validatePick(c: Content, s: GameState, a: ActionOf<"Pick">): string | null {
@@ -64,8 +69,8 @@ export function applyDraftTimeUp(c: Content, s: GameState, events: GameEvent[]):
   if (d.stage === "timeOfDay") {
     applyChooseTimeOfDay(s, { type: "ChooseTimeOfDay", seat: "A", time: s.config.defaultTimeOfDay }, events);
   } else if (d.stage === "ban") {
-    for (const seat of Seats) if (d.bans[seat].length < s.config.bansPerPlayer) events.push({ type: "HeroBanned", seat, heroId: null });
-    d.stage = "pick";
+    events.push({ type: "HeroBanned", seat: s.config.banOrder[d.banIndex]!, heroId: null });
+    nextBan(s);
   } else {
     const free = c.heroes.map((h) => h.id).filter((id) => !taken(s, id));
     const seat = s.config.pickOrder[d.pickIndex]!;

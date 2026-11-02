@@ -1,11 +1,30 @@
-// One game session: local (two players, one device), host or guest (online through PeerJS).
-// The host (or the local device) runs the engine; a guest only sends actions and shows the state it gets back.
-// Room codes and connection settings follow the prototype (prototype/index.html).
+// One game session: local (two players, one device), against the AI, or online through PeerJS
+// (host or guest). The host (or this device) runs the engine; a guest only sends actions and shows
+// the state it gets back. Room codes and connection settings follow the prototype (prototype/index.html).
 import { content, starterDeck } from "@hcd/content";
-import { apply, newMatch, normalConfig, type Action, type GameEvent, type GameState, type Seat } from "@hcd/engine";
+import {
+  apply,
+  botAction,
+  checkConfig,
+  newMatch,
+  normalConfig,
+  type Action,
+  type GameEvent,
+  type GameState,
+  type MatchConfig,
+  type Seat,
+} from "@hcd/engine";
 import { Peer, type DataConnection } from "peerjs";
+import { loadDeck, loadName } from "./storage.ts";
 
-export type Mode = "local" | "host" | "guest";
+export type Mode = "local" | "ai" | "host" | "guest";
+
+// A room before the game starts (rules.md "Match config": Normal or Custom room).
+export interface Lobby {
+  gameMode: "normal" | "custom";
+  config: MatchConfig;
+  guestHere: boolean;
+}
 
 export interface Snapshot {
   mode: Mode | null;
@@ -17,13 +36,16 @@ export interface Snapshot {
   status: string; // connection news or the last error
   code: string | null; // room code
   mySeat: Seat | null; // null = local: both seats on this device
+  names: Record<Seat, string>;
+  lobby: Lobby | null;
   connected: boolean;
 }
 
 type Msg =
-  | { t: "hello" }
+  | { t: "hello"; name: string; deck: string[] }
+  | { t: "lobby"; lobby: Lobby; names: Record<Seat, string> }
   | { t: "action"; action: Action }
-  | { t: "state"; state: GameState; events: GameEvent[]; seq: number; remainingMs: number | null }
+  | { t: "state"; state: GameState; events: GameEvent[]; seq: number; remainingMs: number | null; names: Record<Seat, string> }
   | { t: "error"; error: string };
 
 const PREFIX = "hcd-v2-";
@@ -42,6 +64,7 @@ const PEER_OPTS = {
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+const AI_DELAY_MS = 600; // so the AI's moves can be followed
 
 const empty: Snapshot = {
   mode: null,
@@ -53,17 +76,19 @@ const empty: Snapshot = {
   status: "",
   code: null,
   mySeat: null,
+  names: { A: "", B: "" },
+  lobby: null,
   connected: false,
 };
 
 // Seconds for the current draft step or Preparation Phase (rules.md), or null when there is no clock.
 function stepSeconds(s: GameState): number | null {
   const t = s.config.timers;
-  if (s.phase === "draft") return s.draft!.stage === "timeOfDay" ? t.timeOfDay : s.draft!.stage === "ban" ? t.banPhase : t.pick;
+  if (s.phase === "draft") return s.draft!.stage === "timeOfDay" ? t.timeOfDay : s.draft!.stage === "ban" ? t.ban : t.pick;
   if (s.phase === "prep") return s.round === 1 ? t.firstPrep : t.majorPrep;
   return null;
 }
-const stepKey = (s: GameState) => `${s.phase}|${s.draft?.stage}|${s.draft?.pickIndex}|${s.round}`;
+const stepKey = (s: GameState) => `${s.phase}|${s.draft?.stage}|${s.draft?.banIndex}|${s.draft?.pickIndex}|${s.round}`;
 
 class Session {
   private snap: Snapshot = empty;
@@ -71,6 +96,8 @@ class Session {
   private peer: Peer | null = null;
   private conn: DataConnection | null = null;
   private timerKey = "";
+  private guestDeck: string[] = starterDeck;
+  private aiTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     setInterval(() => this.tick(), 250);
@@ -90,6 +117,7 @@ class Session {
   leave() {
     this.conn?.close();
     this.peer?.destroy();
+    if (this.aiTimer) clearTimeout(this.aiTimer);
     this.peer = null;
     this.conn = null;
     this.timerKey = "";
@@ -98,26 +126,63 @@ class Session {
 
   startLocal() {
     this.leave();
-    this.set({ mode: "local", state: newMatch(normalConfig, newSeed(), { A: starterDeck, B: starterDeck }) });
+    this.set({ mode: "local", state: newMatch(normalConfig, newSeed(), { A: loadDeck(), B: loadDeck() }) });
     this.armTimer();
   }
 
-  host() {
+  // You are A; the AI plays B.
+  startAI() {
+    this.leave();
+    this.set({
+      mode: "ai",
+      mySeat: "A",
+      names: { A: loadName() || "คุณ", B: "AI" },
+      state: newMatch(normalConfig, newSeed(), { A: loadDeck(), B: starterDeck }),
+    });
+    this.armTimer();
+    this.scheduleAI();
+  }
+
+  // ---- Online rooms ----
+
+  host(gameMode: Lobby["gameMode"]) {
     this.leave();
     const code = newCode();
-    this.set({ mode: "host", mySeat: "A", code, status: "กำลังเปิดห้อง…" });
+    this.set({
+      mode: "host",
+      mySeat: "A",
+      code,
+      names: { A: loadName() || "เจ้าของห้อง", B: "" },
+      lobby: { gameMode, config: { ...normalConfig, mode: gameMode }, guestHere: false },
+      status: "กำลังเปิดห้อง…",
+    });
     const peer = new Peer(PREFIX + code, PEER_OPTS);
     this.peer = peer;
-    peer.on("open", () => this.set({ status: "รอเพื่อนเข้าห้อง…" }));
+    peer.on("open", () => this.set({ status: "" }));
     peer.on("connection", (conn) => this.bind(conn));
     peer.on("error", (e) => this.set({ status: `เชื่อมต่อไม่ได้ (${e.type})` }));
     peer.on("disconnected", () => !peer.destroyed && peer.reconnect());
   }
 
+  // Custom room: the host changes the rules before starting.
+  setConfig(config: MatchConfig) {
+    if (this.snap.mode !== "host" || !this.snap.lobby || this.snap.lobby.gameMode !== "custom") return;
+    this.set({ lobby: { ...this.snap.lobby, config } });
+    this.sendLobby();
+  }
+
+  startGame() {
+    const lobby = this.snap.lobby;
+    if (this.snap.mode !== "host" || !lobby?.guestHere || checkConfig(lobby.config).length) return;
+    this.set({ state: newMatch(lobby.config, newSeed(), { A: loadDeck(), B: this.guestDeck }) });
+    this.armTimer();
+    this.broadcast();
+  }
+
   join(code: string) {
     this.leave();
     code = code.trim().toUpperCase();
-    this.set({ mode: "guest", mySeat: "B", code, status: `กำลังเข้าห้อง ${code}…` });
+    this.set({ mode: "guest", mySeat: "B", code, names: { A: "", B: loadName() || "ผู้เล่น 2" }, status: `กำลังเข้าห้อง ${code}…` });
     const peer = new Peer(PEER_OPTS);
     this.peer = peer;
     peer.on("open", () => this.connect());
@@ -136,15 +201,18 @@ class Session {
 
   private bind(conn: DataConnection) {
     conn.on("open", () => {
-      if (this.snap.mode === "guest") {
-        this.conn = conn;
-        conn.send({ t: "hello" } satisfies Msg);
-      }
+      if (this.snap.mode !== "guest") return;
+      this.conn = conn;
+      conn.send({ t: "hello", name: this.snap.names.B, deck: loadDeck() } satisfies Msg);
     });
     conn.on("data", (m) => this.onMessage(conn, m as Msg));
     conn.on("close", () => {
       if (this.conn !== conn) return;
       this.conn = null;
+      if (this.snap.mode === "host" && !this.snap.state && this.snap.lobby) {
+        this.set({ lobby: { ...this.snap.lobby, guestHere: false }, names: { ...this.snap.names, B: "" } });
+        return;
+      }
       this.set({ connected: false, status: "อีกฝ่ายหลุดการเชื่อมต่อ เกมจะรอจนกว่าจะกลับมา" });
       if (this.snap.mode === "guest") setTimeout(() => !this.conn && this.connect(), 3000);
     });
@@ -155,10 +223,11 @@ class Session {
       if (m.t === "hello") {
         if (this.conn && this.conn !== conn) this.conn.close();
         this.conn = conn;
-        if (!this.snap.state) this.set({ state: newMatch(normalConfig, newSeed(), { A: starterDeck, B: starterDeck }) });
-        this.set({ connected: true, status: "" });
-        this.armTimer();
-        this.broadcast();
+        this.guestDeck = Array.isArray(m.deck) ? m.deck : starterDeck;
+        this.set({ connected: true, names: { ...this.snap.names, B: String(m.name || "ผู้เล่น 2").slice(0, 20) } });
+        if (this.snap.lobby) this.set({ lobby: { ...this.snap.lobby, guestHere: true } });
+        if (this.snap.state) this.broadcast();
+        else this.sendLobby();
       } else if (m.t === "action" && conn === this.conn) {
         // The guest plays B only, and never sends the clock's time-up actions.
         if (!("seat" in m.action) || m.action.seat !== "B") return conn.send({ t: "error", error: "not your seat" } satisfies Msg);
@@ -167,20 +236,27 @@ class Session {
       }
       return;
     }
-    if (m.t === "state") {
+    if (m.t === "lobby") this.set({ lobby: m.lobby, names: m.names, connected: true, status: "" });
+    else if (m.t === "state") {
       this.set({
         state: m.state,
         events: m.events,
         history: [...this.snap.history, ...m.events].slice(-80),
         seq: m.seq,
+        names: m.names,
         deadline: m.remainingMs === null ? null : Date.now() + m.remainingMs,
         connected: true,
         status: "",
       });
-    } else if (m.t === "error") {
-      this.set({ status: m.error });
-    }
+    } else if (m.t === "error") this.set({ status: m.error });
   }
+
+  private sendLobby() {
+    const { lobby, names } = this.snap;
+    if (this.conn?.open && lobby) this.conn.send({ t: "lobby", lobby, names } satisfies Msg);
+  }
+
+  // ---- Playing ----
 
   // Everything the player does goes through here.
   dispatch(a: Action): string | null {
@@ -209,15 +285,28 @@ class Session {
     });
     this.armTimer();
     this.broadcast();
+    this.scheduleAI();
     return null;
   }
 
+  // AI mode: whenever it is the AI's move, play it after a short pause.
+  private scheduleAI() {
+    if (this.snap.mode !== "ai" || this.aiTimer) return;
+    this.aiTimer = setTimeout(() => {
+      this.aiTimer = null;
+      const s = this.snap.state;
+      if (this.snap.mode !== "ai" || !s) return;
+      const a = botAction(s, content, "B");
+      if (a) this.run(a);
+    }, AI_DELAY_MS);
+  }
+
   private broadcast() {
-    const { state, events, seq, deadline } = this.snap;
+    const { state, events, seq, deadline, names } = this.snap;
     if (!this.conn?.open || !state) return;
     // As in the prototype, the whole state is sent, opponent's hand included (no hidden information yet).
     const remainingMs = deadline === null ? null : Math.max(deadline - Date.now(), 0);
-    this.conn.send({ t: "state", state, events, seq, remainingMs } satisfies Msg);
+    this.conn.send({ t: "state", state, events, seq, remainingMs, names } satisfies Msg);
   }
 
   // A new draft step or Preparation Phase starts its clock (rules.md timings, config.timers).

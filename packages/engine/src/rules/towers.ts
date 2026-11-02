@@ -74,7 +74,8 @@ export function validateTowerAttack(s: GameState, u: Unit, ab: AbilityDef, p: Po
   return null;
 }
 
-// Shield by Hits blocks the whole hit and uses 1. Otherwise the tower loses the damage (at least 1).
+// Shield by Hits blocks the whole hit and uses 1. Otherwise the tower loses the damage (at least 1),
+// or exactly 1 with HP by Hits.
 export function hitTower(s: GameState, p: Pos, damage: number, events: GameEvent[]): void {
   const { seat, index } = towerAt(s, p)!;
   const t = s.towers[seat][index]!;
@@ -83,7 +84,7 @@ export function hitTower(s: GameState, p: Pos, damage: number, events: GameEvent
     events.push({ type: "TowerShieldBlocked", seat, index, left: t.shieldByHits });
     return;
   }
-  const amount = Math.max(damage, 1);
+  const amount = s.config.towerHpType === "byHits" ? 1 : Math.max(damage, 1);
   t.hp = Math.max(t.hp - amount, 0);
   events.push({ type: "TowerDamaged", seat, index, amount, hp: t.hp });
   if (t.hp === 0) {

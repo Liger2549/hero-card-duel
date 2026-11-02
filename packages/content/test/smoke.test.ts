@@ -1,5 +1,6 @@
 import {
   apply,
+  botAction,
   candidateAims,
   heroDef,
   newMatch,
@@ -12,8 +13,8 @@ import {
 import { describe, expect, it } from "vitest";
 import { content, starterDeck } from "../src/index.ts";
 
-// A simple bot: use an ability that deals damage if it can, else play a card, else step forward, else end the Turn.
-function botAction(s: GameState): Action {
+// A simple bot: use an ability that deals damage if it can, else play a card, else step forward (up to 3 steps), else end the Round.
+function timeUpBot(s: GameState): Action {
   if (s.phase === "draft") return { type: "DraftTimeUp" };
   if (s.phase === "prep") return { type: "PrepTimeUp" };
   const seat = s.activeSeat;
@@ -40,7 +41,7 @@ function botAction(s: GameState): Action {
       if (ok(a)) return a;
     }
   }
-  if (s.stepsThisTurn === 0) {
+  if (s.stepsThisTurn < 3) {
     // Step toward the enemy side when possible.
     const dy = seat === "A" ? 1 : -1;
     for (const u of s.units.filter((x) => x.owner === seat && !x.dead && x.pos)) {
@@ -50,7 +51,7 @@ function botAction(s: GameState): Action {
       }
     }
   }
-  return { type: "EndTurn", seat };
+  return s.stepsThisTurn > 0 ? { type: "EndTurn", seat } : { type: "EndRound", seat };
 }
 
 describe("whole matches with the real heroes (smoke test)", () => {
@@ -59,13 +60,29 @@ describe("whole matches with the real heroes (smoke test)", () => {
       let s = newMatch(normalConfig, seed, { A: starterDeck, B: starterDeck });
       let actions = 0;
       while (s.phase !== "over" && actions < 3000) {
-        const a = botAction(s);
+        const a = timeUpBot(s);
         const r = apply(s, a, content);
         if (!r.ok) throw new Error(`round ${s.round}, ${a.type}: ${r.error}`);
         s = r.state;
         actions++;
       }
       expect(s.phase).toBe("over");
+      expect(s.winner).not.toBeNull();
+    });
+  }
+});
+
+describe("the AI (engine botAction) with the real heroes", () => {
+  for (const seed of [11, 12]) {
+    it(`seed ${seed}: plays both sides from the draft to a winner`, () => {
+      let s = newMatch(normalConfig, seed, { A: starterDeck, B: starterDeck });
+      for (let n = 0; n < 5000 && s.phase !== "over"; n++) {
+        const a = botAction(s, content, "A") ?? botAction(s, content, "B");
+        if (!a) throw new Error(`no move in phase ${s.phase}`);
+        const r = apply(s, a, content);
+        if (!r.ok) throw new Error(`${a.type}: ${r.error}`);
+        s = r.state;
+      }
       expect(s.winner).not.toBeNull();
     });
   }

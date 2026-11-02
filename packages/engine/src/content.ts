@@ -31,6 +31,18 @@ export function itemValue(c: Content, id: string): number {
   return i.price + (i.from ? itemValue(c, i.from) : 0);
 }
 
+// What is wrong with a deck (empty = fine): its size, unknown cards, and each card's copy limit.
+export function checkDeck(c: Content, deck: readonly string[], size: number): string[] {
+  const errors: string[] = [];
+  if (deck.length !== size) errors.push(`a deck has ${size} cards (this one has ${deck.length})`);
+  for (const id of new Set(deck)) {
+    const card = c.cards.find((x) => x.id === id);
+    if (!card) errors.push(`unknown card ${id}`);
+    else if (deck.filter((x) => x === id).length > card.maxCopies) errors.push(`${card.name}: at most ${card.maxCopies}`);
+  }
+  return errors;
+}
+
 // Which ability an action means.
 export type AbilityRef = "normal" | "ultimate" | number; // number = index in skills
 

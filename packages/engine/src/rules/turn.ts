@@ -144,8 +144,18 @@ export function validateEndTurn(s: GameState, a: ActionOf<"EndTurn">): string | 
   return null;
 }
 
-// End Turn takes the player out of the Round.
+// End Turn passes the Turn to the other player.
 export function applyEndTurn(c: Content, s: GameState, events: GameEvent[]): void {
+  events.push({ type: "TurnEnded", seat: s.activeSeat });
+  endTurn(c, s, events);
+}
+
+export function validateEndRound(s: GameState, a: ActionOf<"EndRound">): string | null {
+  return s.phase !== "combat" || a.seat !== s.activeSeat ? "not your Turn" : null;
+}
+
+// End Round takes the player out of the Round; the other keeps playing alone.
+export function applyEndRound(c: Content, s: GameState, events: GameEvent[]): void {
   s.outOfRound.push(s.activeSeat);
   events.push({ type: "PlayerOut", seat: s.activeSeat, stuck: false });
   endTurn(c, s, events);

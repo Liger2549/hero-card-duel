@@ -2,6 +2,62 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — Falka
+
+- New hero **Falka** (`heroes/Falka.md`), from the draft `h1.md`. Her kestrel is named **Kestrel**.
+- **Exfil**: below 25% HP she gets 2 free steps right away (used in her player's Turn). Cooldown 2 Rounds: the Round it triggers counts as 1, the next as 2.
+- Snap Shot and Shatter Round are Hit: First lanes in 8 directions (2 and 3 tiles).
+- Shatter Round: if it breaks the target, its Break DMG gets +250% ATK on top of the normal Break DMG.
+- **Kestrel's Eye** (Free Action): a Scanner within 3 tiles; 3x3 Scan Field; Scanner HP 25% ATK, hit only by skills that do not lock onto a target. Her lanes that line up with the Scan Field go on to its far edge (straight lines only). Hits on enemies in the field get Break +30% ATK.
+- **Vanishing Point** (Free Action): Stealth and 2 free steps. Costs 3 Ult Points, then 1 per Turn of her player. Max Ult Points 7. She can end it any time, for free.
+- **Stealth** (`statuses.md`): hidden while no enemy is next to her; next to an enemy she is shown but cannot be targeted by skills that lock onto a target; being hit ends it.
+- **Break Boost %**: Boost stats get a % version (Falka has Break Boost % 10%). The formula comes later.
+- **Lock-on / No lock** (`board.md` "Anchor"): skills anchored on `T` lock onto a target; skills anchored on `C` (areas, Hit: First lanes) do not. Every hit form header says which.
+- **Stealth details**: "next to" means the 8 tiles around. Falka's own attacks do not end her Stealth. She pays 1 Ult Point at the start of each of her team's Turns. An enemy that steps onto her hidden tile is pushed back and takes 130% of her ATK, and her Stealth ends. While she is hidden, the enemy cannot undo steps and is warned first.
+- **Team Turns**: a new duration kind that counts only one team's Turns (`combat.md` "Durations"). Falka's Scanner lasts 3 Turns of her team; up to 2 at once; it does not block movement and the enemy can see it.
+- Exfil's unused free steps last until the end of that Round.
+- A Lock-on skill cannot pick a stealthed unit's tile, but its area still hits that unit. Counter-attacks count as Lock-on, so Bianca cannot counter Falka in Stealth, even when she is shown.
+- Stepping onto a hidden unit: the damage is Physical, does not reduce the Break Bar, and is not an Action (the enemy's Turn goes on).
+- A third Scanner replaces the oldest.
+- The Scanner works like Stealth for targeting: a Lock-on skill cannot pick its tile, but any skill area that covers it hits it for the same damage.
+- Local 2-player on one device does not need to hide Stealth.
+
+## 2026-11-02 — DOT rework, shared statuses
+
+- **Two kinds of DOT**: Round DOT (ticks at the end of every Round, as before) and Turn DOT (ticks at the end of each Turn of the target's team; the Turn it was applied in is not counted).
+- **DOT damage has no type** (no Physical / Magic). `Tick Damage = max(Damage per tick + DOT Boost − Fortitude, 1)`. DEF no longer reduces DOT. This replaces the old formula with DEF.
+- Serie: Collapse is now reduced only by Fortitude, so Erosion only helps normal hits. The owner is fine with that.
+- DOTs do not reduce the Break Bar. Nocturnal Flame's Break 1 per tick is its own exception: Break Boost / Resistance do not change it, and it cannot lower the Break Bar below 1.
+- **`statuses.md`** holds every DOT and other shared statuses, so new heroes can reuse them. Voidmark moved there from Serie's file.
+- **% of a stat** is allowed in skill values, next to steps ("+1 per 3 ATK").
+- **Rounding**: every non-whole result (division, %, stat modifiers) now rounds to the nearest whole number, looking at the first 2 decimal places (.50 rounds up). This replaces "divisions round down" and "final stats are not rounded", so every stat is a whole number. Steps still count only whole steps.
+- **Hit forms**: an 8-direction area may draw a straight shape and a diagonal shape (`board.md` "Direction").
+
+## 2026-11-02 — Karas
+
+- New hero **Karas** (`heroes/Karas.md`), from the draft `h3.md`.
+- **Nocturnal Flame (เพลิงรัตติกาล)**: a new DOT counted in Turns (every player's Turn). Each tick: damage 2, Break 1. Other heroes from the same origin (e.g. h4) can apply it too.
+- **Nightfall Raven Gauge**: max 3, starts at 0. Each passive interject spends 1. Wraithfire gives +2, Ravenous Eclipse +3.
+- Passive: triggers only when the ally's attack hits, once per Turn, gives no Ult Points. The explosion is 3x3 around that enemy.
+- Wraithfire hit form: a straight shape for N/E/S/W and a diagonal shape for the 4 diagonals.
+- Ravenous Eclipse: zone a takes damage and Nocturnal Flame for 2 Turns; zone b takes only Nocturnal Flame for 1 Turn.
+- Karas is Mixed and gets the Melee free step.
+- Skill values may be written as % of ATK. The other heroes will be converted later.
+
+## 2026-11-02 — Home page, rooms, deck limits
+
+- Home page: player name, local 2-player, vs AI, deck builder, heroes, game info, create room (Normal / Custom) or join.
+- Custom rooms set their own ban and pick order and timers. Different hero counts default to A B A B, then the rest.
+- **Deck limits are per card** (`maxCopies` on each card).
+- **Tower HP by Hits** works as in card-game: with it, every hit takes exactly 1.
+
+## 2026-11-02 — Back toward the prototype (after the first online test)
+
+- **Steps**: no limit per Turn again; mana is the only limit (prototype). The Move-limited rule stays as a Custom option.
+- **End Turn** only ends the Turn. **End Round** (go out of the Round) is its own button again.
+- **Bans** one at a time, A B A B, 8 seconds each (replaces the simultaneous bans).
+- **UI** goes back to the prototype's look.
+
 ## 2026-11-02 — Towers, draft, phases
 
 - **CC effects** follow the prototype for now (`combat.md` "Crowd Control").

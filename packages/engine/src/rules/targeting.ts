@@ -94,9 +94,11 @@ export function resolveArea(s: GameState, user: Unit, t: Targeting, aim: Aim): A
 
   switch (t.type) {
     case "adjacent": {
+      // One enemy on one of the 8 tiles around (prototype adj8: needs a target).
       const p = oneTile();
       if (typeof p === "string") return p;
-      return chebyshev(at, p) === 1 ? hitTiles([p]) : "out of range";
+      if (chebyshev(at, p) !== 1) return "out of range";
+      return isEnemy(unitAt(s, p)) ? hitTiles([p]) : "choose an enemy";
     }
     case "shape":
       if (!aim.dir) return "choose a direction";

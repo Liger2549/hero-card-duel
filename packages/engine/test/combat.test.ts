@@ -35,6 +35,10 @@ describe("normal attack (combat.md Damage Resolution)", () => {
     expect(rejects(duel(), use("a", "normal", at(4, 6)))).toBe("out of range");
   });
 
+  it("needs an enemy on the tile (no swinging at empty air)", () => {
+    expect(rejects(duel(), use("a", "normal", at(3, 4)))).toBe("choose an enemy");
+  });
+
   it("preview: same result, and the state passed in does not change", () => {
     const before = duel();
     const r = apply(before, use("a", "normal", at(4, 5)), fixtures);

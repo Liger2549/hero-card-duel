@@ -36,7 +36,7 @@ Each tile has two parts:
 - **Move** is a stat with two values:
   - **Base Move**: the hero/unit's stat (e.g. `Move: 1` on the hero sheet).
   - **Remaining Move**: how many steps it can still take right now. Each step uses 1. It cannot step with 0 Remaining Move.
-- Remaining Move refills to Base Move at the end of every Turn. With `Move: 1`, a hero/unit takes 1 step per Turn. Only cards, passives and skills can give more.
+- **No step limit per Turn** (as in the prototype): a hero/unit may take any number of steps in a Turn; each step is paid with mana. (A Custom room can set `stepLimit: "move"`: then at most Base Move steps per Turn, and Remaining Move refills to Base Move at the end of every Turn.)
 - In one Turn, a player may move **any number** of their heroes/units. Moving does not end the Turn.
 - A step is blocked by board edges, enemies, and edge-type skills that block movement.
 
@@ -60,6 +60,7 @@ Each tile has two parts:
 - During their own Turn, a player can **undo** steps, newest first, before ending the Turn.
 - Undoing a step returns the unit (and any swapped ally) to where it was, gives back the Remaining Move it used, and refunds that step's cost. If the step used a Melee free step, the free step comes back too.
 - Steps can no longer be undone once the player does any non-move action (attack, skill, card), or once a step triggers a reaction (e.g. an automatic interject).
+- While the enemy has a hidden unit (Stealth, `statuses.md`), steps **cannot be undone** that Turn. The game warns the player before their first step.
 
 ## Range
 
@@ -93,12 +94,17 @@ Each skill draws its area directly on the skill, as a small grid.
 ### Anchor
 
 - A skill's area is centered either on the **caster** (`C`) or on a **target tile** (`T`) chosen by the player within the skill's range.
+- **Lock-on**: a skill anchored on `T` locks onto a target. A skill anchored on `C` (areas and Hit: First lanes) does not (**No lock**).
+  - Effects that pick a unit directly, such as counter-attacks, also count as Lock-on.
+  - Some statuses stop Lock-on targeting (e.g. Stealth, `statuses.md`): a Lock-on skill cannot pick that unit's tile as `T`, but its area still hits the unit if it stands in it.
+- Every hit form states **Lock-on** or **No lock** in its header, e.g. `Rotating (8 directions) | Hit: First | No lock`.
 
 ### Direction
 
 - **Rotating** areas are drawn facing up. When casting, the player chooses a direction and the area rotates to face it.
   - By default, a Rotating area uses the hero's movement directions. Every hero moves in 8 directions, so the default is all 8 (N, E, S, W and the diagonals).
   - A skill can override this by stating its own directions, e.g. **Rotating (8 directions)** or **Rotating (4 directions)**.
+  - An 8-direction area may draw two shapes: a **straight** shape facing N, used for N, E, S, W, and a **diagonal** shape facing NW, used for NE, SE, SW, NW (e.g. Karas's Wraithfire).
 - **Fixed** areas do not rotate.
 - Each skill states whether its area is Rotating or Fixed.
 - Only draw up to the farthest tile the skill reaches. Empty rows are not needed.

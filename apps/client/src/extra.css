@@ -1,0 +1,29 @@
+/* Additions on top of the prototype's styles (proto.css is copied unchanged from prototype/index.html). */
+
+/* Generic animation: numbers float up from the tiles that were hit (docs/ui.md "Animations"). */
+.cell, .tw { position: relative; overflow: visible; }
+.float { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); font-weight: 700; font-size: 15px;
+  color: var(--p2); pointer-events: none; z-index: 3; animation: rise 1.2s ease-out both; text-shadow: 0 1px 0 var(--surface); }
+.float.good { color: var(--heal); }
+@keyframes rise { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -120%; } }
+
+/* How many times a tile was chosen (e.g. Valen's swords, docs/ui.md). */
+.badge { position: absolute; top: 1px; right: 3px; font-size: 11px; font-weight: 700; color: var(--ink); background: var(--hl);
+  border-radius: 6px; padding: 0 4px; z-index: 2; }
+
+.u .e { font-size: clamp(13px, 3.4vw, 20px); }
+.warn { color: var(--p2); }
+
+/* The prototype rule ".hcard .hn span" (icon size) also hit the role line. */
+.hcard .hn .sub { font-size: 13px; }
+
+/* Room settings and info tables */
+.custom h4 { margin: 14px 0 4px; }
+.custom .row label, .field-num { display: inline-flex; align-items: center; gap: 6px; }
+.custom select { font: inherit; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); }
+.stages { border-collapse: collapse; margin: 8px 0; }
+.stages td, .stages th { padding: 3px 8px; text-align: left; vertical-align: top; }
+.info ul { margin: 4px 0 8px; padding-left: 20px; }
+.info h3 { margin-top: 14px; }
+.menu .sbar { margin: 6px 0; }
+.nick { width: 12em; letter-spacing: 0; text-transform: none; }

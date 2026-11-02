@@ -59,9 +59,9 @@ export const fixtures: Content = {
   heroes: [knight, archer],
   summons: [pup],
   cards: [
-    { id: "pupCard", name: "Pup", icon: "P", text: "", kind: "unit", mana: 3, target: "tile", summon: "pup" },
-    { id: "potion", name: "Potion", icon: "H", text: "", kind: "spell", mana: 1, target: "ally", heal: 6 },
-    { id: "orb", name: "Orb", icon: "O", text: "", kind: "spell", mana: 0, target: "none", manaGain: 2 },
+    { id: "pupCard", name: "Pup", icon: "P", text: "", kind: "unit", mana: 3, maxCopies: 4, target: "tile", summon: "pup" },
+    { id: "potion", name: "Potion", icon: "H", text: "", kind: "spell", mana: 1, maxCopies: 2, target: "ally", heal: 6 },
+    { id: "orb", name: "Orb", icon: "O", text: "", kind: "spell", mana: 0, maxCopies: 4, target: "none", manaGain: 2 },
   ],
   items: [
     { id: "charm", name: "Charm", icon: "C", text: "", price: 300, tier: 1, mods: { tenacity: 100 } },

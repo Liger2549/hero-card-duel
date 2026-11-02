@@ -33,7 +33,7 @@ DOT Boost : 2
 - Singularity gained: 0
 - Hit form:
 ```
-Rotating (8 directions) | Hit: All
+Rotating (8 directions) | Hit: All | No lock
 X
 C
 ```
@@ -48,7 +48,7 @@ C
 - Effect: Applies **Voidmark** to every enemy hit for 2 Rounds.
 - Hit form:
 ```
-Rotating (4 directions <N, E, S, W>) | Hit: All
+Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
 
 X X X
 . C .
@@ -66,19 +66,17 @@ X X X
     ```
     Collapse Damage = (Voidmark tick damage × remaining ticks) + ATK
     ```
-    Collapse Damage follows the DOT rules (ignores shields, Armor and Magic Armor; reduced by DEF and Fortitude). It is not a Voidmark tick, so it does not give Singularity.
+    Collapse Damage follows the DOT rules (ignores shields, DEF, Armor and Magic Armor; reduced only by Fortitude). It is not a Voidmark tick, so it does not give Singularity.
   - After the collapse, that enemy's Voidmark is removed and a new Voidmark is applied for 1 Round.
 - Hit form:
 ```
-Rotating (4 directions <N, E, S, W>) | Hit: All
+Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
 
 X X X
 . C .
 ```
 
 ## Voidmark
-A DOT status (see DOT rules in combat.md).
+A Round DOT, defined in `statuses.md` (damage per tick, Erosion).
 
-- **Tick damage**: Magic, +1 per 2 ATK (plus DOT Boost).
-- **Erosion**: while Voidmark is active, the enemy's DEF is reduced by 1 + 1 per 3 DOT Boost (DEF cannot go below 0).
 - Each tick that deals damage gives Serie +1 Singularity (see Passive).

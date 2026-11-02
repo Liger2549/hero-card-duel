@@ -27,7 +27,7 @@ Penetration : 2
   Target Armor Average = (Armor + Magic Armor) / 2
   Bonus = max((Penetration − Target Armor Average) / 2, 0)
 
-  (All divisions round down.)
+  (Each division is rounded to the nearest whole number, combat.md "General".)
 
 ## Normal Attack: The Sword's Radiant Waltz
 - Mana: 2
@@ -37,7 +37,7 @@ Penetration : 2
 - Ult Points gained: 1
 - Hit form:
 ```
-Rotating (8 directions) | Hit: All
+Rotating (8 directions) | Hit: All | No lock
 X
 C
 ```
@@ -52,7 +52,7 @@ C
 - Effect: None
 - Hit form: 
 ```
-Rotating (4 directions <N, E, S, W>) | Hit: All
+Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
 Falloff Magic: -1
 
 b
@@ -75,7 +75,7 @@ C
 - Hit form:
 
 ```
-Targets: 3 (may repeat) | Hit: All
+Targets: 3 (may repeat) | Hit: All | Lock-on
 
 . . T . .
 . T T T .

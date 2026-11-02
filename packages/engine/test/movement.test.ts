@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { normalConfig } from "../src/config.ts";
 import { play, player, pos, rejects, state, unit } from "./helpers.ts";
 
 const step = (unitId: string, x: number, y: number, seat: "A" | "B" = "A") =>
@@ -17,8 +18,14 @@ describe("steps (board.md Movement)", () => {
     expect(rejects(state([unit("v", "A", 0, 0)]), step("v", -1, 0))).toBe("off the board");
   });
 
-  it("takes only 1 step per Turn with Move 1, and gets it back next Turn", () => {
-    let s = play(state([unit("v", "A", 4, 4), unit("e", "B", 4, 8)]), step("v", 4, 5));
+  it("steps as many times as mana allows (stepLimit none, as in the prototype)", () => {
+    const s = play(state([unit("v", "A", 4, 4), unit("e", "B", 0, 8)]), step("v", 4, 5), step("v", 4, 6), step("v", 5, 7));
+    expect(s.players.A.mana).toBe(10); // free, 1, 1
+  });
+
+  it("with stepLimit move: only Move steps per Turn, refilled next Turn", () => {
+    const limited = { config: { ...normalConfig, stepLimit: "move" as const } };
+    let s = play(state([unit("v", "A", 4, 4), unit("e", "B", 4, 8)], limited), step("v", 4, 5));
     expect(rejects(s, step("v", 4, 6))).toBe("no Move left");
     s = play(s, endTurn("A"));
     expect(s.units[0]!.remainingMove).toBe(1);
@@ -84,8 +91,9 @@ describe("swap (board.md Occupancy)", () => {
     expect(s.units.every((u) => u.freeStepUsed)).toBe(true);
   });
 
-  it("cannot swap with an ally that has no Move left", () => {
-    const s = play(state([unit("v", "A", 4, 4), unit("b", "A", 5, 5)]), step("b", 4, 5));
+  it("with stepLimit move: cannot swap with an ally that has no Move left", () => {
+    const limited = { config: { ...normalConfig, stepLimit: "move" as const } };
+    const s = play(state([unit("v", "A", 4, 4), unit("b", "A", 5, 5)], limited), step("b", 4, 5));
     expect(rejects(s, step("v", 4, 5))).toBe("ally has no Move left to swap");
   });
 });

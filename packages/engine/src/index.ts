@@ -1,5 +1,6 @@
 export * from "./actions.ts";
 export * from "./board.ts";
+export { botAction } from "./bot.ts";
 export * from "./config.ts";
 export * from "./content.ts";
 export * from "./defs.ts";

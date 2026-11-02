@@ -1,7 +1,10 @@
 import { content } from "@hcd/content";
 import { findUnit, TimesOfDay, unitDef, type GameEvent, type GameState, type Seat } from "@hcd/engine";
 
-export const seatName = (seat: Seat) => (seat === "A" ? "ผู้เล่น A" : "ผู้เล่น B");
+// Player names for log lines; the match screen keeps these up to date.
+let names: Record<Seat, string> = { A: "", B: "" };
+export const setLogNames = (n: Record<Seat, string>) => void (names = n);
+export const seatName = (seat: Seat) => names[seat] || (seat === "A" ? "ผู้เล่น 1" : "ผู้เล่น 2");
 export const timeName = (i: number) => ["เช้า", "เที่ยง", "เย็น", "พลบค่ำ", "กลางคืน", "ดึก"][i] ?? TimesOfDay[i];
 
 export function unitName(s: GameState, id: string): string {

@@ -121,6 +121,7 @@ export interface CardDef {
   text: string;
   kind: "unit" | "spell";
   mana: number;
+  maxCopies: number; // how many of this card one deck may hold
   target: "none" | "tile" | "allyHero" | "ally"; // tile = placement (board.md "Placement")
   summon?: string; // unit cards: the unit's id
   heal?: number;

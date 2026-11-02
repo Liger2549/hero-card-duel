@@ -39,7 +39,7 @@ tools/sim          bot-vs-bot balance runs
 
 Engine rules:
 - No DOM, no network, no Date.now, no Math.random. Randomness comes from a seeded RNG stored in state, so a game replays exactly from its action list.
-- All integers; divisions round down unless combat.md says otherwise (fractional stats from modifiers: open question in `docs/ideas.md`).
+- All integers; any non-whole result (division, %, stat modifiers) rounds to the nearest whole number using the first 2 decimal places, .50 up (`combat.md` "General"). Use integer math (e.g. hundredths), not floating point, so replays stay exact.
 - Tunable rule values (board size, zones, mana per round, tower stages, gold, timers, draft order) live in one match config object. Normal mode uses the defaults; a Custom room overrides them.
 - Skills are data (hit form in `board.md` tile notation, rotation, Hit: All / First, zones, falloff, physical and magic formulas, break, ult gain, effects). Unusual mechanics (Bianca's counter, Serie's Collapse) are trigger hooks in that hero's own file, not special cases in the engine core.
 - apply() emits events (DamageDealt, StatusApplied, BreakTriggered, UnitDied, …) used for the UI log and animations.

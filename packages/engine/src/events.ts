@@ -15,6 +15,7 @@ export type GameEvent =
   | { type: "PlayerReady"; seat: Seat }
   | { type: "CombatStarted"; round: number; starter: Seat }
   | { type: "TurnStarted"; seat: Seat }
+  | { type: "TurnEnded"; seat: Seat }
   | { type: "PlayerOut"; seat: Seat; stuck: boolean } // stuck = could do nothing
   | { type: "RoundEnded"; round: number; nextStarter: Seat }
   | { type: "RoundStarted"; round: number }

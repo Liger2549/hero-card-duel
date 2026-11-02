@@ -20,11 +20,13 @@ import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "
 import { checkWin } from "./rules/status.ts";
 import type { Aim } from "./rules/targeting.ts";
 import {
+  applyEndRound,
   applyEndTurn,
   applyPlaceHero,
   applyPrepTimeUp,
   applyReady,
   endTurn,
+  validateEndRound,
   validateEndTurn,
   validatePlaceHero,
   validateReady,
@@ -51,7 +53,8 @@ export type Action =
   | { type: "Undo"; seat: Seat }
   | { type: "UseAbility"; seat: Seat; unitId: string; ability: AbilityRef; aim: Aim }
   | { type: "PlayCard"; seat: Seat; card: number; aim: Aim } // card = index in hand
-  | { type: "EndTurn"; seat: Seat };
+  | { type: "EndTurn"; seat: Seat }
+  | { type: "EndRound"; seat: Seat };
 
 export type ActionOf<T extends Action["type"]> = Extract<Action, { type: T }>;
 
@@ -91,6 +94,8 @@ export function validate(s: GameState, a: Action, c: Content): string | null {
       return validatePlayCard(c, s, a);
     case "EndTurn":
       return validateEndTurn(s, a);
+    case "EndRound":
+      return validateEndRound(s, a);
   }
 }
 
@@ -151,6 +156,9 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       break;
     case "EndTurn":
       applyEndTurn(c, s, events);
+      break;
+    case "EndRound":
+      applyEndRound(c, s, events);
       break;
   }
   return { ok: true, state: s, events };

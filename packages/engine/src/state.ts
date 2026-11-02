@@ -96,6 +96,7 @@ export interface DraftState {
   stage: "timeOfDay" | "ban" | "pick";
   bans: Record<Seat, string[]>;
   picks: Record<Seat, string[]>;
+  banIndex: number; // into config.banOrder
   pickIndex: number; // into config.pickOrder
 }
 

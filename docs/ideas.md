@@ -10,11 +10,12 @@ Things to design or decide later. Not rules yet; move them into the rule docs wh
 4. **Free Action and Own Turn**: confirm that a Free Action skill neither ends the Turn nor uses the hero's Own Turn.
 5. **Shields and the new Durations rule**: confirm that a shield's duration also skips the Turn it was given in, like buffs.
 6. **Bianca's counter**: once per enemy Action, or once per guarded unit hit by an AoE?
-7. **Whole numbers or fractions**: `combat.md` "Stat Modifiers" says final stats are not rounded (Additive % can give fractions), but mana and step costs are whole numbers. Round stats down when they are used, or keep fractions?
-8. **Repeated skill use** (owner is designing it): using the same skill again costs more mana, or deals less damage. Still to decide: which one, how much, and whether the count is per Turn or per Round.
-9. **Manual interject delay**: it resolves "N Turns" after being cast. Does that delay also skip the Turn it was cast in, like Durations?
-10. **Stash** (from the UI design): a place for items that are not on a hero. How many slots? Can items move between the stash and heroes at any time, or only in the Preparation Phase? Does a hero's death clear only its own 2 slots?
-11. **Team buff cards** (from the UI design): cards that buff the whole team and stay in play. How many can be active at once, how long do they last, and can the enemy remove them?
+7. **Repeated skill use** (owner is designing it): using the same skill again costs more mana, or deals less damage. Still to decide: which one, how much, and whether the count is per Turn or per Round.
+8. **Manual interject delay**: it resolves "N Turns" after being cast. Does that delay also skip the Turn it was cast in, like Durations?
+9. **Stash** (from the UI design): a place for items that are not on a hero. How many slots? Can items move between the stash and heroes at any time, or only in the Preparation Phase? Does a hero's death clear only its own 2 slots?
+10. **Team buff cards** (from the UI design): cards that buff the whole team and stay in play. How many can be active at once, how long do they last, and can the enemy remove them?
+11. **Boost stats as %**: decided (2026-11-03) that Boost stats have a flat and a % version (Falka has Break Boost % 10%). Still to write: the formulas, e.g. `Break = (Break + Break Boost) × (1 + Break Boost %)`, and where the % goes in the Break Resistance step.
+12. **Steps to %**: change skills written as steps ("+1 per N", e.g. Bianca, Leilani, Voidmark) to % of a stat? Keep steps until the owner decides.
 
 ## Board
 

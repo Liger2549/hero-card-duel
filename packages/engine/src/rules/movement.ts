@@ -17,7 +17,8 @@ export function validateStep(s: GameState, a: ActionOf<"Step">): string | null {
   if (!u.pos) return "unit is not on the board";
   if (!inBounds(s.config, a.to)) return "off the board";
   if (chebyshev(u.pos, a.to) !== 1) return "a step moves exactly 1 tile";
-  if (u.remainingMove < 1) return "no Move left";
+  const limited = s.config.stepLimit === "move";
+  if (limited && u.remainingMove < 1) return "no Move left";
   // CC effects as in the prototype: Stun and Root stop movement.
   if (u.cc.stun !== undefined || u.cc.root !== undefined) return "cannot move (CC)";
 
@@ -25,7 +26,7 @@ export function validateStep(s: GameState, a: ActionOf<"Step">): string | null {
   const other = unitAt(s, a.to);
   if (other) {
     if (other.owner !== u.owner) return "tile is taken by an enemy";
-    if (other.remainingMove < 1) return "ally has no Move left to swap";
+    if (limited && other.remainingMove < 1) return "ally has no Move left to swap";
     if (other.cc.stun !== undefined || other.cc.root !== undefined) return "ally cannot move (CC)";
     cost += stepCostOf(other);
   }

@@ -35,8 +35,8 @@ export const serie = defineHero({
       magic: ATK,
       break: 2,
       ultGain: 0,
-      // Voidmark tick: Magic +1 per 2 ATK, worked out by Serie's hooks.
-      onHit: [{ type: "dot", id: "voidmark", rounds: 2 }],
+      // Voidmark tick: Magic +1 per 2 ATK (Erosion and Singularity come with Serie's hooks).
+      onHit: [{ type: "dot", id: "voidmark", magic: (f) => Math.floor(f.atk / 2), rounds: 2 }],
     },
   ],
   ultimate: {

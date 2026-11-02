@@ -16,7 +16,7 @@
 
 ## Cards
 
-- A deck has 24 cards; a hand holds at most 5.
+- A deck has 24 cards; a hand holds at most 5. Each card states how many copies of it one deck may hold.
 - **Unit cards** (summons) cost the mana on the card. The owner sets card and unit values. Placement follows `board.md` "Placement".
 - **A summoned unit's first attack** each Round is cheaper. This applies to units from cards and from hero skills, counted for each unit on its own, and resets every Round. Each unit sheet states:
   - the mana of its first attack in the Round it was summoned (prototype units: free),
@@ -80,7 +80,8 @@ A tower's HP is set by **stages**. Each stage starts at a round and lasts until 
 
 There are 2 match modes:
 - **Normal**: the standard rules in these docs, unchanged. 4 heroes per player, 2 towers to win.
-- **Custom room**: the room can change the match config for that match (e.g. heroes per player, towers to win, tower config, mana, timers), and can **skip the ban steps** of the draft. Each player can have their own number of heroes.
+- **Custom room**: the room can change the match config for that match (e.g. heroes per player, towers to win, tower config, mana, gold, timers), set its own **ban order and pick order** (e.g. ABAB), and can **skip the bans**. Each player can have their own number of heroes; the pick order then defaults to A B A B ... with the side that needs more heroes picking the rest at the end.
+- A room shows the players (with their names); the host starts the match.
 - A hero's Base Bounty comes from the hero (`heroes/README.md`), not from the match config.
 
 #### Before the Game Starts
@@ -92,7 +93,7 @@ There are 2 match modes:
 Bans and picks are shown to both players as soon as they are made.
 
 1. A chooses the time of day for the game to start (8 seconds).
-2. **Ban phase**: A and B ban at the same time, 2 heroes each, until the ban time runs out or both have banned. A hero the other player already banned cannot be banned. (A Custom room can skip this phase.)
+2. Bans, one at a time (8 seconds each): A, B, A, B. (A Custom room can skip the bans.)
 3. Picks, one at a time (8 seconds each):
 
 A picks 1 hero
@@ -139,7 +140,7 @@ Minor Phase:
 
 ##### Combat Phase
 
-A player who presses End Turn, or who can do nothing on their Turn, is out of the Round; the other player keeps taking Turns alone (`combat.md` "Turn Flow"). The phase ends once every player is out.
+A player who presses End Round, or who can do nothing on their Turn, is out of the Round; the other player keeps taking Turns alone (`combat.md` "Turn Flow"). The phase ends once every player is out.
 
 **Who starts**: in round 1, **B** starts. In every later round, the player who went out first in the previous round starts.
 

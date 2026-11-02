@@ -3,8 +3,9 @@
 ## General
 
 - All values are integers.
-- If any calculation involves division, the result is **rounded down**, unless a rule states otherwise.
-- Scaling effects should be written as steps (e.g. "+1 damage per 3 ATK") rather than fractions.
+- **Rounding**: any result that is not a whole number (division, %, stat modifiers) is **rounded to the nearest whole number**, looking only at the first 2 decimal places (.50 and above rounds up). This applies unless a rule states otherwise.
+  - Example: 120% of ATK 4 = 4.80 → 5. 25% of ATK 3 = 0.75 → 1. 30% of ATK 4 = 1.20 → 1. 7 / 2 = 3.50 → 4. 2.495 is read as 2.49 → 2.
+- Scaling effects may be written as a percentage of a stat (e.g. "75% ATK") or as steps (e.g. "+1 per 3 ATK"). Steps count only whole steps (ATK 5 gives 1 step of 3).
 
 ## Terms
 
@@ -21,24 +22,26 @@
 - In a Turn, the player may move any number of heroes/units (`board.md` "Movement"), then do **one** normal attack, skill or ultimate. That ends the Turn. The player can also end the Turn without acting.
 - **Free Action**: a skill with this tag does not end the Turn. The player may then act again or end the Turn.
 - **Playing a card** does not end the Turn.
-- **End Turn button**: the player is **out of the Round**. The other player keeps taking Turns alone until they also go out.
+- **End Turn button**: ends the Turn; the other player goes next.
   - The player must have taken at least **1 step** this Turn (an undone step does not count) before pressing End Turn. If none of their heroes/units can step at all, End Turn is allowed without one.
+- **End Round button**: the player is **out of the Round**. The other player keeps taking Turns alone until they also go out.
 - A player who **can do nothing** when their Turn would start (no possible step or Action) goes out of the Round automatically.
 - The Round ends when every player is out (`rules.md` "Combat Phase").
 - A hero/unit **uses its Own Turn** when it does a normal attack, skill or ultimate in a Turn. A Free Action does not use it. A hero/unit uses at most one Own Turn per Turn.
 
 ## Durations
 
-Buffs, debuffs, shields and other timed effects state their duration in one of two ways:
+Buffs, debuffs, shields and other timed effects state their duration in one of three ways:
 
 - **Turns** (the default): counts every Turn, whoever's it is.
+- **Team Turns**: counts only the Turns of one team. The skill states whose (e.g. the caster's team). Example: Falka's Scanner lasts 3 Turns of her team.
 - **Own Turns**: counts only the Turns in which a hero/unit uses its Own Turn. The skill states whose Own Turns count (e.g. the unit that has the effect, or its caster).
 
-Both kinds:
-- The Turn in which the effect is applied is **not counted**. Counting starts with the next Turn (or the next Own Turn).
+All kinds:
+- The Turn in which the effect is applied is **not counted**. Counting starts with the next Turn (or the next Team Turn or Own Turn).
   - Example: on A's Turn, Bianca gives Valen a buff for 2 Turns. It counts down at the end of B's Turn and at the end of A's next Turn, then ends.
 - A duration of **-1** means permanent.
-- These rules do not apply to crowd control (Recovery, see Crowd Control) or DOT (Rounds, see Damage over Time).
+- These rules do not apply to crowd control (Recovery, see Crowd Control) or DOT (see Damage over Time).
 
 ## Hits
 
@@ -195,25 +198,27 @@ Break DMG dealt             = max( Target Max Break Bar / 5, 1 ) + attacker's Br
 
 ## Damage over Time (DOT)
 
-- A DOT status deals damage to its target at the **end of every Round** (when the Combat Phase ends), for its duration.
-- Each DOT states its **Physical** and **Magic** damage per tick and its duration in **Rounds** (e.g. Burn: Magic 2 for 4 Rounds). The duration is the number of ticks.
-- The first tick happens at the end of the Round the DOT was applied in.
-  - Example: in round 3, a hero applies Burn for 2 Rounds. It ticks at the end of round 3 and at the end of round 4, then expires.
+- A DOT status deals damage to its target on every tick, for its duration. The duration is the number of ticks.
+- DOTs that more than one hero can use are defined in `statuses.md`.
+- Each DOT is one of two kinds:
+  - **Round DOT**: ticks at the **end of every Round** (when the Combat Phase ends). Its duration is in **Rounds**. The first tick happens at the end of the Round the DOT was applied in.
+    - Example: in round 3, a hero applies a Round DOT for 2 Rounds. It ticks at the end of round 3 and at the end of round 4, then expires.
+  - **Turn DOT**: ticks at the **end of each Turn of the target's team**. Turns of the applier's team do not count. Its duration is in those Turns. The Turn it was applied in is not counted.
+    - Example: on A's Turn, Karas applies Nocturnal Flame for 2 Turns to a hero of B. It ticks at the end of B's next Turn and at the end of B's Turn after that, then expires.
+- Each DOT states its **Damage** per tick. DOT damage has no type (not Physical or Magic).
 - The damage per tick is calculated and **stored when the DOT is applied**, using the applier's stats at that moment (ATK, DOT Boost).
 - DOT damage **ignores shields**. It goes straight past Shield by Damage and Shield by Hits and does not reduce either of them.
-- DOT damage **ignores Armor and Magic Armor** (so Penetration has no effect on it). It is reduced only by DEF and Fortitude:
+- DOT damage **ignores DEF, Armor and Magic Armor** (so Penetration has no effect on it). It is reduced only by Fortitude:
 
 ```
-Physical DOT = Physical per tick + DOT Boost
-Magic DOT    = Magic per tick    + DOT Boost    (only if the DOT has Magic damage)
-
-Tick Damage = max( Physical DOT + Magic DOT − DEF − Fortitude, 1 )
+DOT Damage  = Damage per tick + DOT Boost
+Tick Damage = max( DOT Damage − Fortitude, 1 )
 ```
 
-- **DOT Boost** is added once to each damage type the DOT has (Physical and/or Magic).
-- The target's DEF and Fortitude are checked **on every tick**, so buffs and debuffs on the target take effect immediately.
+- The target's Fortitude is checked **on every tick**, so buffs and debuffs on the target take effect immediately.
 - Every tick deals at least **1 damage**.
-- A DOT tick is **not an attack or a hit**. It does not trigger counter-attacks, Life Steal or on-hit effects, and does not reduce the Break Bar.
+- A DOT tick is **not an attack or a hit**. It does not trigger counter-attacks, Life Steal or on-hit effects.
+- A DOT tick does not reduce the Break Bar, unless that DOT states its own **Break** per tick (e.g. Nocturnal Flame).
 - If the same DOT is applied to a unit that already has it, the new one replaces the old one (new damage and full duration). Different DOTs stack.
 - If the applier dies, their DOTs keep ticking until they expire.
 - **Cleanse** removes DOT statuses only if the Cleanse skill says so.
@@ -221,7 +226,7 @@ Tick Damage = max( Physical DOT + Magic DOT − DEF − Fortitude, 1 )
 ## Other Statuses
 
 - **Fortitude**: Reduces DOT damage per tick by a flat amount (see Damage over Time).
-- Non-CC statuses (buffs, debuffs) state their duration in Turns or Own Turns (see Durations). DOT states it in Rounds.
+- Non-CC statuses (buffs, debuffs) state their duration in Turns or Own Turns (see Durations). DOT states it in Rounds or in the target team's Turns (see Damage over Time).
 
 ## Shields
 
@@ -307,7 +312,7 @@ Final stat = (Base + all Flat) × (1 + all Additive %) × every Multiplicative
 ```
 
 - **Override** fixes the stat to its value, ignoring the others. If there is more than one, the latest wins.
-- Final stats are not rounded.
+- Final stats are rounded (see General "Rounding"), so every stat is a whole number.
 - A final stat is never below 0, except **Tenacity** (it can be negative). **Speed** is at least 1.
 - A modifier that lowers Max HP, Max HP Hits or Max Break Bar (when it is added, or when a buff that raised it ends) states its type from Max Value Changes.
 

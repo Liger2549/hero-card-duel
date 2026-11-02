@@ -14,7 +14,9 @@ Each hero has the following skill types. The number of skills varies by hero.
 | **Ultimate** | A powerful ability that costs Ult Points. |
 
 - A normal attack, skill or ultimate ends the player's Turn, unless it has the **Free Action** tag (`combat.md` "Turn Flow").
-- Each timed effect states its duration in Turns, Own Turns (and whose), or Rounds for DOT (`combat.md` "Durations").
+- Each timed effect states its duration in Turns, Own Turns (and whose) (`combat.md` "Durations"). A DOT states Rounds or the target team's Turns (`combat.md` "Damage over Time").
+- Statuses that several heroes can use (every DOT) are defined in `docs/statuses.md`. The hero file links to them.
+- Every hit form header says **Lock-on** (anchored on `T`) or **No lock** (anchored on `C`) (`board.md` "Anchor").
 
 ### Ult Points
 
@@ -47,7 +49,7 @@ Each hero has the following skill types. The number of skills varies by hero.
 - Some heroes can respawn under their own conditions. These are described on the hero.
 
 ```
-Bounty = Base Bounty + (Total value of held items / 4)   (rounded down)
+Bounty = Base Bounty + (Total value of held items / 4)   (rounded, combat.md "General")
 ```
 
 - Item value is the item's gold price in the shop.

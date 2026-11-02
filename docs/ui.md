@@ -44,7 +44,9 @@ Every action animates instead of resolving at once: the client plays the engine'
 
 - **Hero viewer**: every hero's stats, skills and hit forms, built from the content data.
 - **Deck builder**: arrange the 24-card deck.
-- **Match setup**: Normal or Custom room.
+- **Home**: name, two players on one device, vs AI, deck, heroes, game info, create room (Normal / Custom), join with a code.
+- **Room**: players with names, the Custom settings (host edits, guest sees), Start (host) and Leave.
+- **Game info**: stats, rules and CC in short Thai, from the rule docs.
 
 ## Not decided
 
