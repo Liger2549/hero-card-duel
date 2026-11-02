@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hero Card Duel – ต้นแบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDEFF3;--surface:#FFFFFF;--surface2:#F4F5F8;--ink:#1B2030;--muted:#5D6475;--line:#D5D9E1;
+  --tile:#E3E6EC;--zone1:#D6E9F2;--zone2:#F4DCD9;--frame:#9AA3B5;
+  --p1:#2B78A0;--p2:#BC3B35;--orb:#D49A12;--hl:#E8B931;--heal:#3A955B;--skyc:#F3D7A1;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151925;--surface:#1F2433;--surface2:#262C3D;--ink:#E8EBF2;--muted:#A0A7B8;--line:#343B4F;
+    --tile:#2B3142;--zone1:#1D3443;--zone2:#3F2428;--frame:#4A5268;
+    --p1:#5AAED6;--p2:#E2675F;--orb:#E8B23A;--hl:#F0C64A;--heal:#5BBF7F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151925;--surface:#1F2433;--surface2:#262C3D;--ink:#E8EBF2;--muted:#A0A7B8;--line:#343B4F;
+  --tile:#2B3142;--zone1:#1D3443;--zone2:#3F2428;--frame:#4A5268;
+  --p1:#5AAED6;--p2:#E2675F;--orb:#E8B23A;--hl:#F0C64A;--heal:#5BBF7F;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;font-size:15px;line-height:1.55;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,.disp{font-family:'Mitr','IBM Plex Sans Thai',system-ui,sans-serif;font-weight:500;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+#app{max-width:1060px;margin:0 auto;padding:12px 12px 28px}
+
+/* time-of-day band: the signature element */
+.dayband{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;border-radius:10px;overflow:hidden;margin-top:8px}
+.dayband span{display:flex;flex-direction:column;align-items:center;padding:5px 2px;color:#1B2030;font-size:15px;line-height:1.2;opacity:.55;transition:opacity .3s}
+.dayband span.dk{color:#F3F4F8}
+.dayband small{font-size:11px}
+.dayband span.now{opacity:1;box-shadow:inset 0 -4px 0 rgba(0,0,0,.35);font-weight:600}
+
+.top .tl{display:flex;align-items:center;gap:10px}
+.top h1{font-size:22px}
+.rd{color:var(--muted);font-size:14px}
+.ghost{margin-left:auto;background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px}
+
+.layout{display:grid;gap:14px;margin-top:12px}
+@media (min-width:820px){.layout{grid-template-columns:minmax(0,470px) minmax(0,1fr);align-items:start}}
+
+.sbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border-radius:10px;font-size:13px}
+.sbar .nm{font-family:'Mitr',system-ui,sans-serif;font-size:15px}
+.sbar.s0 .nm{color:var(--p1)}.sbar.s1 .nm{color:var(--p2)}
+.sbar.on.s0{background:color-mix(in srgb,var(--p1) 15%,transparent)}
+.sbar.on.s1{background:color-mix(in srgb,var(--p2) 15%,transparent)}
+.meta{display:flex;gap:10px;color:var(--muted);margin-left:auto}
+.pips{display:inline-flex;gap:3px;align-items:center}
+.pip{width:11px;height:11px;border-radius:50%;border:2px solid var(--orb);display:inline-block}
+.pip.on{background:var(--orb)}
+.more{color:var(--orb);font-size:12px;margin-left:2px}
+
+.board{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;padding:6px;border-radius:12px;background:color-mix(in srgb,var(--skyc) 60%,var(--frame));transition:background .6s}
+.cell{aspect-ratio:1;border:0;border-radius:6px;background:color-mix(in srgb,var(--tile) 88%,var(--skyc));position:relative;padding:0;display:flex;align-items:center;justify-content:center;min-width:0}
+.cell.z0{background:color-mix(in srgb,var(--zone1) 88%,var(--skyc))}
+.cell.z1{background:color-mix(in srgb,var(--zone2) 88%,var(--skyc))}
+.cell.t{box-shadow:inset 0 0 0 3px var(--hl)}
+.cell.a{background:color-mix(in srgb,var(--hl) 55%,var(--tile))}
+.cell.sel{box-shadow:inset 0 0 0 3px var(--ink)}
+.cell::after{content:'';position:absolute;inset:0;border-radius:6px;opacity:0;pointer-events:none}
+.cell.fx-bad::after{background:var(--p2);animation:fx .6s ease-out}
+.cell.fx-good::after{background:var(--heal);animation:fx .6s ease-out}
+@keyframes fx{from{opacity:.6}to{opacity:0}}
+@media (prefers-reduced-motion:reduce){.cell::after{animation:none!important}.dayband span,.board{transition:none}}
+
+.u{width:88%;height:88%;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid var(--p1);background:var(--surface);position:relative}
+.u.s1{border-color:var(--p2)}
+.u.unit{border-radius:24%;border-style:dashed}
+.u.stunned{opacity:.6}
+.u .e{font-size:clamp(15px,4.8vw,24px);line-height:1}
+.u .hpn{font-size:10px;font-weight:600;line-height:1.1}
+.hp{position:absolute;left:10%;right:10%;bottom:-3px;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.hp i{display:block;height:100%;background:var(--heal)}
+.shd{position:absolute;top:-6px;right:-8px;font-size:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 3px;line-height:1.4}
+.stn{position:absolute;top:-8px;left:-6px;font-size:13px}
+
+.towers{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:0 6px;margin:5px 0}
+.towers.off{display:block;text-align:center;color:var(--muted);font-size:12px;padding:2px 6px}
+.tw{border:0;border-radius:8px;padding:4px;background:var(--surface2);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;border-bottom:3px solid var(--p1)}
+.tw.s1{border-bottom:0;border-top:3px solid var(--p2)}
+.tw.t{box-shadow:inset 0 0 0 3px var(--hl)}
+.tw.dead{opacity:.45}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.status{margin:0 0 10px;font-size:14px}
+.status b{font-family:'Mitr',system-ui,sans-serif;font-weight:500}
+.muted{color:var(--muted);font-size:13px;margin:6px 0}
+.warn{color:var(--p2);font-size:14px}
+.uh{display:flex;gap:10px;align-items:center}
+.big{font-size:30px}
+.uh h3{font-size:18px}
+.uinfo.s0 h3{color:var(--p1)}.uinfo.s1 h3{color:var(--p2)}
+.sub{color:var(--muted);font-size:13px}
+.stats{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 0;font-size:13px}
+.pas{font-size:13px;margin:4px 0;color:var(--muted)}
+.ultm{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.bar{flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden;max-width:200px}
+.bar i{display:block;height:100%;background:var(--orb)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.tags span{background:var(--surface2);border-radius:6px;padding:1px 6px}
+.acts{display:grid;gap:6px;margin-top:10px}
+.act{display:grid;grid-template-columns:auto 1fr;gap:0 10px;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;align-items:center}
+.act.on{border-color:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+.act:disabled{opacity:.45}
+.act .an{font-weight:600}
+.act .ad{grid-column:2;font-size:12px;color:var(--muted)}
+.cost{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--orb);color:#2A1E00;font-weight:600;font-size:13px;grid-row:span 2}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;font-weight:500}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.45}
+.roster{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.roster button{border:2px solid var(--line);background:var(--surface2);border-radius:10px;padding:6px 10px}
+.roster button.on{border-color:var(--hl)}
+
+.hand{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;margin-top:12px}
+.card{flex:0 0 136px;display:flex;flex-direction:column;gap:2px;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px}
+.card.on{border-color:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+.card:disabled{opacity:.45}
+.ch{display:flex;justify-content:space-between;align-items:center}
+.ci{font-size:22px}
+.card .cost{grid-row:auto}
+.cd{font-size:12px;color:var(--muted);line-height:1.4}
+.handlbl{font-size:13px;color:var(--muted);margin:12px 0 0}
+
+.log{list-style:none;margin:12px 0 0;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:13px;max-height:190px;overflow:auto}
+.log li{padding:2px 0}
+.log li.c0{color:var(--p1)}.log li.c1{color:var(--p2)}
+.log li.sys{color:var(--muted)}
+.log li.kill{font-weight:600}
+
+/* menu and draft */
+.menu{max-width:560px;margin:5vh auto 0;text-align:left}
+.menu .dayband span{padding:14px 2px;font-size:24px;opacity:1}
+.menu .dayband small{font-size:12px;margin-top:4px}
+.title{font-size:clamp(34px,9vw,52px);line-height:1.1;margin-top:22px;letter-spacing:-.5px}
+.lead{color:var(--muted);font-size:16px;max-width:46ch}
+.mbtns{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 12px}
+.menu .ghost{margin-left:0}
+.picks{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.pk{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:18px;min-width:150px}
+.pk b{font-size:14px;font-family:'Mitr',system-ui,sans-serif;font-weight:500;margin-right:6px}
+.pk.s0 b{color:var(--p1)}.pk.s1 b{color:var(--p2)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.hcard{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.hcard.tk{opacity:.5}
+.hcard.tk.s0{border:2px solid var(--p1)}.hcard.tk.s1{border:2px solid var(--p2)}
+.hcard .hn{display:flex;gap:8px;align-items:center}
+.hcard .hn span{font-size:26px}
+.hcard h3{font-size:17px}
+.hcard p{margin:0;font-size:13px}
+.hcard .k{font-weight:600}
+
+.ov{position:fixed;inset:0;background:rgba(10,14,24,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.ov.show{display:flex}
+.modal{background:var(--surface);color:var(--ink);border-radius:14px;max-width:540px;width:100%;max-height:85vh;overflow:auto;padding:20px}
+.modal h2{font-size:22px;margin-bottom:8px}
+.modal ul{padding-left:18px;margin:8px 0}
+.modal li{margin:4px 0;font-size:14px}
+
+.cell.smk{background:color-mix(in srgb,var(--muted) 38%,var(--tile))}
+.cell.smk::before{content:'☁️';position:absolute;top:1px;left:3px;font-size:11px;opacity:.85;pointer-events:none}
+.sti{position:absolute;top:-8px;left:-8px;font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 2px;line-height:1.35}
+.u.hid{border-style:dotted;opacity:.7}
+.hcard.bn{opacity:.4;border:2px dashed var(--muted)}
+.org{align-self:flex-start;font-size:11px;border-radius:6px;padding:0 6px;background:var(--surface2);color:var(--muted)}
+.org.own{background:var(--orb);color:#2A1E00}
+.org.idea{background:color-mix(in srgb,var(--p1) 22%,transparent);color:var(--ink)}
+.bans{font-size:13px;color:var(--muted);margin-left:8px}
+.bbr{position:absolute;left:10%;right:10%;bottom:-8px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.bbr i{display:block;height:100%;background:var(--orb)}
+.shop{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.shop h3{font-size:17px;display:flex;align-items:center;gap:10px}
+.gold{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;color:var(--orb);font-weight:600}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:8px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:0 6px;align-items:center;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.item.on{border-color:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+.item:disabled{opacity:.45}
+.item .ii{font-size:18px}.item b{font-size:13px}.item .ip{font-size:12px;color:var(--orb);font-weight:600}
+.item .cd{grid-column:1/-1}
+.equip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0;font-size:13px}
+.eq{background:var(--surface2);border-radius:8px;padding:2px 8px;display:inline-flex;gap:6px;align-items:center}
+.eq small{color:var(--muted)}
+.mini{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:0 6px;font-size:12px}
+.tierlbl{grid-column:1/-1;margin:6px 0 0;font-size:12px;color:var(--muted)}
+.item.t3{border-color:color-mix(in srgb,var(--orb) 60%,var(--line))}
+.online{margin:18px 0 14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.online h3{font-size:18px;margin-bottom:4px}
+.codein{width:7.5em;font:inherit;font-size:16px;text-transform:uppercase;letter-spacing:2px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--ink)}
+.bigcode{font-family:'Mitr',system-ui,sans-serif;font-size:56px;letter-spacing:10px;margin:10px 0}
+.nick{width:12em;letter-spacing:0;text-transform:none}
+.linkbox{font-size:13px;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:8px 10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ov" class="ov" role="dialog" aria-modal="true"></div>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+'use strict';
+const W=6,H=6;
+const TIMES=[
+  {n:'เช้า',ic:'🌅',sky:'#F3D7A1'},{n:'เที่ยง',ic:'☀️',sky:'#BFE0F0'},{n:'เย็น',ic:'🌇',sky:'#F0B27A'},
+  {n:'พลบค่ำ',ic:'🌆',sky:'#9C6A88'},{n:'กลางคืน',ic:'🌙',sky:'#3A4275'},{n:'ดึก',ic:'🌌',sky:'#1C2142'}];
+const DIRS=[{f:[0,-1],r:[1,0]},{f:[1,0],r:[0,1]},{f:[0,1],r:[-1,0]},{f:[-1,0],r:[0,-1]}];
+const rot=(o,d)=>[o[0]*d.r[0]-o[1]*d.f[0],o[0]*d.r[1]-o[1]*d.f[1]];
+const PLUS=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+const RING8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+const SQ3=[[0,0],...RING8];
+const ADJ4=[[1,0],[-1,0],[0,1],[0,-1]];
+const R2=[];for(let x=-2;x<=2;x++)for(let y=-2;y<=2;y++){const d=Math.abs(x)+Math.abs(y);if(d>=1&&d<=2)R2.push([x,y]);}
+const K=p=>p[0]+','+p[1];
+const cheb=(a,b)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
+const A=u=>getAtk(u),D=u=>rawDef(u);
+
+/* origin: own = ไฟล์ฮีโร่ของผู้เล่น, idea = จากไอเดียของผู้เล่น, new = ตัวใหม่
+   ตัวเลขทุกตัวเป็นจำนวนเต็ม หารแล้วปัดลง ตาม combat.md */
+const HEROES=[
+{id:'valen',origin:'own',name:'Valen',ic:'⚔️',role:'Damage / Penetration',dmg:'phys',hp:20,atk:4,def:0,spd:115,bb:12,pen:2,move8:true,
+ passive:'Let the light pierce the eternal darkness: ทุกครั้งที่ตีโดน ได้ดาเมจโบนัส (Penetration − (Armor + Magic Armor) ÷ 2) ÷ 2',
+ na:{name:'The Sword\u2019s Radiant Waltz',adj8:true,P:A,brk:1,desc:'ฟัน 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK'},
+ skills:[{name:'Light of Vow',cost:3,kind:'dirShape',shape:[[0,-1],[0,-2],[0,-3]],P:(u,i)=>i===0?2:0,M:(u,i)=>Math.max(0,A(u)-i),brk:2,ultGain:2,
+   desc:'เส้นตรง 3 ช่อง ช่องแรกกายภาพ 2 + เวท ATK ช่องถัดไปเวทลดทีละ 1'}],
+ ult:{name:'Sword of Justice',cost:4,need:4,max:4,kind:'multi',count:3,cast:2,P:1,M:u=>Math.max(A(u)-2,0),pen:5,brk:1,breakPerHit:true,
+   desc:'ดาบ 3 เล่ม เลือก 3 ช่องในระยะ 2 (ซ้ำได้) ดาบละกายภาพ 1 + เวท ATK−2 Penetration +5'}},
+{id:'bianca',origin:'own',name:'Bianca',ic:'🛡️',role:'Damage / Counter-based',dmg:'phys',hp:18,atk:2,def:2,spd:100,bb:14,armor:1,marmor:1,
+ passive:'Bastione Bianco: DEF เป็น 0 เสมอ แปลงเป็น Armor +1 ต่อ DEF 1 และ Magic Armor +1 ต่อ DEF 2 (DEF ในสูตรสกิลคือค่าก่อนแปลง)',
+ na:{name:'Pugno d\u2019Acciaio',adj8:true,P:u=>A(u)+D(u),brk:1,desc:'ต่อย 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK + DEF'},
+ skills:[{name:'Martello del Giuramento',cost:3,kind:'adj8',P:u=>D(u)+A(u),brk:3,ultGain:2,desc:'ทุบ 1 ช่องรอบตัว 8 ทิศ กายภาพ DEF + ATK Break 3'},
+   {name:'Scudo d\u2019Avorio',cost:3,kind:'self',shape:SQ3,oath:'oath',ultGain:2,
+    desc:'Giuramento d\u2019Avorio: ตัวเองและพวกในระยะ 1 ได้ Armor +2 Magic Armor +1 นาน 4 Turns ถ้าศัตรูตีคนที่คุ้มกัน สวนกลับ 1 + DEF (สูงสุด 2 ครั้ง)'}],
+ ult:{name:'Fortezza Inviolata',cost:4,need:5,max:5,kind:'dirShape',shape:[[0,-1],[0,-2]],P:u=>5+D(u),brk:5,oath:'vendetta',
+   desc:'ฟาดเส้นตรง 2 ช่อง กายภาพ 5 + DEF Break 5 แล้วได้ Vendetta della Cittadella (สวนกลับ 2 + 3 ต่อ DEF 2)'}},
+{id:'serie',origin:'own',name:'Serie',ic:'🌀',role:'Damage / DOT, AoE',dmg:'mixed',hp:18,atk:3,def:0,spd:125,bb:10,dotBoost:2,move8:true,
+ passive:'The Abyss Hungers: ไม่ได้แต้มอัลติ แต่ได้ Singularity +1 ทุกครั้งที่ Voidmark ทิกโดนศัตรู (นับแยกต่อตัว)',
+ na:{name:'Hollow Edge',adj8:true,P:u=>Math.max(A(u)-1,0),M:1,brk:1,ultGain:0,desc:'ฟัน 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK − 1 + เวท 1'},
+ skills:[{name:'Voidrend Crescent',cost:3,kind:'dirShape',shape:[[-1,-1],[0,-1],[1,-1]],P:2,M:A,brk:2,ultGain:0,onHit:[{dot:'voidmark',turns:2}],
+   desc:'ฟันแถวหน้า 3 ช่อง กายภาพ 2 + เวท ATK ติด Voidmark 2 Turns'}],
+ ult:{name:'Event Horizon',cost:3,need:8,max:8,gauge:'Singularity',kind:'dirShape',shape:[[-1,-1],[0,-1],[1,-1]],P:1,M:1,brk:1,collapse:true,
+   desc:'ฟันแถวหน้า 3 ช่อง แล้วระเบิด Voidmark ทุกตัวบนกระดาน: (ดาเมจทิก × ทิกที่เหลือ) + ATK แล้วติด Voidmark ใหม่ 1 Turn'}},
+{id:'sniper',origin:'idea',name:'มือปืนสายลม',ic:'🔭',role:'Damage / Single-target',dmg:'phys',hp:16,atk:3,def:0,spd:110,bb:9,range:2,move8:true,
+ passive:'ตีปกตินัดแรกของแต่ละรอบใหญ่ดาเมจ +2',
+ na:{P:A,brk:1,desc:'ยิงศัตรู 1 ตัวในระยะ 2 กายภาพ ATK'},
+ skills:[{name:'กระสุนเจาะเกราะ',cost:3,kind:'line',len:3,pierce:false,P:u=>A(u)+3,pen:3,brk:2,desc:'ยิงเส้นตรง 3 ช่อง โดนตัวแรก กายภาพ ATK + 3 Penetration +3'}],
+ ult:{name:'เป้าตาย',cost:4,need:5,max:5,kind:'enemy',cast:3,P:u=>A(u)+4,brk:3,desc:'ยิงศัตรู 1 ตัวในระยะ 3 กายภาพ ATK + 4'}},
+{id:'flag',origin:'idea',name:'ผู้ถือธงเหล็ก',ic:'🚩',role:'Tank / Control',dmg:'phys',hp:22,atk:3,def:1,spd:85,bb:16,armor:1,
+ passive:'พวกที่ยืนติดกัน 4 ทิศได้ DEF +1',
+ na:{adj8:true,P:A,brk:2,desc:'ฟาด 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK Break 2'},
+ skills:[{name:'ปักธงท้าทาย',cost:3,kind:'self',shape:ADJ4,P:2,brk:2,onHit:[{cc:'root',v:300}],desc:'กระแทก 4 ช่องรอบตัว กายภาพ 2 ติด Root 300'},
+   {name:'บุกนำทัพ',cost:2,kind:'dash',len:2,ultGain:1,desc:'พุ่งตรงสูงสุด 2 ช่อง (เคลื่อนที่อย่างเดียว)'}],
+ ult:{name:'เรียกพลทหาร',cost:3,need:4,max:4,kind:'summon',summon:'soldier',count:2,desc:'เรียกพลทหาร 2 ตัวข้างตัว'}},
+{id:'blood',origin:'idea',name:'นักดาบโลหิต',ic:'🩸',role:'Damage / Burst',dmg:'phys',hp:22,atk:4,def:0,spd:100,bb:12,
+ passive:'ตีปกติเคลือบเลือด แรงขึ้น 2 แต่เสีย HP ตัวเอง 2',
+ na:{cost:2,hpCost:2,adj8:true,P:u=>A(u)+2,brk:1,desc:'ฟัน 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK + 2'},
+ skills:[{name:'ตัดสายเลือด',cost:3,kind:'enemy',cast:1,tru:(u,i,t)=>Math.floor(t.maxHp*22/100),brk:2,desc:'ตัดเลือดศัตรูที่ยืนติดกัน 22% ของ HP สูงสุด ไม่สนเกราะและโล่'}],
+ ult:{name:'ราตรีเลือด',cost:4,need:4,max:4,kind:'self',shape:RING8,P:u=>A(u)+2,brk:2,lifesteal:true,desc:'ฟาด 8 ช่องรอบตัว กายภาพ ATK + 2 ฟื้น HP ครึ่งหนึ่งของดาเมจ'}},
+{id:'frost',origin:'idea',name:'นักล่าน้ำแข็ง',ic:'❄️',role:'Damage / Control',dmg:'phys',hp:22,atk:4,def:1,spd:105,bb:13,
+ passive:'ตีศัตรูที่ติด Slow ได้ดาเมจ +2',
+ na:{adj8:true,P:A,brk:1,desc:'แทง 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK'},
+ skills:[{name:'หอกเยือกแข็ง',cost:3,kind:'line',len:2,pierce:true,P:A,brk:2,onHit:[{cc:'slow',v:300}],desc:'แทงทะลุ 2 ช่อง กายภาพ ATK ติด Slow 300 (เดินใช้มานา +1)'}],
+ ult:{name:'พายุหิมะ',cost:4,need:5,max:5,kind:'self',shape:R2,P:2,brk:3,onHit:[{cc:'stun',v:300}],desc:'ศัตรูในระยะ 2 รอบตัว กายภาพ 2 ติด Stun 300'}},
+{id:'flame',origin:'idea',name:'นักเวทเพลิง',ic:'🔥',role:'Damage / DOT',dmg:'magic',hp:16,atk:3,def:0,spd:100,bb:9,range:2,
+ passive:'ตีศัตรูที่ติด Burn ได้ดาเมจ +1 ช่วงเที่ยง ATK +1',
+ na:{M:A,brk:1,desc:'ยิงไฟ 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'ลูกไฟ',cost:3,kind:'burst',cast:2,shape:PLUS,M:u=>A(u)-1,brk:2,onHit:[{dot:'burn',magic:1,turns:2}],desc:'ระเบิดกากบาทในระยะ 2 เวท ATK − 1 ติด Burn เวท 1 นาน 2 Turns'}],
+ ult:{name:'ทะเลเพลิง',cost:4,need:5,max:5,kind:'burst',cast:3,shape:SQ3,M:A,brk:2,onHit:[{dot:'burn',magic:1,turns:4}],desc:'พื้นที่ 3x3 ในระยะ 3 เวท ATK ติด Burn เวท 1 นาน 4 Turns'}},
+{id:'mist',origin:'idea',name:'ภูตหมอกควัน',ic:'🌫️',role:'Support / Control',dmg:'magic',hp:18,atk:4,def:0,spd:105,bb:11,range:2,move8:true,
+ passive:'ตายแล้วฟื้นได้ 1 ครั้ง (HP 8) ถ้าทีมฆ่าฮีโร่ศัตรูได้ภายในรอบใหญ่ที่ตายหรือรอบถัดไป และยังมีพวกเหลือ',
+ na:{M:A,brk:1,desc:'ยิงหมอก 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'ม่านควัน',cost:3,kind:'burst',cast:3,shape:PLUS,M:2,brk:1,zone:{turns:4},desc:'ควันกากบาทในระยะ 3 นาน 4 Turns ศัตรูในควันโดนเวท 2 พวกในควันโดนตีปกติและสกิลเล็งเป้าไม่ได้'}],
+ ult:{name:'หมอกกลืนกิน',cost:4,need:4,max:4,kind:'burst',cast:3,shape:SQ3,M:u=>A(u)+1,brk:2,onHit:[{cc:'silence',v:300}],desc:'พื้นที่ 3x3 ในระยะ 3 เวท ATK + 1 ติด Silence 300'}},
+{id:'seal',origin:'idea',name:'ผู้ผนึกเวท',ic:'🔒',role:'Support / Control',dmg:'magic',hp:20,atk:3,def:1,spd:95,bb:13,range:2,marmor:1,
+ passive:'ตีศัตรูที่ติด Silence ได้ดาเมจ +2',
+ na:{M:A,brk:1,desc:'ยิงเวท 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'ตราผนึก',cost:3,kind:'enemy',cast:3,M:A,brk:2,onHit:[{cc:'silence',v:300}],desc:'ศัตรู 1 ตัวในระยะ 3 เวท ATK ติด Silence 300'}],
+ ult:{name:'อาณาเขตเงียบ',cost:4,need:5,max:5,kind:'self',shape:R2,brk:1,onHit:[{cc:'silence',v:500}],desc:'ศัตรูในระยะ 2 รอบตัว ติด Silence 500'}},
+{id:'rubber',origin:'idea',name:'นักมวยยาง',ic:'🥊',role:'Damage / Disrupt',dmg:'phys',hp:20,atk:3,def:1,spd:110,bb:14,range:2,
+ passive:'แขนยางยืด ตีปกติได้ไกล 2 ช่อง',
+ na:{P:A,brk:1,desc:'ต่อยศัตรู 1 ตัวในระยะ 2 กายภาพ ATK'},
+ skills:[{name:'หมัดยืด',cost:3,kind:'line',len:3,pierce:false,P:u=>A(u)+2,brk:3,knock:true,desc:'ต่อยเส้นตรง 3 ช่อง โดนตัวแรก กายภาพ ATK + 2 และผลักถอย 1 ช่อง'}],
+ ult:{name:'งานรื่นเริงยาง',cost:3,need:5,max:5,kind:'shuffle',selfHeal:5,desc:'สุ่มย้ายยูนิตทุกตัวบนกระดานไม่เกิน 2 ช่อง (หอคอยไม่ขยับ) และฟื้น HP ตัวเอง 5'}},
+{id:'shadowk',origin:'idea',name:'ราชันเงา',ic:'👑',role:'Damage / Summoner',dmg:'phys',hp:18,atk:2,def:1,spd:100,bb:12,
+ passive:'ทุก 2 รอบใหญ่ ATK +1 (สูงสุด +3) กลางคืนและดึก ATK +1',
+ na:{adj8:true,P:A,brk:1,desc:'ฟัน 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK'},
+ skills:[{name:'ปลุกเงา',cost:3,kind:'summon',summon:'shade',count:1,desc:'เรียกทหารเงา (HP 6 ATK 3) ช่องติดตัว'}],
+ ult:{name:'กองทัพเงา',cost:4,need:5,max:5,kind:'summon',summon:'shade',count:3,selfBuff:{stat:'atk',amt:2,turns:4},desc:'เรียกทหารเงาสูงสุด 3 ตัว และ ATK +2 นาน 4 Turns'}},
+{id:'ghost',origin:'idea',name:'นักฆ่าไร้เงา',ic:'🗡️',role:'Damage / Burst',dmg:'phys',hp:18,atk:4,def:0,spd:130,bb:10,move8:true,
+ passive:'ต้นทุกช่วงต่อสู้ล่องหนจนกว่าจะโจมตี โจมตีตอนล่องหนดาเมจ +2 (กลางคืนและดึก +3)',
+ na:{adj8:true,P:A,brk:1,desc:'แทง 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK'},
+ skills:[{name:'แทงจากเงา',cost:3,kind:'enemy',cast:3,blink:true,P:u=>A(u)+1,brk:2,desc:'วาร์ปไปข้างศัตรูในระยะ 3 แล้วแทง กายภาพ ATK + 1'}],
+ ult:{name:'เงามรณะ',cost:4,need:4,max:4,kind:'enemy',cast:1,P:u=>A(u)+4,brk:3,rehide:true,desc:'แทงศัตรูที่ยืนติดกัน กายภาพ ATK + 4 ถ้าฆ่าได้จะล่องหนอีกครั้ง'}},
+{id:'priest',origin:'new',name:'นักบวชหยก',ic:'🌿',role:'Support / Healer',dmg:'magic',hp:18,atk:2,def:1,spd:95,bb:12,range:2,
+ passive:'ต้นรอบใหญ่ ฟื้น HP 2 ให้พวกที่ยืนติดกัน',
+ na:{M:A,brk:1,desc:'ยิงแสง 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'พรหยก',cost:3,kind:'ally',cast:3,heal:6,desc:'ฟื้น HP 6 ให้พวก 1 ตัวในระยะ 3'}],
+ ult:{name:'สายธารหยก',cost:4,need:5,max:5,kind:'team',heal:5,shield:{amt:4,turns:4},desc:'ทั้งทีมฟื้น HP 5 และได้โล่ 4 นาน 4 Turns'}},
+{id:'bard',origin:'new',name:'นักกวีศึก',ic:'🎺',role:'Support / Buffer',dmg:'magic',hp:17,atk:2,def:0,spd:110,bb:11,range:2,
+ passive:'พวกที่ยืนติดตัว (8 ทิศ) ATK +1',
+ na:{M:A,brk:1,desc:'ยิงคลื่นเสียง 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'บทเพลงฮึกเหิม',cost:3,kind:'ally',cast:3,buff:{stat:'atk',amt:2,turns:4},desc:'พวก 1 ตัวในระยะ 3 ATK +2 นาน 4 Turns'},
+   {name:'จังหวะเจาะเกราะ',cost:2,kind:'ally',cast:3,buff:{stat:'pen',amt:2,turns:4},ultGain:1,desc:'พวก 1 ตัวในระยะ 3 Penetration +2 นาน 4 Turns'}],
+ ult:{name:'ซิมโฟนีสงคราม',cost:4,need:5,max:5,kind:'team',buff:{stat:'atk',amt:2,turns:4},buff2:{stat:'brk',amt:1,turns:4},desc:'ทั้งทีม ATK +2 และ Break Boost +1 นาน 4 Turns'}},
+{id:'aegis',origin:'new',name:'ผู้พิทักษ์ผลึก',ic:'💎',role:'Support / Shield',dmg:'magic',hp:20,atk:2,def:1,spd:95,bb:14,range:2,marmor:1,
+ passive:'โล่ที่ตัวนี้ให้ ได้เพิ่ม 2 ถ้าเป้าหมายมี HP ไม่ถึงครึ่ง',
+ na:{M:A,brk:1,desc:'ยิงผลึก 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'ผลึกคุ้มภัย',cost:3,kind:'ally',cast:2,setShield:{amt:6,turns:4},desc:'ตั้งโล่แบบ Set 6 ให้พวก 1 ตัวในระยะ 2 นาน 4 Turns'}],
+ ult:{name:'ปราการผลึก',cost:4,need:5,max:5,kind:'team',shield:{amt:5,turns:4},buff:{stat:'armor',amt:1,turns:4},desc:'ทั้งทีมได้โล่แบบ Add 5 และ Armor +1 นาน 4 Turns'}},
+{id:'medic',origin:'new',name:'หมอธารา',ic:'💧',role:'Support / Healer',dmg:'magic',hp:18,atk:2,def:0,spd:105,bb:11,range:2,move8:true,
+ passive:'ฮีลจากตัวนี้ได้เพิ่ม ATK ÷ 2 เดินได้ 8 ทิศ',
+ na:{M:A,brk:1,desc:'ยิงน้ำ 1 ตัวในระยะ 2 เวท ATK'},
+ skills:[{name:'สายธารชำระ',cost:3,kind:'ally',cast:2,heal:5,cleanse:true,desc:'ฟื้น HP 5 และ Cleanse ล้าง CC กับ DOT ให้พวก 1 ตัวในระยะ 2'}],
+ ult:{name:'ฝนชุบชีวิต',cost:4,need:5,max:5,kind:'team',heal:6,desc:'ทั้งทีมฟื้น HP 6'}},
+];
+const ITEMS={
+  sword:{name:'ดาบเหล็ก',ic:'🗡️',price:300,mods:{atk:1},desc:'ATK +1'},
+  blade:{name:'ดาบมรกต',ic:'💚',price:350,from:'sword',tier:2,mods:{atk:2},desc:'ATK +2'},
+  mail:{name:'เกราะโซ่',ic:'🦺',price:300,mods:{armor:2},desc:'Armor +2'},
+  cloak:{name:'เสื้อคลุมเวท',ic:'🧥',price:300,mods:{marmor:2},desc:'Magic Armor +2'},
+  heart:{name:'หัวใจยักษ์',ic:'❤️',price:400,mods:{hp:4},desc:'Max HP +4 และฟื้น 4 ตอนใส่'},
+  boots:{name:'รองเท้าลม',ic:'👟',price:250,mods:{spd:25},desc:'Speed +25 หาย CC เร็วขึ้น'},
+  lance:{name:'หอกเจาะ',ic:'🔱',price:350,mods:{pen:1},desc:'Penetration +1'},
+  hammer:{name:'ค้อนทลาย',ic:'🔨',price:300,mods:{brk:1},desc:'Break Boost +1'},
+  fangs:{name:'เขี้ยวดูดเลือด',ic:'🦷',price:400,mods:{ls:1},desc:'Life Steal +1 ฟื้น 1 ทุก hit ที่ทำดาเมจ'},
+  charm:{name:'ผ้ายันต์',ic:'📿',price:300,mods:{ten:100},desc:'Tenacity +100 CC สั้นลง'},
+  amulet:{name:'เครื่องรางต้านพิษ',ic:'🧿',price:250,mods:{fort:1},desc:'Fortitude +1 ลดดาเมจ DOT'},
+  sunsword:{name:'ดาบสุริยัน',ic:'☀️',price:700,from:'blade',tier:3,mods:{atk:3,pen:1},desc:'ATK +3 Penetration +1'},
+  fortress:{name:'ป้อมเหล็กกล้า',ic:'🏰',price:800,from:'mail',tier:3,mods:{armor:4,hp:6},desc:'Armor +4 Max HP +6 (ฟื้น 6 ตอนใส่)'},
+  starveil:{name:'ม่านดารา',ic:'🌌',price:750,from:'cloak',tier:3,mods:{marmor:4,ten:150},desc:'Magic Armor +4 Tenacity +150'},
+  titan:{name:'หัวใจไททัน',ic:'💗',price:900,from:'heart',tier:3,mods:{hp:10,fort:1},desc:'Max HP +10 Fortitude +1 (ฟื้นส่วนที่เพิ่มตอนใส่)'},
+  nightclaw:{name:'กรงเล็บราตรี',ic:'🌒',price:900,from:'fangs',tier:3,mods:{ls:2,atk:2},desc:'Life Steal +2 ATK +2'},
+  quake:{name:'ค้อนธรณี',ic:'🌋',price:800,from:'hammer',tier:3,mods:{brk:2,bdmg:3},desc:'Break Boost +2 Break DMG Bonus +3'},
+  gale:{name:'ปีกวายุ',ic:'🪽',price:700,from:'boots',tier:3,mods:{spd:50,ten:100},desc:'Speed +50 Tenacity +100'},
+  skypierce:{name:'หอกทะลวงฟ้า',ic:'⚡',price:800,from:'lance',tier:3,mods:{pen:3,atk:1},desc:'Penetration +3 ATK +1'},
+  abyss:{name:'คทาเหวลึก',ic:'🔮',price:850,from:'amulet',tier:3,mods:{dot:2,atk:1},desc:'DOT Boost +2 ATK +1 (Fortitude เดิมหายไป)'},
+};
+for(const k in ITEMS){const it=ITEMS[k];it.tier=it.tier||1;it.total=it.price+(it.from?ITEMS[it.from].total:0);}
+const START_GOLD=800,ROUND_GOLD=300,MANA=12;
+const HB={};HEROES.forEach(h=>HB[h.id]=h);
+const ORIGIN={own:'ฮีโร่ของคุณ',idea:'จากไอเดียของคุณ',new:'ตัวใหม่'};
+const UNITS={
+  guard:{id:'guard',name:'ทหารยาม',ic:'🪖',hp:10,atk:2,def:1,spd:60,bb:6,range:1,dmg:'phys'},
+  bow:{id:'bow',name:'พลธนู',ic:'🎯',hp:6,atk:2,def:0,spd:80,bb:4,range:2,dmg:'phys'},
+  soldier:{id:'soldier',name:'พลทหาร',ic:'💂',hp:8,atk:2,def:1,spd:70,bb:5,range:1,dmg:'phys'},
+  shade:{id:'shade',name:'ทหารเงา',ic:'👤',hp:6,atk:3,def:0,spd:100,bb:4,range:1,dmg:'phys'}};
+const CARDS={
+  orb:{name:'ผลึกมานา',ic:'🔮',cost:0,target:'none',free:true,desc:'+2 มานา ไม่เสียเทิร์น ใช้ตอนต่อสู้'},
+  guard:{name:'เรียกทหารยาม',ic:'🪖',cost:3,target:'zone',summon:'guard',desc:'ยูนิต HP 10 ATK 2 ระยะ 1 ลงติดกับพวกเรา'},
+  bow:{name:'เรียกพลธนู',ic:'🎯',cost:3,target:'zone',summon:'bow',desc:'ยูนิต HP 6 ATK 2 ระยะ 2 ลงติดกับพวกเรา'},
+  roar:{name:'เสียงคำราม',ic:'📯',cost:1,target:'allyHero',desc:'ฮีโร่ฝ่ายเรา ATK +2 นาน 4 Turns'},
+  potion:{name:'ยาฟื้นพลัง',ic:'🧪',cost:1,target:'allyAny',desc:'ฟื้น HP 6 ให้ฝ่ายเรา 1 ตัว'},
+  iron:{name:'ผิวเหล็ก',ic:'⛓️',cost:1,target:'allyAny',desc:'Armor และ Magic Armor +2 นาน 4 Turns'}};
+const DRAFT=[['ban',0],['ban',1],['ban',0],['ban',1],['pick',0],['pick',1],['pick',0],['pick',1],['pick',0],['pick',1],['pick',0],['pick',1]];
+const CCN={stun:'Stun',silence:'Silence',root:'Root',slow:'Slow'};
+const CCI={stun:'💫',silence:'🔇',root:'⛓️',slow:'🧊'};
+
+const app=document.getElementById('app'),ov=document.getElementById('ov');
+let S=null,aiBusy=false,HLc=null;
+
+/* ---------- state ---------- */
+const mkT=()=>[0,1,2].map(()=>({hp:25,max:25,alive:true}));
+function newState(mode){return{mode,phase:'draft',round:1,time:0,turn:0,passed:[false,false],orbs:[MANA,MANA],gturn:0,
+  units:[],decks:[[],[]],hands:[[],[]],picks:[[],[]],bans:[[],[]],draftStep:0,log:[],towers:[mkT(),mkT()],zones:[],
+  prepSide:0,prepMove:[false,false],moveLog:[],turnMoves:0,gold:[START_GOLD,START_GOLD],shopSel:null,sel:null,act:null,pv:null,winner:null,winReason:'',timer:90,uidc:1,flash:null,shSeq:0};}
+const inB=(x,y)=>x>=0&&x<W&&y>=0&&y<H;
+const onBoard=u=>u.alive&&u.placed;
+const unitAt=(x,y)=>S.units.find(u=>onBoard(u)&&u.x===x&&u.y===y);
+const zoneRows=s=>s===0?[4,5]:[0,1];
+const md=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+const sideName=s=>s===0?'ผู้เล่น 1':(S.mode==='ai'?'AI':'ผู้เล่น 2');
+const isHumanSide=s=>S.mode==='hot'||(S.mode==='online'?(!!NET&&NET.side===s):s===0);
+const towersOn=()=>S.round>=7;
+const towerBlocked=(s,x)=>towersOn()&&!S.towers[s][Math.floor(x/2)].alive;
+const byUid=id=>S.units.find(u=>u.uid===id);
+function log(t,c){S.log.unshift({t,c:c===undefined?'sys':c});if(S.log.length>70)S.log.pop();}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildDeck(){const d=[];for(const k of Object.keys(CARDS))for(let i=0;i<4;i++)d.push(k);return shuffle(d);}
+function draw(s,n){while(n-->0&&S.decks[s].length)S.hands[s].push(S.decks[s].pop());}
+function baseUnit(d,side,kind){return{uid:S.uidc++,side,kind,def:d,name:d.name,ic:d.ic,x:-1,y:-1,placed:false,hp:d.hp,maxHp:d.hp,atk:d.atk,defn:d.def,spd:d.spd,
+  range:d.range||1,dmg:d.dmg,ult:0,ultNeed:kind==='hero'?d.ult.need:0,ultMax:kind==='hero'?d.ult.max:0,bb:d.bb,maxBb:d.bb,broken:false,
+  shields:[],buffs:[],cc:{},dots:[],oath:null,items:[],freeShotUsed:false,alive:true,revived:false,reviveWindow:-1,reviveReady:false};}
+const mkHero=(d,side)=>baseUnit(d,side,'hero');
+function mkUnit(key,side,x,y){const u=baseUnit(UNITS[key],side,'unit');u.x=x;u.y=y;u.placed=true;return u;}
+
+/* ---------- stats ---------- */
+const buffSum=(u,st)=>u.buffs.filter(b=>b.stat===st).reduce((a,b)=>a+b.amt,0);
+const itemSum=(u,k)=>u.items.reduce((a,id)=>a+(ITEMS[id].mods[k]||0),0);
+const statSum=(u,k)=>buffSum(u,k)+itemSum(u,k);
+const penOf=u=>(u.def.pen||0)+statSum(u,'pen');
+const getSpd=u=>Math.max(1,u.spd+itemSum(u,'spd'));
+const fortOf=u=>(u.def.fortitude||0)+itemSum(u,'fort');
+const itemValue=u=>u.items.reduce((a,id)=>a+ITEMS[id].total,0);
+function getAtk(u){let a=u.atk+statSum(u,'atk');const id=u.def.id,t=S.time;
+  if(onBoard(u)&&S.units.some(b=>onBoard(b)&&b.def.id==='bard'&&b.side===u.side&&b!==u&&cheb(b,u)===1))a+=1;
+  if(id==='shadowk'){a+=Math.min(3,Math.floor((S.round-1)/2));if(t>=4)a+=1;}
+  if(id==='flame'&&t===1)a+=1;return a;}
+const erosion=u=>u.dots.reduce((a,d)=>a+(d.erosion||0),0);
+/* DEF ก่อนแปลง: ค่าพื้นฐาน + บัฟ + ธง − Erosion */
+function rawDef(u){let d=u.defn+buffSum(u,'def');
+  if(S.units.some(f=>onBoard(f)&&f.def.id==='flag'&&f.side===u.side&&f!==u&&md(f,u)===1))d+=1;
+  return Math.max(0,d-erosion(u));}
+const getDef=u=>u.def.id==='bianca'?0:rawDef(u);
+function guardian(t){return S.units.find(b=>b.alive&&b.oath&&b.oath.guarded.has(t.uid));}
+function getArmor(u){let a=(u.def.armor||0)+statSum(u,'armor');if(u.def.id==='bianca')a+=rawDef(u);if(guardian(u))a+=2;return a;}
+function getMArmor(u){let a=(u.def.marmor||0)+statSum(u,'marmor');if(u.def.id==='bianca')a+=Math.floor(rawDef(u)/2);if(guardian(u))a+=1;return a;}
+const isStunned=u=>!!u.cc.stun;
+const isCC=u=>Object.keys(u.cc).length>0;
+const isHidden=u=>buffSum(u,'hidden')>0;
+const inSmoke=u=>S.zones.some(z=>z.side===u.side&&z.tiles.has(K([u.x,u.y])));
+const untargetable=u=>isHidden(u)||inSmoke(u);
+const reveal=u=>{u.buffs=u.buffs.filter(b=>b.stat!=='hidden');};
+const shieldTotal=u=>u.shields.reduce((a,s)=>a+s.amt,0);
+function addShield(u,amt,turns){u.shields.push({type:'add',amt,turns,seq:S.shSeq++});}
+function setShield(u,amt,turns){u.shields=u.shields.filter(s=>s.type!=='set');u.shields.push({type:'set',amt,turns,seq:S.shSeq++});}
+/* โล่แบบ add โดนก่อน เก่าสุดก่อน โล่แบบ set โดนท้ายสุด */
+function consumeShield(u,n){const order=[...u.shields].sort((a,b)=>(a.type==='set')-(b.type==='set')||a.seq-b.seq);
+  for(const s of order){if(n<=0)break;const x=Math.min(s.amt,n);s.amt-=x;n-=x;}u.shields=u.shields.filter(s=>s.amt>0);}
+function naOf(u){if(u.kind!=='hero')return{cost:2,ultGain:0,hpCost:0,P:u.dmg==='magic'?0:A,M:u.dmg==='magic'?A:0,brk:1,adj8:false};
+  return Object.assign({cost:2,ultGain:1,hpCost:0,brk:1},u.def.na);}
+const getRange=u=>naOf(u).adj8?1:u.range;
+function costNA(u){return Math.max(2,naOf(u).cost);}
+const canNA=u=>S.orbs[u.side]>=costNA(u)&&u.hp>naOf(u).hpCost;
+const isMelee=u=>u.kind==='hero'&&getRange(u)===1;
+const costMove=u=>((isMelee(u)&&!u.freeMoveUsed)?0:1)+(u.cc.slow?1:0);
+const ccTurns=(u,k)=>u.cc[k]?Math.max(1,Math.floor(u.cc[k].rem/getSpd(u))):0;
+
+/* ---------- damage (combat.md) ---------- */
+const ev=(f,u,i,t)=>typeof f==='function'?f(u,i,t):(f||0);
+function bonusOf(a,t,penB){let b=0;const pen=penOf(a)+(penB||0);
+  if(a.def.id==='valen')b+=Math.max(0,Math.floor((pen-Math.floor((getArmor(t)+getMArmor(t))/2))/2));
+  if(a.def.id==='frost'&&t.cc.slow)b+=2;
+  if(a.def.id==='flame'&&t.dots.some(d=>d.id==='burn'))b+=1;
+  if(a.def.id==='seal'&&t.cc.silence)b+=2;
+  if(a.def.id==='ghost'&&isHidden(a))b+=S.time>=4?3:2;
+  return b;}
+/* หนึ่ง hit: โล่รับ P+M ก่อน (รับชนิดที่น้อยกว่าก่อน เท่ากันรับเวทก่อน) แล้วที่ทะลุไปลด Armor/Magic Armor/DEF */
+function hitCalc(a,t,P,M,penB,apply){P=Math.max(0,P);M=Math.max(0,M);
+  const sh=shieldTotal(t);let p=P,m=M,through=true;
+  if(sh>0){const take=Math.min(sh,p+m);
+    if(take>=p+m){p=0;m=0;through=false;}
+    else{let rem=take;if(p<m){const x=Math.min(rem,p);p-=x;rem-=x;m-=rem;}else{const x=Math.min(rem,m);m-=x;rem-=x;p-=rem;}}
+    if(apply)consumeShield(t,take);}
+  if(!through)return{d:0,through:false};
+  const pen=penOf(a)+(penB||0);
+  let d=Math.max(0,p-Math.max(0,getArmor(t)-pen))+Math.max(0,m-Math.max(0,getMArmor(t)-pen))-getDef(t);
+  d=Math.max(0,d)+bonusOf(a,t,penB);return{d,through:true};}
+function lifeSteal(a,d){if(!a||!a.alive||d<=0)return;const h=Math.min(itemSum(a,'ls'),a.maxHp-a.hp);if(h>0)a.hp+=h;}
+function damageHP(t,d,src){if(!t.alive||d<=0)return;t.hp-=d;
+  if(t.hp<=0){t.hp=0;t.alive=false;t.ult=0;t.oath=null;log(`${t.ic} ${t.name} ของ${sideName(t.side)} ล้ม`,'kill');
+    if(src&&src.side!==t.side){const g=t.kind==='hero'?400+Math.floor(itemValue(t)/4):100;S.gold[src.side]+=g;log(`💰 ${sideName(src.side)} ได้ค่าหัว ${g} ทอง`,src.side);}
+    t.items=[];
+    if(t.def.id==='mist'&&!t.revived)t.reviveWindow=S.round+1;
+    if(t.kind==='hero'&&src)for(const m of S.units)if(m.def.id==='mist'&&!m.alive&&!m.revived&&!m.reviveReady&&m.side===src.side&&S.round<=m.reviveWindow){m.reviveReady=true;log(`${m.ic} ${m.name} จะฟื้นในรอบหน้า`,m.side);}}}
+function applyCC(t,k,v){if(!t.alive)return;const rem=Math.max(v-(t.def.tenacity||0)-itemSum(t,'ten'),0);if(rem<=0)return;
+  if(!t.cc[k]||t.cc[k].rem<rem)t.cc[k]={rem};}
+/* Break: ลดครั้งเดียวต่อ action ต่อเป้า ถ้าแตก โดน Break DMG และ Stun 500 */
+function breakHit(a,t,brk){if(!t.alive||t.broken||!brk||!t.maxBb)return false;
+  t.bb-=Math.max(brk+(a?statSum(a,'brk'):0),1);if(t.bb>0)return false;
+  t.bb=0;t.broken=true;const bd=Math.max(Math.floor(t.maxBb/5),1)+(a?statSum(a,'bdmg'):0);log(`💥 ${t.name} โดน Break! รับ Break DMG ${bd} และ Stun 500`,'kill');
+  damageHP(t,bd,a);applyCC(t,'stun',500);return true;}
+function applyDot(a,t,e){const boost=(a.def.dotBoost||0)+itemSum(a,'dot');
+  const d=e.dot==='voidmark'?{id:'voidmark',phys:0,magic:Math.floor(getAtk(a)/2),boost,turns:e.turns,src:a.uid,erosion:1+Math.floor(boost/3)}
+    :{id:e.dot,phys:e.phys||0,magic:e.magic||0,boost,turns:e.turns,src:a.uid,erosion:0};
+  t.dots=t.dots.filter(x=>x.id!==d.id);t.dots.push(d);}
+const dotRaw=d=>(d.phys?d.phys+d.boost:0)+(d.magic?d.magic+d.boost:0);
+const tickDmg=(d,t)=>Math.max(dotRaw(d)-getDef(t)-fortOf(t),1);
+function applyEffect(a,t,e){if(e.cc)applyCC(t,e.cc,e.v);if(e.dot)applyDot(a,t,e);}
+function knock(u,t){if(!t.alive)return;const dx=t.x-u.x,dy=t.y-u.y;let sx=0,sy=0;if(Math.abs(dx)>=Math.abs(dy))sx=Math.sign(dx);else sy=Math.sign(dy);
+  const p=[t.x+sx,t.y+sy];if(inB(p[0],p[1])&&!unitAt(p[0],p[1])){t.x=p[0];t.y=p[1];}}
+function shuffleBoard(){for(const a of shuffle(S.units.filter(onBoard))){const c=[[a.x,a.y]];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const d=Math.abs(x-a.x)+Math.abs(y-a.y);if(d>=1&&d<=2&&!unitAt(x,y))c.push([x,y]);}
+  const p=c[Math.floor(Math.random()*c.length)];a.x=p[0];a.y=p[1];}}
+
+/* ---------- Bianca: oath + counter (automatic interject) ---------- */
+function castOath(b,type){const g=new Set(S.units.filter(a=>onBoard(a)&&a.side===b.side&&cheb(a,b)<=1).map(a=>a.uid));
+  b.oath={type,turns:4,counters:2,x:b.x,y:b.y,guarded:g};
+  log(`${b.ic} ${b.name} ${type==='oath'?'Giuramento d\u2019Avorio':'Vendetta della Cittadella'} คุ้มกัน ${g.size} ตัว`,b.side);}
+function refreshOaths(){for(const b of S.units){if(!b.oath)continue;
+  if(!b.alive||b.oath.turns<=0||b.x!==b.oath.x||b.y!==b.oath.y){if(b.alive&&b.oath.turns>0)log(`${b.name} ขยับ คำสาบานจบลง`,b.side);b.oath=null;continue;}
+  for(const id of [...b.oath.guarded]){const a=byUid(id);if(!a||!a.alive||cheb(a,b)>1)b.oath.guarded.delete(id);}}}
+function triggerCounters(att,hitUnits){refreshOaths();if(!att.alive)return;
+  const bs=S.units.filter(b=>b.alive&&b.oath&&b.side!==att.side&&b.oath.counters>0&&!isCC(b)&&hitUnits.some(t=>b.oath.guarded.has(t.uid)));
+  for(const b of bs){let tgt=null;
+    if(att.alive&&cheb(att,b)<=1)tgt=att;
+    else{const near=S.units.filter(e=>onBoard(e)&&e.side!==b.side&&cheb(e,b)<=1).sort((x,y)=>(y.kind==='hero')-(x.kind==='hero')||md(x,b)-md(y,b));tgt=near[0]||null;}
+    if(!tgt)continue;
+    const ven=b.oath.type==='vendetta',P=ven?2+3*Math.floor(rawDef(b)/2):1+rawDef(b);
+    const h=hitCalc(b,tgt,P,0,0,true);b.oath.counters--;
+    log(`${b.ic} ${b.name} สวนกลับ ${tgt.ic} ${tgt.name} ${h.d} ดาเมจ (เหลือ ${b.oath.counters} ครั้ง)`,b.side);
+    flash([[tgt.x,tgt.y]],'bad');damageHP(tgt,h.d,b);lifeSteal(b,h.d);if(h.through)breakHit(b,tgt,ven?3:2);}}
+
+/* ---------- targeting ---------- */
+function moveTargets(u){if(u.cc.root)return[];return(u.def.move8?RING8:ADJ4).map(o=>[u.x+o[0],u.y+o[1]]).filter(p=>inB(p[0],p[1])&&!unitAt(p[0],p[1]));}
+function attackTargets(u){const na=naOf(u),r=getRange(u),out=[];
+  for(const e of S.units){if(!onBoard(e)||e.side===u.side||untargetable(e))continue;
+    const d=na.adj8?cheb(e,u):md(e,u);if(d<=r)out.push({type:'unit',t:e,x:e.x,y:e.y});}
+  if(towersOn()){const E=1-u.side,ty=E===1?-1:H;
+    S.towers[E].forEach((tw,k)=>{if(!tw.alive||Math.floor(u.x/2)!==k||Math.abs(u.y-ty)>r)return;
+      const lo=Math.min(u.y,ty),hi=Math.max(u.y,ty);for(let y=lo+1;y<hi;y++){const b=unitAt(u.x,y);if(b&&b.side===E)return;}
+      out.push({type:'tower',side:E,k});});}
+  return out;}
+const hasDmg=ab=>ab.P!==undefined||ab.M!==undefined||ab.tru!==undefined;
+function getOpts(u,ab){const P=[u.x,u.y],opts=[],ok=p=>inB(p[0],p[1]);
+  switch(ab.kind){
+  case 'dirShape':for(const d of DIRS){const t=ab.shape.map(o=>{const r=rot(o,d);return[u.x+r[0],u.y+r[1]];}).filter(ok);if(t.length)opts.push({click:t,area:t});}break;
+  case 'adj8':for(const o of RING8){const p=[u.x+o[0],u.y+o[1]];if(ok(p))opts.push({click:[p],area:[p]});}break;
+  case 'line':for(const d of DIRS){const t=[];for(let i=1;i<=ab.len;i++){const p=[u.x+d.f[0]*i,u.y+d.f[1]*i];if(!ok(p))break;t.push(p);
+      const o=unitAt(p[0],p[1]);if(!ab.pierce&&o&&!(o.side!==u.side&&untargetable(o)))break;}if(t.length)opts.push({click:t,area:t});}break;
+  case 'burst':case 'multi':for(let y=0;y<H;y++)for(let x=0;x<W;x++){const dd=Math.abs(x-u.x)+Math.abs(y-u.y);if(dd<1||dd>ab.cast)continue;
+      opts.push({click:[[x,y]],area:ab.kind==='multi'?[[x,y]]:ab.shape.map(o=>[x+o[0],y+o[1]]).filter(ok)});}break;
+  case 'self':{const t=ab.shape.map(o=>[u.x+o[0],u.y+o[1]]).filter(ok);opts.push({click:[P,...t],area:t});}break;
+  case 'ally':for(const a of S.units)if(onBoard(a)&&a.side===u.side&&md(a,u)<=ab.cast)opts.push({click:[[a.x,a.y]],area:[[a.x,a.y]]});break;
+  case 'team':{const t=S.units.filter(a=>onBoard(a)&&a.side===u.side).map(a=>[a.x,a.y]);opts.push({click:t,area:t});}break;
+  case 'shuffle':opts.push({click:[P],area:S.units.filter(onBoard).map(a=>[a.x,a.y])});break;
+  case 'summon':for(const o of RING8){const p=[u.x+o[0],u.y+o[1]];if(ok(p)&&!unitAt(p[0],p[1]))opts.push({click:[p],area:[p]});}break;
+  case 'enemy':for(const e of S.units){if(!onBoard(e)||e.side===u.side||untargetable(e)||md(e,u)>ab.cast)continue;
+      if(!ab.blink){opts.push({click:[[e.x,e.y]],area:[[e.x,e.y]]});continue;}
+      let dest=null;if(md(e,u)===1)dest=P;else{let best=null;for(const o of ADJ4){const p=[e.x+o[0],e.y+o[1]];if(ok(p)&&!unitAt(p[0],p[1])){const dd=Math.abs(p[0]-u.x)+Math.abs(p[1]-u.y);if(!best||dd<best.d)best={p,d:dd};}}if(best)dest=best.p;}
+      if(dest)opts.push({click:[[e.x,e.y]],area:[[e.x,e.y]],dest});}break;
+  case 'dash':for(const d of DIRS){const t=[];let hit=null,dest=P;for(let i=1;i<=ab.len;i++){const p=[u.x+d.f[0]*i,u.y+d.f[1]*i];if(!ok(p))break;const o=unitAt(p[0],p[1]);t.push(p);if(o){if(o.side!==u.side)hit=o;break;}dest=p;}
+      if(t.length&&((hit&&hasDmg(ab))||dest!==P))opts.push({click:t,area:t,hit:hasDmg(ab)?hit:null,dest});}break;}
+  return opts;}
+function hitTargets(u,ab,opt){const out=[],at=p=>unitAt(p[0],p[1]),en=t=>t&&t.side!==u.side;
+  if(ab.kind==='line'&&!ab.pierce){for(let i=0;i<opt.area.length;i++){const t=at(opt.area[i]);if(!t)continue;if(en(t)&&untargetable(t))continue;if(en(t))out.push({t,i});break;}}
+  else if(ab.kind==='dash'){if(opt.hit)out.push({t:opt.hit,i:0});}
+  else if(ab.kind==='multi')opt.picks.forEach((p,i)=>{const t=at(p);if(en(t))out.push({t,i});});
+  else if(['dirShape','adj8','line','burst','self','enemy'].includes(ab.kind))opt.area.forEach((p,i)=>{const t=at(p);if(en(t))out.push({t,i});});
+  return out;}
+/* ใช้ทั้งตอนเล่นจริง (apply) และตอน AI ประเมิน (ไม่เปลี่ยน state) */
+function resolve(u,ab,opt,apply){const r={dmg:0,kills:0,heroKills:0,heal:0,shield:0,buff:0,status:0,summon:0,zone:0,misc:0,breaks:0,hit:[]};
+  const dm=hasDmg(ab),left=new Map(),touched=new Map();
+  for(const {t,i} of hitTargets(u,ab,opt)){if(!t.alive)continue;const cur=left.has(t.uid)?left.get(t.uid):t.hp;if(cur<=0)continue;
+    const hadSh=shieldTotal(t)>0;let d=0,through=true;
+    if(ab.tru!==undefined)d=ev(ab.tru,u,i,t);else if(dm){const h=hitCalc(u,t,ev(ab.P,u,i,t),ev(ab.M,u,i,t),ab.pen||0,apply);d=h.d;through=h.through;}
+    r.dmg+=Math.min(d,cur);left.set(t.uid,cur-d);const dies=dm&&d>=cur;
+    if(dies){r.kills++;if(t.kind==='hero')r.heroKills++;}
+    const rec=touched.get(t.uid)||{t,through:false,hadSh};rec.through=rec.through||through;touched.set(t.uid,rec);
+    if(apply){damageHP(t,d,u);lifeSteal(u,d);}
+    if(ab.breakPerHit&&apply&&(through||!hadSh)&&breakHit(u,t,ab.brk))r.breaks++;
+    if(!dies&&ab.onHit){r.status+=ab.onHit.length;if(apply&&t.alive)ab.onHit.forEach(e=>applyEffect(u,t,e));}
+    if(!dies&&ab.knock&&apply)knock(u,t);}
+  if(!ab.breakPerHit&&ab.brk)for(const rec of touched.values()){if(!(rec.through||!rec.hadSh))continue;
+    if(apply){if(breakHit(u,rec.t,ab.brk))r.breaks++;}else if(!rec.t.broken&&rec.t.bb<=ab.brk)r.breaks++;}
+  r.hit=[...touched.values()].map(x=>x.t);
+  if(ab.lifesteal){const h=Math.min(Math.floor(r.dmg/2),u.maxHp-u.hp);r.heal+=h;if(apply)u.hp+=h;}
+  let allies=[];
+  if(ab.kind==='ally')allies=[unitAt(opt.area[0][0],opt.area[0][1])].filter(Boolean);
+  if(ab.kind==='team')allies=S.units.filter(a=>onBoard(a)&&a.side===u.side);
+  const healAmt=n=>n+(u.def.id==='medic'?Math.floor(getAtk(u)/2):0);
+  for(const a of allies){if(!a.alive)continue;
+    if(ab.heal){const h=Math.min(healAmt(ab.heal),a.maxHp-a.hp);r.heal+=h;if(apply)a.hp+=h;}
+    const shBonus=(u.def.id==='aegis'&&a.hp*2<a.maxHp)?2:0;
+    if(ab.shield){const n=ab.shield.amt+shBonus;r.shield+=n;if(apply)addShield(a,n,ab.shield.turns);}
+    if(ab.setShield){const n=ab.setShield.amt+shBonus;r.shield+=n;if(apply)setShield(a,n,ab.setShield.turns);}
+    for(const bf of [ab.buff,ab.buff2])if(bf){const near=S.units.some(e=>onBoard(e)&&e.side!==a.side&&md(e,a)<=3);r.buff+=near?1:0.3;if(apply)a.buffs.push({...bf});}
+    if(ab.cleanse){const n=Object.keys(a.cc).length+a.dots.length;r.status+=n;if(apply){if(a.cc.stun&&a.broken){a.broken=false;a.bb=a.maxBb;}a.cc={};a.dots=[];}}}
+  if(ab.selfHeal){const h=Math.min(ab.selfHeal,u.maxHp-u.hp);r.heal+=h;if(apply)u.hp+=h;}
+  if(ab.selfBuff){r.buff++;if(apply)u.buffs.push({...ab.selfBuff});}
+  if(ab.oath){const g=S.units.filter(a=>onBoard(a)&&a.side===u.side&&cheb(a,u)<=1).length,threat=S.units.some(e=>onBoard(e)&&e.side!==u.side&&md(e,u)<=3);
+    r.buff+=threat?g:0;if(apply)castOath(u,ab.oath);}
+  if(ab.zone){r.zone=opt.area.filter(p=>{const t=unitAt(p[0],p[1]);return t&&t.side===u.side;}).length;if(apply)S.zones.push({side:u.side,tiles:new Set(opt.area.map(K)),turns:ab.zone.turns});}
+  if(ab.kind==='summon'){const first=opt.area[0];const spots=[first,...RING8.map(o=>[u.x+o[0],u.y+o[1]]).filter(p=>inB(p[0],p[1])&&!unitAt(p[0],p[1])&&K(p)!==K(first))].slice(0,ab.count);
+    r.summon=spots.length;if(apply)spots.forEach(p=>S.units.push(mkUnit(ab.summon,u.side,p[0],p[1])));}
+  if(ab.kind==='shuffle'){r.misc=1;if(apply)shuffleBoard();}
+  if(ab.collapse){for(const t of S.units.filter(e=>onBoard(e)&&e.side!==u.side)){const vm=t.dots.find(d=>d.id==='voidmark');if(!vm)continue;
+      const raw=dotRaw(vm)*vm.turns+getAtk(u),d=Math.max(raw-getDef(t)-fortOf(t),1);r.dmg+=Math.min(d,t.hp);if(d>=t.hp){r.kills++;if(t.kind==='hero')r.heroKills++;}
+      if(apply){log(`🌀 Collapse ${t.name} ${d} ดาเมจ`,u.side);t.dots=t.dots.filter(x=>x!==vm);damageHP(t,d,u);if(t.alive)applyDot(u,t,{dot:'voidmark',turns:1});}}}
+  return r;}
+
+/* ---------- actions ---------- */
+function flash(tiles,kind){S.flash={tiles:new Set(tiles.map(K)),kind};const ref=S;setTimeout(()=>{if(S===ref)S.flash=null;},650);}
+function after(side,free){S.act=null;S.pv=null;S.moveLog=[];refreshOaths();if(checkWin()){render();return;}if(!free)endTurn(side);render();}
+const gainUlt=(u,n)=>{if(u.kind==='hero'&&n>0)u.ult=Math.min(u.ultMax,u.ult+n);};
+/* เดินไม่เสีย Turn แต่ใช้มานา ตัวประชิดเดินฟรีได้ 1 ครั้งต่อรอบใหญ่ ย้อนได้จนกว่าจะทำ Action */
+function execMove(u,p){const c=costMove(u),free=isMelee(u)&&!u.freeMoveUsed;
+  S.moveLog.push({uid:u.uid,from:[u.x,u.y],cost:c,free,oaths:S.units.filter(b=>b.def.id==='bianca').map(b=>[b.uid,b.oath?{...b.oath,guarded:new Set(b.oath.guarded)}:null])});
+  if(free)u.freeMoveUsed=true;S.orbs[u.side]-=c;u.x=p[0];u.y=p[1];S.turnMoves++;
+  log(`${u.ic} ${u.name} เดิน${free?' (ฟรี)':` (${c} มานา)`}`,u.side);refreshOaths();S.act=null;S.pv=null;S.sel=u.uid;render();}
+function undoMove(){const m=S.moveLog.pop();if(!m)return;const u=byUid(m.uid);u.x=m.from[0];u.y=m.from[1];S.orbs[u.side]+=m.cost;if(m.free)u.freeMoveUsed=false;
+  for(const [id,o] of m.oaths){const b=byUid(id);if(b)b.oath=o;}S.turnMoves--;log(`↩️ ย้อนการเดินของ ${u.name}`,u.side);S.act=null;S.pv=null;S.sel=u.uid;render();}
+function endTurnAction(s){log(`${sideName(s)} จบ Turn`,s);endTurn(s);render();}
+function execAttack(u,tg){const na=naOf(u),c=costNA(u),snipe=u.def.id==='sniper'&&!u.freeShotUsed;if(snipe)u.freeShotUsed=true;S.orbs[u.side]-=c;if(na.hpCost)u.hp-=na.hpCost;
+  if(tg.type==='unit'){const t=tg.t,hadSh=shieldTotal(t)>0,h=hitCalc(u,t,ev(na.P,u,0,t),ev(na.M,u,0,t),0,true);if(snipe&&h.through)h.d+=2;flash([[t.x,t.y]],'bad');
+    log(`${u.ic} ${u.name} ตีปกติใส่ ${t.ic} ${t.name} ${h.d} ดาเมจ${h.through?'':' (โล่รับไว้)'}${na.hpCost?` เสีย HP ${na.hpCost}`:''}`,u.side);
+    damageHP(t,h.d,u);lifeSteal(u,h.d);if(h.through||!hadSh)breakHit(u,t,na.brk);if(t.alive&&na.onHit)na.onHit.forEach(e=>applyEffect(u,t,e));
+    gainUlt(u,na.ultGain);if(u.def.id==='ghost')reveal(u);triggerCounters(u,[t]);}
+  else{const tw=S.towers[tg.side][tg.k],d=Math.max(1,ev(na.P,u,0,null)+ev(na.M,u,0,null));tw.hp=Math.max(0,tw.hp-d);log(`${u.ic} ${u.name} ตีหอคอย ${d} ดาเมจ`,u.side);
+    if(tw.hp<=0){tw.alive=false;log(`หอคอยของ${sideName(tg.side)} พัง!`,'kill');}gainUlt(u,na.ultGain);if(u.def.id==='ghost')reveal(u);}
+  after(u.side,false);}
+function execSkill(u,ab,opt,isUlt){S.orbs[u.side]-=ab.cost;
+  if(isUlt)u.ult-=u.ultNeed;else gainUlt(u,ab.ultGain===undefined?2:ab.ultGain);
+  if(opt.dest){u.x=opt.dest[0];u.y=opt.dest[1];}
+  const r=resolve(u,ab,opt,true);
+  if(u.def.id==='ghost'&&hasDmg(ab)){reveal(u);if(ab.rehide&&r.kills>0){u.buffs.push({stat:'hidden',amt:1,turns:99});log(`${u.ic} ${u.name} ล่องหนอีกครั้ง`,u.side);}}
+  flash(opt.area,hasDmg(ab)||r.status?'bad':'good');
+  let msg=`${u.ic} ${u.name} ใช้${isUlt?'อัลติ ':''}${ab.name}`;
+  if(hasDmg(ab)||ab.collapse)msg+=` ดาเมจรวม ${r.dmg}`;if(r.heal)msg+=` ฟื้นรวม ${r.heal}`;if(r.shield)msg+=` โล่รวม ${r.shield}`;if(r.status)msg+=` ติดสถานะ ${r.status} ครั้ง`;if(r.summon)msg+=` เรียก ${r.summon} ตัว`;
+  log(msg,u.side);
+  if(hasDmg(ab)&&r.hit.length)triggerCounters(u,r.hit);
+  after(u.side,false);}
+function placeSummon(s,i,p){const c=S.hands[s][i];S.hands[s].splice(i,1);S.units.push(mkUnit(CARDS[c].summon,s,p[0],p[1]));const d=UNITS[CARDS[c].summon];log(`${sideName(s)} ลง ${d.ic} ${d.name}`,s);}
+function execCard(s,i,p){const c=S.hands[s][i],d=CARDS[c];
+  if(S.phase==='prep'){S.orbs[s]-=d.cost;placeSummon(s,i,p);S.act=null;S.sel=null;render();return;}
+  S.orbs[s]-=d.cost;
+  if(d.summon){placeSummon(s,i,p);flash([p],'good');after(s,false);return;}
+  S.hands[s].splice(i,1);
+  if(c==='orb'){S.orbs[s]+=2;log(`${sideName(s)} ใช้ ${d.ic} ${d.name} +2 มานา`,s);after(s,true);return;}
+  const u=unitAt(p[0],p[1]);
+  if(c==='potion'){const h=Math.min(6,u.maxHp-u.hp);u.hp+=h;log(`${sideName(s)} ใช้ยาฟื้นพลังกับ ${u.name} ฟื้น ${h}`,s);}
+  if(c==='roar'){u.buffs.push({stat:'atk',amt:2,turns:4});log(`${sideName(s)} ใช้เสียงคำรามกับ ${u.name}`,s);}
+  if(c==='iron'){u.buffs.push({stat:'armor',amt:2,turns:4},{stat:'marmor',amt:2,turns:4});log(`${sideName(s)} ใช้ผิวเหล็กกับ ${u.name}`,s);}
+  flash([p],'good');after(s,false);}
+function cardTargets(s,c){const d=CARDS[c],out=[];
+  if(d.target==='zone'){const set=new Set();for(const a of S.units)if(onBoard(a)&&a.side===s)for(const o of RING8){const p=[a.x+o[0],a.y+o[1]];
+      if(inB(p[0],p[1])&&!unitAt(p[0],p[1])&&!(zoneRows(s).includes(p[1])&&towerBlocked(s,p[0])))set.add(K(p));}
+    for(const k of set)out.push(k.split(',').map(Number));}
+  else if(d.target==='allyHero'){for(const u of S.units)if(onBoard(u)&&u.side===s&&u.kind==='hero')out.push([u.x,u.y]);}
+  else if(d.target==='allyAny'){for(const u of S.units)if(onBoard(u)&&u.side===s)out.push([u.x,u.y]);}
+  return out;}
+
+/* ---------- turn flow ---------- */
+function checkWin(){if(S.phase==='over')return true;for(const s of [0,1]){const alive=S.units.some(u=>u.side===s&&u.kind==='hero'&&u.alive);const down=S.towers[s].filter(t=>!t.alive).length;
+  if(!alive||down>=2){S.winner=1-s;S.phase='over';S.winReason=!alive?'ล้มฮีโร่ของอีกฝ่ายครบ 4 ตัว':'ทำลายหอคอยของอีกฝ่ายได้ 2 หอ';log(`${sideName(1-s)} ชนะ!`,'kill');return true;}}return false;}
+/* จบทุก Turn: DOT ทิก -> CC ลด Recovery ตาม Speed -> นับอายุบัฟ โล่ คำสาบาน ควัน */
+function endOfTurn(){
+  for(const t of S.units.filter(onBoard)){for(const d of [...t.dots]){const dmg=tickDmg(d,t);
+      log(`${d.id==='voidmark'?'🌀 Voidmark':'🔥 Burn'} ทิก ${t.name} ${dmg}`,t.side);damageHP(t,dmg,byUid(d.src));
+      if(d.id==='voidmark'){const s=byUid(d.src);if(s&&s.alive)gainUlt(s,1);}
+      d.turns--;if(!t.alive)break;}
+    t.dots=t.dots.filter(d=>d.turns>0);}
+  if(checkWin())return false;
+  for(const u of S.units){if(!u.alive)continue;
+    for(const k of Object.keys(u.cc)){const sp=getSpd(u);u.cc[k].rem-=sp;if(u.cc[k].rem<sp){delete u.cc[k];if(k==='stun'&&u.broken){u.broken=false;u.bb=u.maxBb;log(`${u.name} หายจาก Break แถบ Break เต็มอีกครั้ง`,u.side);}}}
+    u.buffs.forEach(b=>b.turns--);u.buffs=u.buffs.filter(b=>b.turns>0);
+    u.shields.forEach(s=>{if(s.turns>0)s.turns--;});u.shields=u.shields.filter(s=>s.turns!==0&&s.amt>0);
+    if(u.oath)u.oath.turns--;}
+  S.zones.forEach(z=>z.turns--);S.zones=S.zones.filter(z=>z.turns>0);
+  refreshOaths();S.gturn++;return true;}
+function endTurn(side){S.sel=null;S.act=null;S.pv=null;S.moveLog=[];S.turnMoves=0;if(!endOfTurn())return;S.turn=S.passed[1-side]?side:1-side;autoCheck();}
+function doPass(s){if(S.phase!=='battle'||S.passed[s])return;S.passed[s]=true;log(`${sideName(s)} ผ่าน`,s);S.sel=null;S.act=null;S.pv=null;S.moveLog=[];S.turnMoves=0;
+  if(!endOfTurn())return;
+  if(S.passed[0]&&S.passed[1]){endRound();return;}S.turn=1-s;autoCheck();}
+function autoCheck(){if(S.phase!=='battle')return;const s=S.turn;if(S.passed[s])return;
+  const units=S.units.filter(u=>onBoard(u)&&u.side===s),ready=units.filter(u=>!isStunned(u));
+  const res=S.orbs[s]>0||S.hands[s].includes('orb')||ready.some(u=>isMelee(u)&&!u.freeMoveUsed&&moveTargets(u).length);
+  if(!units.length||!res){doPass(s);return;}
+  if(!ready.length){log(`${sideName(s)} ข้าม Turn เพราะติด Stun ทั้งหมด`,s);if(!endOfTurn())return;if(S.passed[1-s]){autoCheck();return;}S.turn=1-s;autoCheck();}}
+function startBattle(){S.phase='battle';S.moveLog=[];S.turnMoves=0;S.passed=[false,false];S.turn=S.round%2===1?0:1;S.act=null;S.sel=null;S.pv=null;
+  for(const u of S.units){u.freeShotUsed=false;u.freeMoveUsed=false;if(onBoard(u)&&u.def.id==='ghost'&&!isHidden(u))u.buffs.push({stat:'hidden',amt:1,turns:99});}
+  log(`รอบที่ ${S.round} (${TIMES[S.time].n}) เริ่มต่อสู้ ${sideName(S.turn)} เริ่มก่อน`,'sys');autoCheck();render();}
+function endRound(){
+  S.round++;S.time=(S.round-1)%6;
+  if(S.round===7)log('หอคอยปรากฏแล้ว ทำลาย 2 ใน 3 หอของศัตรูเพื่อชนะ','kill');
+  for(const p of S.units)if(onBoard(p)&&p.def.id==='priest')for(const a of S.units)if(onBoard(a)&&a.side===p.side&&md(a,p)===1)a.hp+=Math.min(2,a.maxHp-a.hp);
+  for(const m of S.units)if(m.def.id==='mist'&&!m.alive&&m.reviveReady&&!m.revived&&S.units.some(a=>a!==m&&a.side===m.side&&a.kind==='hero'&&a.alive)){
+    const e=[];for(const y of zoneRows(m.side))for(let x=0;x<W;x++)if(!unitAt(x,y))e.push([x,y]);
+    if(e.length){const p=e[Math.floor(Math.random()*e.length)];Object.assign(m,{alive:true,hp:8,x:p[0],y:p[1],placed:true,revived:true,buffs:[],shields:[],cc:{},dots:[],ult:0,bb:m.maxBb,broken:false});log(`${m.ic} ${m.name} ฟื้นคืนชีพ!`,m.side);}}
+  startPrep(0);}
+function startPrep(s){S.phase='prep';S.prepSide=s;S.act=null;S.sel=null;S.pv=null;S.shopSel=null;draw(s,S.round===1?4:2);
+  if(S.round>1){S.gold[s]+=ROUND_GOLD;log(`💰 ${sideName(s)} ได้รายได้ ${ROUND_GOLD} ทอง`,s);}S.prepMove[s]=false;S.timer=90;S.orbs[s]=MANA;
+  if(S.mode==='ai'&&!isHumanSide(s)){aiPrep(s);aiShop(s);finishPrep(s);return;}render();}
+const canBuyFor=(u,id)=>{const it=ITEMS[id];return u.alive&&(it.from?u.items.includes(it.from):u.items.length<2);};
+function buyItem(s,uid,id){const u=byUid(uid),it=ITEMS[id];if(!it||!u||u.side!==s||!canBuyFor(u,id)||S.gold[s]<it.price)return false;
+  S.gold[s]-=it.price;let dhp=it.mods.hp||0;
+  if(it.from){const i=u.items.indexOf(it.from);dhp-=ITEMS[it.from].mods.hp||0;u.items[i]=id;}else u.items.push(id);
+  if(dhp>0){u.maxHp+=dhp;u.hp+=dhp;}else if(dhp<0){u.maxHp+=dhp;u.hp=Math.min(u.hp,u.maxHp);}
+  log(`🛒 ${sideName(s)} ${it.from?'อัพเกรดเป็น':'ซื้อ'} ${it.ic} ${it.name} ให้ ${u.name}`,s);return true;}
+function sellItem(s,uid,i){const u=byUid(uid);if(!u||u.side!==s||!u.items[i])return;const it=ITEMS[u.items[i]];u.items.splice(i,1);
+  if(it.mods.hp){u.maxHp-=it.mods.hp;u.hp=Math.min(u.hp,u.maxHp);}
+  const g=Math.floor(it.total/2);S.gold[s]+=g;log(`${sideName(s)} ขาย ${it.ic} ${it.name} ได้ ${g} ทอง`,s);}
+function aiShop(s){
+  for(const u of S.units.filter(h=>h.side===s&&h.kind==='hero'&&h.alive))for(const id of [...u.items]){
+    let next=Object.keys(ITEMS).find(k=>ITEMS[k].from===id);if(next&&S.gold[s]>=ITEMS[next].price+150)buyItem(s,u.uid,next);}
+  for(let n=0;n<3;n++){const u=S.units.filter(h=>h.side===s&&h.kind==='hero'&&h.alive&&h.items.length<2).sort((a,b)=>a.items.length-b.items.length)[0];if(!u)break;
+    const support=/Support|Tank/.test(u.def.role);
+    const want=support?['heart','mail','cloak','boots','charm']:['blade','sword','lance','fangs','hammer','heart'];
+    const pick=want.find(id=>ITEMS[id].price<=S.gold[s]&&!u.items.includes(id));if(!pick)break;buyItem(s,u.uid,pick);}}
+function finishPrep(s){if(S.phase!=='prep'||S.prepSide!==s)return;
+  for(const u of S.units.filter(u=>u.side===s&&u.kind==='hero'&&u.alive&&!u.placed)){const e=[];for(const y of zoneRows(s))for(let x=0;x<W;x++)if(!unitAt(x,y))e.push([x,y]);const p=e[Math.floor(Math.random()*e.length)];u.x=p[0];u.y=p[1];u.placed=true;}
+  refreshOaths();
+  if(s===0)startPrep(1);else startBattle();}
+function startGame(mode){S=newState(mode);aiBusy=false;render();}
+const takenBy=id=>S.picks[0].includes(id)?'p0':S.picks[1].includes(id)?'p1':(S.bans[0].includes(id)||S.bans[1].includes(id))?'ban':null;
+function draftChoose(id){const st=DRAFT[S.draftStep];if(!st||takenBy(id))return;const [kind,s]=st;(kind==='ban'?S.bans:S.picks)[s].push(id);
+  log(`${sideName(s)} ${kind==='ban'?'แบน':'เลือก'} ${HB[id].ic} ${HB[id].name}`,s);S.draftStep++;
+  if(S.draftStep>=DRAFT.length){for(const s2 of [0,1]){S.picks[s2].forEach(h=>S.units.push(mkHero(HB[h],s2)));S.decks[s2]=buildDeck();}
+    log('ดราฟต์เสร็จแล้ว เริ่มรอบที่ 1','sys');startPrep(0);return;}
+  render();}
+
+/* ---------- AI ---------- */
+const PREF=['valen','bianca','serie','bard','aegis','medic','ghost','flame','frost','sniper','seal','blood','priest','flag','shadowk','mist','rubber'];
+function aiDraft(){const free=PREF.filter(id=>!takenBy(id)).slice(0,4);draftChoose(free[Math.floor(Math.random()*free.length)]);}
+function aiPrep(s){const front=s===1?1:4,back=s===1?0:5;
+  for(const u of S.units.filter(u=>u.side===s&&u.kind==='hero'&&u.alive&&!u.placed)){const row=getRange(u)>=2?back:front;let e=[];
+    for(let x=0;x<W;x++)if(!unitAt(x,row))e.push([x,row]);if(!e.length)for(const y of zoneRows(s))for(let x=0;x<W;x++)if(!unitAt(x,y))e.push([x,y]);
+    const p=e[Math.floor(Math.random()*e.length)];u.x=p[0];u.y=p[1];u.placed=true;}
+  let n=0;for(let i=S.hands[s].length-1;i>=0&&n<1;i--){const c=S.hands[s][i];if(!CARDS[c].summon||S.orbs[s]<CARDS[c].cost+4)continue;
+    const T=cardTargets(s,c).sort((a,b)=>s===1?b[1]-a[1]:a[1]-b[1]);if(T.length){S.orbs[s]-=CARDS[c].cost;placeSummon(s,i,T[0]);n++;}}}
+function goals(s){const g=S.units.filter(e=>onBoard(e)&&e.side!==s&&!untargetable(e)).map(e=>({x:e.x,y:e.y,w:e.kind==='hero'?1:.6}));
+  if(towersOn()){const E=1-s,ty=E===1?-1:H;S.towers[E].forEach((t,k)=>{if(t.alive){g.push({x:2*k,y:ty,w:.9});g.push({x:2*k+1,y:ty,w:.9});}});}return g;}
+function moveScore(u,p,s){const G=goals(s);if(!G.length)return -1;const r=getRange(u);
+  let near=null,nd=1e9;for(const g of G){const d=(Math.abs(u.x-g.x)+Math.abs(u.y-g.y))/g.w;if(d<nd){nd=d;near=g;}}
+  const dist=(x,y)=>naOf(u).adj8?Math.max(Math.abs(x-near.x),Math.abs(y-near.y)):Math.abs(x-near.x)+Math.abs(y-near.y);
+  const sc=(Math.abs(dist(u.x,u.y)-r)-Math.abs(dist(p[0],p[1])-r))*1.6;return sc>0?sc:-1;}
+const scoreR=r=>r.dmg+r.kills*6+r.heroKills*14+r.heal*.8+r.shield*.3+r.buff*1.5+r.status*2.5+r.summon*2.5+r.zone*2+r.misc*1.5+r.breaks*4;
+const counterRisk=(s,ts)=>ts.some(t=>{const b=guardian(t);return b&&b.side!==s&&b.oath.counters>0&&!isCC(b);})?2:0;
+function aiActions(s){const acts=[],orbs=S.orbs[s];
+  for(const u of S.units.filter(u=>onBoard(u)&&u.side===s&&!isStunned(u))){
+    const na=naOf(u);
+    if(canNA(u)&&!(na.hpCost&&u.hp<=na.hpCost+4))for(const tg of attackTargets(u)){let sc;
+      if(tg.type==='unit'){const t=tg.t,d=hitCalc(u,t,ev(na.P,u,0,t),ev(na.M,u,0,t),0,false).d;sc=Math.min(d,t.hp)+(d>=t.hp?(t.kind==='hero'?20:6):0)+.3+(na.onHit?1.5:0)-na.hpCost*.3-counterRisk(s,[t])+(t.bb<=na.brk&&!t.broken?4:0);}
+      else{const tw=S.towers[tg.side][tg.k],d=ev(na.P,u,0,null)+ev(na.M,u,0,null);sc=d*1.4+(d>=tw.hp?25:0);}
+      acts.push({sc,cost:Math.max(costNA(u),.6),run:()=>execAttack(u,tg)});}
+    if(u.kind==='hero'&&!u.cc.silence){const abs=u.def.skills.map(a=>({a,ult:false}));if(u.ult>=u.ultNeed)abs.push({a:u.def.ult,ult:true});
+      for(const {a,ult} of abs){if(orbs<a.cost)continue;let opts=getOpts(u,a);
+        if(a.kind==='multi')opts=opts.filter(o=>{const t=unitAt(o.area[0][0],o.area[0][1]);return t&&t.side!==s;}).map(o=>({picks:[o.area[0],o.area[0],o.area[0]],area:o.area}));
+        if(a.kind==='summon')opts=opts.slice(0,2);
+        for(const o of opts){const r=resolve(u,a,o,false);let sc=scoreR(r);if(sc<=0)continue;
+          if(a.kind==='dash'&&!hasDmg(a)){const m=moveScore(u,o.dest,s);if(m<=0)continue;sc=m+.4;}
+          sc-=hasDmg(a)?counterRisk(s,r.hit):0;
+          sc=ult?sc*1.2:sc+.5;acts.push({sc,cost:a.cost,run:()=>execSkill(u,a,o,ult)});}}}
+    const mc=costMove(u);if(orbs>=mc&&S.turnMoves<3&&!(u.oath&&u.oath.turns>0))for(const p of moveTargets(u)){const sc=moveScore(u,p,s);if(sc>0)acts.push({sc,cost:Math.max(mc,.6),run:()=>execMove(u,p)});}}
+  S.hands[s].forEach((c,i)=>{const d=CARDS[c];if(orbs<d.cost)return;
+    if(c==='orb'){if(orbs<=3&&acts.length)acts.push({sc:4,cost:.6,run:()=>execCard(s,i,null)});return;}
+    const T=cardTargets(s,c);if(!T.length)return;
+    if(d.summon){T.sort((a,b)=>s===1?b[1]-a[1]:a[1]-b[1]);acts.push({sc:2.6,cost:d.cost,run:()=>execCard(s,i,T[0])});}
+    if(c==='potion'){let b=null;for(const p of T){const u=unitAt(p[0],p[1]),m=Math.min(6,u.maxHp-u.hp);if(m>=4&&(!b||m>b.m))b={p,m};}if(b)acts.push({sc:b.m*.8,cost:1,run:()=>execCard(s,i,b.p)});}
+    if(c==='roar'){for(const p of T){const u=unitAt(p[0],p[1]);if(attackTargets(u).length){acts.push({sc:2.2,cost:1,run:()=>execCard(s,i,p)});break;}}}
+    if(c==='iron'){for(const p of T){const u=unitAt(p[0],p[1]);if(u.kind==='hero'&&S.units.some(e=>onBoard(e)&&e.side!==s&&md(e,u)<=3)){acts.push({sc:1.6,cost:1,run:()=>execCard(s,i,p)});break;}}}});
+  return acts;}
+function aiBest(s){let best=null,bv=.45;for(const a of aiActions(s)){const v=a.sc/a.cost;if(v>bv){bv=v;best=a;}}return best;}
+function aiTakeStep(s){const b=aiBest(s);if(b){b.run();return;}if(S.turnMoves>0)endTurnAction(s);else{doPass(s);render();}}
+function aiStep(){if(!S||S.phase!=='battle'||S.passed[S.turn]||isHumanSide(S.turn))return;aiTakeStep(S.turn);}
+function scheduleAI(){if(!S||S.mode!=='ai'||aiBusy)return;const ref=S;
+  if(S.phase==='draft'&&DRAFT[S.draftStep]&&!isHumanSide(DRAFT[S.draftStep][1])){aiBusy=true;setTimeout(()=>{aiBusy=false;if(S===ref&&S.phase==='draft')aiDraft();},550);return;}
+  if(S.phase==='battle'&&S.turn===1&&!S.passed[1]){aiBusy=true;setTimeout(()=>{aiBusy=false;if(S===ref)aiStep();},750);}}
+
+/* ---------- highlights ---------- */
+function prepTargetList(){const Ac=S.act,s=S.prepSide,out=[];if(!Ac)return out;
+  const empt=blk=>{for(const y of zoneRows(s))for(let x=0;x<W;x++)if(!unitAt(x,y)&&!(blk&&towerBlocked(s,x)))out.push([x,y]);};
+  if(Ac.type==='place')empt(false);
+  else if(Ac.type==='card')cardTargets(s,S.hands[s][Ac.idx]).forEach(p=>out.push(p));
+  else if(Ac.type==='pmove'){const u=byUid(Ac.uid);if(S.round===1)empt(false);else for(const p of ADJ4.map(o=>[u.x+o[0],u.y+o[1]]))if(inB(p[0],p[1])&&!unitAt(p[0],p[1])&&zoneRows(s).includes(p[1]))out.push(p);}
+  return out;}
+function hl(){const t=new Set(),a=new Set(),tw=new Set();const Ac=S.act;if(!Ac)return{t,a,tw};
+  if(S.phase==='prep'){prepTargetList().forEach(p=>t.add(K(p)));return{t,a,tw};}
+  if(Ac.type==='card'){cardTargets(S.turn,S.hands[S.turn][Ac.idx]).forEach(p=>t.add(K(p)));return{t,a,tw};}
+  const u=byUid(Ac.uid);
+  if(Ac.type==='move')moveTargets(u).forEach(p=>t.add(K(p)));
+  if(Ac.type==='attack')attackTargets(u).forEach(g=>g.type==='unit'?t.add(K([g.x,g.y])):tw.add(g.side+','+g.k));
+  if(Ac.type==='skill'){Ac.opts.forEach(o=>o.click.forEach(p=>t.add(K(p))));
+    if(Ac.ab.kind==='multi')Ac.picks.forEach(p=>a.add(K(p)));else if(S.pv!==null)Ac.opts[S.pv].area.forEach(p=>a.add(K(p)));}
+  return{t,a,tw};}
+
+/* ---------- input ---------- */
+function handSide(){if(!S)return null;if(S.phase==='prep')return isHumanSide(S.prepSide)?S.prepSide:null;if(S.phase==='battle')return S.mode==='hot'?S.turn:(S.mode==='online'?(NET?NET.side:null):0);return null;}
+const humanTurn=()=>S.phase==='battle'&&isHumanSide(S.turn)&&!S.passed[S.turn];
+function onCell(x,y){const k=x+','+y;
+  if(S.phase==='prep'){const s=S.prepSide;if(!isHumanSide(s))return;
+    if(S.act&&prepTargetList().some(p=>K(p)===k)){const Ac=S.act;
+      if(Ac.type==='place'){const u=byUid(Ac.uid);u.x=x;u.y=y;u.placed=true;}
+      else if(Ac.type==='card'){execCard(s,Ac.idx,[x,y]);return;}
+      else if(Ac.type==='pmove'){const u=byUid(Ac.uid);u.x=x;u.y=y;if(S.round>1){S.prepMove[s]=true;log(`${sideName(s)} ขยับ ${u.name} ฟรี 1 ช่อง`,s);}refreshOaths();}
+      S.act=null;S.sel=null;render();return;}
+    const u=unitAt(x,y);S.act=null;S.sel=u?u.uid:null;
+    if(u&&u.side===s&&(S.round===1||!S.prepMove[s]))S.act={type:'pmove',uid:u.uid};
+    render();return;}
+  if(S.phase!=='battle')return;
+  if(humanTurn()&&S.act){const Ac=S.act,s=S.turn;
+    if(Ac.type==='card'){if(cardTargets(s,S.hands[s][Ac.idx]).some(p=>K(p)===k)){execCard(s,Ac.idx,[x,y]);return;}}
+    else{const u=byUid(Ac.uid);
+      if(Ac.type==='move'&&moveTargets(u).some(p=>K(p)===k)){execMove(u,[x,y]);return;}
+      if(Ac.type==='attack'){const g=attackTargets(u).find(g=>g.type==='unit'&&g.x===x&&g.y===y);if(g){execAttack(u,g);return;}}
+      if(Ac.type==='skill'){const idx=Ac.opts.map((o,i)=>o.click.some(p=>K(p)===k)?i:-1).filter(i=>i>=0);
+        if(idx.length){
+          if(Ac.ab.kind==='multi'){Ac.picks.push([x,y]);if(Ac.picks.length>=Ac.ab.count){execSkill(u,Ac.ab,{picks:Ac.picks,area:Ac.picks},Ac.ult);return;}render();return;}
+          if(S.pv!==null&&idx.includes(S.pv)){execSkill(u,Ac.ab,Ac.opts[S.pv],Ac.ult);return;}S.pv=idx[0];render();return;}}}}
+  const u=unitAt(x,y);S.act=null;S.pv=null;S.sel=u?u.uid:null;render();}
+function onTower(s,k){if(!humanTurn()||!S.act||S.act.type!=='attack')return;const u=byUid(S.act.uid);
+  const g=attackTargets(u).find(g=>g.type==='tower'&&g.side===s&&g.k===k);if(g)execAttack(u,g);}
+function onAct(a){
+  if(a==='start-ai')return startGame('ai');if(a==='start-hot')return startGame('hot');
+  if(a==='menu'){netLeave();S=null;closeOv();return render();}
+  if(a==='net-create')return netCreate();
+  if(a==='net-join'){const v=((document.getElementById('joincode')||{}).value||'').trim().toUpperCase();if(!/^[A-Z0-9]{5}$/.test(v)){NET_MSG='รหัสห้องต้องเป็นตัวอักษรหรือตัวเลข 5 ตัว';return render();}return guestOpen(v,null);}
+  if(a==='net-rejoin')return netRejoin();
+  if(a==='copy-link'){const link=location.href.split('#')[0]+'#'+NET.code;try{navigator.clipboard.writeText(link);NET_MSG='คัดลอกลิงก์แล้ว';}catch(e){NET_MSG='คัดลอกไม่ได้ ให้กดค้างที่ลิงก์แล้วคัดลอกเอง';}return render();}
+  if(a==='again'){const m=S.mode;closeOv();if(m==='online'){S=newState('online');return render();}return startGame(m);}
+  if(a==='rules')return showRules();if(a==='close')return closeOv();
+  if(!S)return;
+  if(a==='ready'){finishPrep(S.prepSide);return;}
+  if(a==='pass'){if(humanTurn()){doPass(S.turn);render();}return;}
+  if(a==='undo'){if(humanTurn())undoMove();return;}
+  if(a==='endturn'){if(humanTurn())endTurnAction(S.turn);return;}
+  if(a==='cancel'){S.act=null;S.pv=null;return render();}
+  if(a.startsWith('place:')){S.act={type:'place',uid:+a.slice(6)};S.sel=null;return render();}
+  if(a.startsWith('shop:')){S.shopSel=S.shopSel===a.slice(5)?null:a.slice(5);return render();}
+  if(a.startsWith('buy:')){if(S.phase==='prep'&&buyItem(S.prepSide,+a.slice(4),S.shopSel))S.shopSel=null;return render();}
+  if(a.startsWith('sell:')){const [,uid,i]=a.split(':');if(S.phase==='prep')sellItem(S.prepSide,+uid,+i);return render();}
+  if(!humanTurn())return;const u=byUid(S.sel);
+  if(a==='confirm'&&S.act&&S.act.type==='skill'&&S.pv!==null){const Ac=S.act;execSkill(byUid(Ac.uid),Ac.ab,Ac.opts[S.pv],Ac.ult);return;}
+  if(!u||u.side!==S.turn)return;
+  if(a==='move')S.act={type:'move',uid:u.uid};
+  else if(a==='attack')S.act={type:'attack',uid:u.uid};
+  else if(a.startsWith('skill:')||a==='ult'){const ult=a==='ult',ab=ult?u.def.ult:u.def.skills[+a.slice(6)],opts=getOpts(u,ab);
+    S.act={type:'skill',uid:u.uid,ab,ult,opts,picks:[]};S.pv=(opts.length===1&&ab.kind!=='multi')?0:null;}
+  render();}
+function onCard(i){const s=handSide();if(s===null)return;const c=S.hands[s][i];if(!cardPlayable(s,c))return;
+  if(S.phase==='battle'&&CARDS[c].target==='none'){execCard(s,i,null);return;}
+  S.act={type:'card',idx:i};S.sel=null;S.pv=null;render();}
+function cardPlayable(s,c){const d=CARDS[c];
+  if(S.phase==='prep')return s===S.prepSide&&!!d.summon&&S.orbs[s]>=d.cost&&cardTargets(s,c).length>0;
+  if(S.phase==='battle')return S.turn===s&&humanTurn()&&S.orbs[s]>=d.cost&&(d.target==='none'||cardTargets(s,c).length>0);
+  return false;}
+app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.dataset.cell){const [x,y]=b.dataset.cell.split(',').map(Number);onCell(x,y);}
+  else if(b.dataset.tower){const [s,k]=b.dataset.tower.split(',').map(Number);onTower(s,k);}
+  else if(b.dataset.card!==undefined)onCard(+b.dataset.card);
+  else if(b.dataset.pick)draftChoose(b.dataset.pick);
+  else if(b.dataset.act)onAct(b.dataset.act);});
+ov.addEventListener('click',e=>{const b=e.target.closest('button');if(e.target===ov&&S&&S.phase!=='over')return closeOv();if(b&&b.dataset.act)onAct(b.dataset.act);});
+
+/* ---------- render ---------- */
+function pips(n){let h=`<span class="pips" aria-label="มานา ${n}">`;for(let i=0;i<MANA;i++)h+=`<i class="pip${i<n?' on':''}"></i>`;if(n>MANA)h+=`<b class="more">+${n-MANA}</b>`;return h+'</span>';}
+function dayband(t){return `<div class="dayband" role="img" aria-label="${t>=0?'เวลาในเกม '+TIMES[t].n:'เวลาในเกมทั้งหกช่วง'}">`+TIMES.map((x,i)=>`<span class="${i===t?'now':''}${i>=3?' dk':''}" style="background:${x.sky}">${x.ic}<small>${x.n}</small></span>`).join('')+'</div>';}
+function sideBar(s){const alive=S.units.filter(u=>u.side===s&&u.kind==='hero'&&u.alive).length;
+  const on=S.phase==='battle'?(S.turn===s&&!S.passed[s]):(S.phase==='prep'&&S.prepSide===s);
+  return `<div class="sbar s${s}${on?' on':''}"><span class="nm">${sideName(s)}${seatTag(s)}</span>${pips(S.orbs[s])}<span class="meta"><span>💰 ${S.gold[s]}</span><span>ฮีโร่ ${alive}/4</span><span>มือ ${S.hands[s].length} ใบ</span>${S.phase==='battle'&&S.passed[s]?'<span>ผ่านแล้ว</span>':''}</span></div>`;}
+function statusIcons(u){let s='';if(u.dots.some(d=>d.id==='burn'))s+='🔥';if(u.dots.some(d=>d.id==='voidmark'))s+='🌀';for(const k of Object.keys(u.cc))s+=CCI[k];if(guardian(u))s+='🤍';return s;}
+function token(u){const st=statusIcons(u),sh=shieldTotal(u);return `<span class="u s${u.side}${u.kind==='unit'?' unit':''}${isStunned(u)?' stunned':''}${isHidden(u)?' hid':''}"><span class="e">${u.ic}</span><span class="hpn">${u.hp}</span><span class="hp"><i style="width:${Math.round(100*u.hp/u.maxHp)}%"></i></span><span class="bbr"><i style="width:${u.maxBb?Math.round(100*u.bb/u.maxBb):0}%"></i></span>${sh?`<span class="shd">🛡${sh}</span>`:''}${st?`<span class="sti">${st}</span>`:''}</span>`;}
+function board(){let h='<div class="board">';const f=viewSide()===1;for(let yy=0;yy<H;yy++)for(let xx=0;xx<W;xx++){const y=f?H-1-yy:yy,x=f?W-1-xx:xx,k=x+','+y,u=unitAt(x,y),c=['cell'];
+  if(y>=4)c.push('z0');else if(y<=1)c.push('z1');if(S.zones.some(z=>z.tiles.has(k)))c.push('smk');if(HLc.t.has(k))c.push('t');if(HLc.a.has(k))c.push('a');if(u&&S.sel===u.uid)c.push('sel');
+  if(S.flash&&S.flash.tiles.has(k))c.push('fx-'+S.flash.kind);
+  h+=`<button class="${c.join(' ')}" data-cell="${k}" aria-label="ช่อง ${x+1} แถว ${y+1}${u?' '+u.name+' HP '+u.hp:''}">${u?token(u):''}</button>`;}return h+'</div>';}
+function towerStrip(s){if(!towersOn())return s!==viewSide()?`<div class="towers off">หอคอยจะปรากฏในรอบที่ 7 (อีก ${7-S.round} รอบ)</div>`:'';
+  const ks=viewSide()===1?[2,1,0]:[0,1,2];return '<div class="towers">'+ks.map(k=>[S.towers[s][k],k]).map(([t,k])=>`<button class="tw s${s}${t.alive?'':' dead'}${HLc.tw.has(s+','+k)?' t':''}" data-tower="${s},${k}" ${t.alive?'':'disabled'} aria-label="หอคอย ${k+1} ของ${sideName(s)}"><span>${t.alive?'🏯':'💥'}</span><span>${t.alive?t.hp+'/'+t.max:'พัง'}</span></button>`).join('')+'</div>';}
+function btn(id,name,cost,dis,desc,on){return `<button class="act${on?' on':''}" data-act="${id}" ${dis?'disabled':''}><span class="cost">${cost}</span><span class="an">${name}</span>${desc?`<span class="ad">${desc}</span>`:''}</button>`;}
+function naDesc(h){return(h.na&&h.na.desc)||'ตีปกติ';}
+const gaugeName=d=>(d.ult&&d.ult.gauge)||'อัลติ';
+function unitInfo(u,mine){const d=u.def;let h=`<div class="uinfo s${u.side}"><div class="uh"><span class="big">${u.ic}</span><div><h3>${u.name}</h3><div class="sub">${sideName(u.side)}${d.role?' / '+d.role:' / ยูนิตเรียก'}</div></div></div>`;
+  h+=`<div class="stats"><span>HP <b>${u.hp}/${u.maxHp}</b></span><span>ATK <b>${getAtk(u)}</b></span><span>DEF <b>${getDef(u)}${u.def.id==='bianca'?` (ก่อนแปลง ${rawDef(u)})`:''}</b></span><span>Armor <b>${getArmor(u)}</b></span><span>Magic Armor <b>${getMArmor(u)}</b></span><span>Speed <b>${u.spd}</b></span><span>Break <b>${u.bb}/${u.maxBb}</b></span>${d.pen?`<span>Penetration <b>${d.pen}</b></span>`:''}${d.dotBoost?`<span>DOT Boost <b>${d.dotBoost}</b></span>`:''}</div>`;
+  const tags=[];if(isHidden(u))tags.push('👻 ล่องหน');if(inSmoke(u))tags.push('☁️ อยู่ในควัน');
+  u.shields.forEach(s=>tags.push(`🛡 โล่ ${s.amt}${s.turns>0?` (${s.turns} Turns)`:''}`));
+  u.dots.forEach(x=>tags.push(`${x.id==='voidmark'?'🌀 Voidmark':'🔥 Burn'} ทิกละ ${tickDmg(x,u)} เหลือ ${x.turns} Turns${x.erosion?` DEF −${x.erosion}`:''}`));
+  for(const k of Object.keys(u.cc))tags.push(`${CCI[k]} ${CCN[k]} ${u.cc[k].rem} (≈${ccTurns(u,k)} Turns)`);
+  if(u.broken)tags.push('💥 Break');
+  const g=guardian(u);if(g)tags.push(`🤍 ${g.name} คุ้มกัน Armor +2 Magic Armor +1`);
+  if(u.oath)tags.push(`${u.oath.type==='oath'?'Giuramento':'Vendetta'} เหลือ ${u.oath.turns} Turns สวนได้อีก ${u.oath.counters}`);
+  u.buffs.filter(b=>b.stat!=='hidden').forEach(b=>tags.push(`${b.stat==='atk'?'ATK':b.stat==='armor'?'Armor':b.stat==='marmor'?'Magic Armor':b.stat} +${b.amt} (${b.turns} Turns)`));
+  if(tags.length)h+=`<div class="tags">${tags.map(t=>`<span>${t}</span>`).join('')}</div>`;
+  if(u.kind==='hero'){const canSell=S.phase==='prep'&&isHumanSide(S.prepSide)&&u.side===S.prepSide;
+    h+=`<div class="equip"><span class="muted">ไอเทม ${u.items.length}/2</span>${u.items.map((id,i)=>`<span class="eq">${ITEMS[id].ic} ${ITEMS[id].name} <small>${ITEMS[id].desc}</small>${canSell?`<button class="mini" data-act="sell:${u.uid}:${i}">ขาย ${Math.floor(ITEMS[id].total/2)}</button>`:''}</span>`).join('')}</div>`;}
+  if(u.kind==='hero')h+=`<p class="pas">พาสซีฟ: ${d.passive}</p><div class="ultm">${gaugeName(d)} ${u.ult}/${u.ultMax} (ใช้ ${u.ultNeed})<span class="bar"><i style="width:${Math.round(100*u.ult/u.ultMax)}%"></i></span></div>`;
+  if(mine){if(isStunned(u))h+='<p class="warn">ตัวนี้ติด Stun ใช้ไม่ได้ใน Turn นี้</p>';else{const o=S.orbs[u.side],Ac=S.act||{},mc=costMove(u),na=naOf(u),nc=costNA(u),sil=!!u.cc.silence;
+    h+='<div class="acts">'+btn('move','เดิน 1 ช่อง'+(u.def.move8?' (8 ทิศ)':''),mc,o<mc||!moveTargets(u).length,(u.cc.root?'ติด Root เดินไม่ได้':(mc===0?'ฟรี ตัวประชิดเดินฟรีได้ 1 ครั้งต่อรอบใหญ่ ':(mc>1?'ติด Slow เดินแพงขึ้น ':''))+'ไม่เสีย Turn ย้อนได้'+(u.oath?' ถ้าเดิน คำสาบานจะจบ':'')),Ac.type==='move')
+      +btn('attack',(na.name||'ตีปกติ'),nc,!canNA(u)||!attackTargets(u).length,(u.kind==='hero'?naDesc(d):'')+(na.hpCost?` เสีย HP ${na.hpCost}`:''),Ac.type==='attack');
+    if(u.kind==='hero'){d.skills.forEach((sk,i)=>{h+=btn('skill:'+i,sk.name,sk.cost,sil||o<sk.cost||!getOpts(u,sk).length,sk.desc+(sil?' (ติด Silence)':''),Ac.type==='skill'&&!Ac.ult&&Ac.ab===sk);});
+      const ul=d.ult;h+=btn('ult','อัลติ: '+ul.name,ul.cost,sil||u.ult<u.ultNeed||o<ul.cost||!getOpts(u,ul).length,ul.desc+(u.ult<u.ultNeed?` (${gaugeName(d)} ${u.ult}/${u.ultNeed})`:''),Ac.type==='skill'&&Ac.ult);}
+    h+='</div>';}}
+  return h+'</div>';}
+function statusText(){if(S.phase==='prep'){const s=S.prepSide;if(!isHumanSide(s))return S.mode==='online'?'รอคู่แข่งเตรียมตัวและซื้อของ…':'AI กำลังเตรียมตัว';
+    return S.round===1?`<b>${sideName(s)}</b> วางฮีโร่ทั้ง 4 ตัวในสองแถวฝั่งของคุณ แตะฮีโร่ที่วางแล้วเพื่อย้ายที่ได้ และลงยูนิตจากการ์ดได้ (ใช้มานา ต้องลงติดกับพวกเรา) มานาของรอบนี้ใช้ได้ตั้งแต่ตอนนี้`
+      :`<b>${sideName(s)}</b> ช่วงเตรียมตัว ลงยูนิตจากการ์ดได้ (ใช้มานา ต้องลงติดกับพวกเรา) และขยับฟรีได้ 1 ช่องในเขตตัวเอง${S.prepMove[s]?' (ใช้สิทธิ์ขยับแล้ว)':''}`;}
+  if(S.phase==='battle'){if(!isHumanSide(S.turn))return S.mode==='online'?'รอคู่แข่งเล่น…':'AI กำลังคิด…';
+    if(S.act&&S.act.type==='skill'&&S.act.ab.kind==='multi')return `เลือกช่องให้ดาบ ${S.act.picks.length}/${S.act.ab.count} (เลือกช่องเดิมซ้ำได้)`;
+    if(S.act&&S.act.type==='skill')return 'แตะช่องที่ไฮไลต์เพื่อดูพื้นที่ แตะซ้ำหรือกดยืนยันเพื่อใช้';
+    if(S.act)return 'แตะเป้าหมายที่มีกรอบสีเหลือง';
+    return `Turn ของ <b>${sideName(S.turn)}</b> เดินได้หลายครั้งโดยไม่เสีย Turn (ใช้มานา ย้อนได้) แล้วเลือก 1 Action หรือกดจบ Turn`;}
+  return '';}
+function panel(){let h=`<p class="status">${statusText()}</p>`;
+  if(S.phase==='prep'&&isHumanSide(S.prepSide)){const s=S.prepSide,un=S.units.filter(u=>u.side===s&&u.kind==='hero'&&u.alive&&!u.placed);
+    if(un.length)h+='<div class="roster">'+un.map(u=>`<button data-act="place:${u.uid}" class="${S.act&&S.act.type==='place'&&S.act.uid===u.uid?'on':''}">${u.ic} ${u.name}</button>`).join('')+'</div>';
+    h+=`<p class="muted">เวลาเตรียมตัวเหลือ <b id="timer">${S.timer}</b> วินาที</p>`;
+    h+=`<div class="shop"><h3>ร้านค้า <span class="gold">💰 ${S.gold[s]} ทอง</span></h3><p class="muted">ฮีโร่ใส่ได้ตัวละ 2 ชิ้น อัพเกรดแทนที่ชิ้นเดิมโดยไม่เสียช่อง ขายคืนได้ครึ่งของราคารวม ฮีโร่ที่ล้มจะเสียไอเทม และอีกฝั่งได้ค่าหัว 400 + มูลค่าไอเทม ÷ 4</p><div class="items">`
+      +[1,2,3].map(tier=>`<p class="tierlbl">${['','ขั้นที่ 1 ซื้อได้เลย','ขั้นที่ 2 อัพเกรดจากขั้นที่ 1','ขั้นที่ 3 อัพเกรดจากขั้นก่อนหน้า (ค่าสถานะสูง)'][tier]}</p>`+Object.entries(ITEMS).filter(([,it])=>it.tier===tier).map(([id,it])=>{
+        const ok=S.gold[s]>=it.price&&S.units.some(x=>x.side===s&&x.kind==='hero'&&canBuyFor(x,id));
+        return `<button class="item t${tier}${S.shopSel===id?' on':''}" data-act="shop:${id}" ${ok?'':'disabled'}><span class="ii">${it.ic}</span><b>${it.name}</b><span class="ip">${it.from?'+':''}${it.price}</span><span class="cd">${it.desc}${it.from?` อัพเกรดจาก ${ITEMS[it.from].ic} ${ITEMS[it.from].name} (รวม ${it.total})`:''}</span></button>`;}).join('')).join('')+'</div>';
+    if(S.shopSel){const hs=S.units.filter(x=>x.side===s&&x.kind==='hero'&&x.alive);
+      h+=`<p class="status">ใส่ ${ITEMS[S.shopSel].ic} ${ITEMS[S.shopSel].name} ให้ใคร</p><div class="roster">`+hs.map(x=>`<button data-act="buy:${x.uid}" ${canBuyFor(x,S.shopSel)?'':'disabled'}>${x.ic} ${x.name} (${x.items.length}/2)</button>`).join('')+'</div>';}
+    h+='</div>';}
+  const u=S.sel!==null?byUid(S.sel):null;
+  if(u&&u.alive)h+=unitInfo(u,S.phase==='battle'&&humanTurn()&&u.side===S.turn);
+  else if(S.phase==='battle'&&humanTurn()&&!S.act)h+='<p class="muted">แตะยูนิตบนกระดานเพื่อดูข้อมูลและการกระทำ หรือใช้การ์ดด้านล่าง</p>';
+  return h;}
+function controls(){let h='<div class="row">';
+  if(S.phase==='prep'&&isHumanSide(S.prepSide)){const un=S.units.some(u=>u.side===S.prepSide&&u.kind==='hero'&&u.alive&&!u.placed);
+    h+=`<button class="btn pri" data-act="ready" ${un?'disabled':''}>พร้อมรบ</button>`;}
+  if(humanTurn()){if(S.moveLog.length)h+=`<button class="btn" data-act="undo">↩️ ย้อนการเดิน (${S.moveLog.length})</button>`;
+    h+='<button class="btn" data-act="endturn">จบ Turn</button><button class="btn" data-act="pass">จบรอบของฉัน (ผ่าน)</button>';}
+  if(S.act)h+='<button class="btn" data-act="cancel">ยกเลิก</button>';
+  if(S.act&&S.act.type==='skill'&&S.pv!==null&&humanTurn())h+='<button class="btn pri" data-act="confirm">ยืนยันใช้สกิล</button>';
+  return h+'</div>';}
+function handHTML(){const s=handSide();if(s===null)return '';const cards=S.hands[s];
+  let h=`<p class="handlbl">การ์ดในมือของ${sideName(s)} (กองเหลือ ${S.decks[s].length})</p>`;
+  if(!cards.length)return h+'<p class="muted">ไม่มีการ์ดในมือ</p>';
+  return h+'<div class="hand">'+cards.map((c,i)=>{const d=CARDS[c],on=S.act&&S.act.type==='card'&&S.act.idx===i;
+    return `<button class="card${on?' on':''}" data-card="${i}" ${cardPlayable(s,c)?'':'disabled'}><span class="ch"><span class="ci">${d.ic}</span><span class="cost">${d.cost}</span></span><b>${d.name}</b><span class="cd">${d.desc}</span></button>`;}).join('')+'</div>';}
+function menuHTML(){return `<div class="menu">${dayband(-1)}<h1 class="title">Hero Card Duel</h1>
+  <p class="lead">ต้นแบบเกมดวลฮีโร่และการ์ดบนกระดาน 6x6 ฮีโร่ ${HEROES.length} ตัว แบนฝั่งละ 2 เลือกฝั่งละ 4 ระบบต่อสู้ตาม combat.md ทั้ง Break, CC แบบ Recovery, DOT และโล่</p>
+  <div class="mbtns"><button class="btn pri" data-act="start-ai">เล่นกับ AI</button><button class="btn" data-act="start-hot">สองคนเครื่องเดียว</button></div>
+  ${onlineMenu()}
+  <button class="ghost" data-act="rules">อ่านกติกาย่อ</button></div>`;}
+function draftHTML(){const st=DRAFT[S.draftStep],s=st[1],ban=st[0]==='ban';
+  return `<header class="top"><div class="tl"><h1>ดราฟต์ฮีโร่</h1><button class="ghost" data-act="rules">กติกา</button></div></header>
+  <p class="status" style="margin-top:10px">${isHumanSide(s)?`ตาของ<b>${sideName(s)}</b> ${ban?'แบน 1 ตัว (ฝั่งละ 2 ตัว)':'เลือก 1 ตัว (ฝั่งละ 4 ตัว ห้ามซ้ำ)'}`:`${S.mode==='online'?'รอคู่แข่ง':'AI กำลัง'}${ban?'แบน':'เลือก'}…`}</p>
+  <div class="picks">${[0,1].map(i=>`<div class="pk s${i}"><b>${sideName(i)}</b>${S.picks[i].map(id=>HB[id].ic).join(' ')||'–'}<span class="bans">แบน ${S.bans[i].map(id=>HB[id].ic).join(' ')||'–'}</span></div>`).join('')}</div>
+  <div class="hgrid">${HEROES.map(h=>{const t=takenBy(h.id),ul=h.ult;const cls=t==='ban'?' bn':t?' tk s'+t[1]:'';const na=Object.assign({cost:2},h.na);
+    return `<button class="hcard${cls}" data-pick="${h.id}" ${t||!isHumanSide(s)?'disabled':''}>
+      <span class="org ${h.origin}">${t==='ban'?'ถูกแบน':ORIGIN[h.origin]}</span>
+      <span class="hn"><span>${h.ic}</span><span><h3>${h.name}</h3><span class="sub">${h.role}</span></span></span>
+      <p>HP ${h.hp}  ATK ${h.atk}  DEF ${h.def}  Speed ${h.spd}  Break ${h.bb}${h.armor?'  Armor '+h.armor:''}${h.marmor?'  Magic Armor '+h.marmor:''}${h.pen?'  Pen '+h.pen:''}${h.dotBoost?'  DOT Boost '+h.dotBoost:''}</p>
+      <p><span class="k">พาสซีฟ</span> ${h.passive}</p>
+      <p><span class="k">${na.name||'ตีปกติ'}</span> (${na.cost} มานา) ${naDesc(h)}</p>
+      ${h.skills.map(x=>`<p><span class="k">${x.name}</span> (${x.cost} มานา) ${x.desc}</p>`).join('')}
+      <p><span class="k">อัลติ ${ul.name}</span> (${ul.cost} มานา ใช้ ${gaugeName(h)} ${ul.need}) ${ul.desc}</p></button>`;}).join('')}</div>`;}
+function gameHTML(){HLc=hl();
+  return `<header class="top"><div class="tl"><h1>Hero Card Duel</h1><span class="rd">รอบที่ ${S.round} Turn ${S.gturn+1}</span><button class="ghost" data-act="rules">กติกา</button></div>${dayband(S.time)}</header>
+  <div class="layout"><section class="field">${sideBar(1-viewSide())}${towerStrip(1-viewSide())}${board()}${towerStrip(viewSide())}${sideBar(viewSide())}</section>
+  <section class="side"><div class="panel">${panel()}</div>${controls()}${handHTML()}<ol class="log" aria-live="polite">${S.log.slice(0,30).map(l=>`<li class="${typeof l.c==='number'?'c'+l.c:l.c}">${l.t}</li>`).join('')}</ol></section></div>`;}
+function render(){document.documentElement.style.setProperty('--skyc',TIMES[S?S.time:0].sky);
+  if(!S){app.innerHTML=menuHTML();return;}
+  if(S.mode==='online'&&NET&&!NET.seats[1]){app.innerHTML=waitHTML();netSync();return;}
+  app.innerHTML=S.phase==='draft'?draftHTML():gameHTML();
+  if(S.phase==='over')showOver();else if(ov.dataset.kind==='over')closeOv();
+  if(S.mode==='online')netSync();
+  scheduleAI();}
+function showOver(){ov.dataset.kind='over';ov.innerHTML=`<div class="modal"><h2>${sideName(S.winner)}${seatTag(S.winner)} ชนะ</h2><p>${S.winReason} ในรอบที่ ${S.round}</p><div class="row"><button class="btn pri" data-act="again">เล่นอีกครั้ง</button><button class="btn" data-act="menu">กลับเมนู</button></div></div>`;ov.classList.add('show');}
+function showRules(){ov.dataset.kind='rules';ov.innerHTML=`<div class="modal"><h2>กติกาย่อ</h2><ul>
+  <li>ดราฟต์: แบนฝั่งละ 2 ตัว แล้วผลัดกันเลือกฝั่งละ 4 ตัว ห้ามซ้ำ</li>
+  <li>ชนะเมื่อล้มฮีโร่ศัตรูครบ 4 ตัว หรือทำลายหอคอยศัตรู 2 ใน 3 หอ (หอคอยปรากฏตั้งแต่รอบที่ 7)</li>
+  <li>ทีมละ ${MANA} มานาต่อรอบใหญ่ ได้ตั้งแต่ช่วงเตรียมตัวและไม่ทบไปรอบหน้า ตีปกติอย่างน้อย 2 สกิล 3 อัลติ 3 ถึง 4 การ์ดเรียกยูนิต 3</li>
+  <li>เดิน 1 ช่องใช้ 1 มานาและไม่เสีย Turn ย้อนได้จนกว่าจะทำ Action ตัวประชิดเดินฟรีได้ 1 ครั้งต่อรอบใหญ่ แต่ละ Turn ทำได้ 1 Action (ตี สกิล การ์ด) หรือกดจบ Turn</li>
+  <li>ยูนิตจากการ์ดต้องลงติดกับฮีโร่หรือยูนิตฝั่งเรา</li>
+  <li>Turn นับทั้งสองฝั่ง ระยะเวลาบัฟ โล่ DOT และ CC นับเป็น Turn</li>
+  <li>ดาเมจ = (กายภาพ − Armor) + (เวท − Magic Armor) − DEF โดย Penetration ลด Armor ก่อน โล่รับดาเมจก่อนลดเกราะ</li>
+  <li>Break: ทุก Action ลดแถบ Break ครั้งเดียวต่อเป้า ถ้าแถบหมด เป้าโดน Break DMG (Break สูงสุด ÷ 5) และ Stun 500 พอหาย Stun แถบเต็มใหม่</li>
+  <li>CC เป็นค่า Recovery: จบทุก Turn ลดตาม Speed ของตัวที่โดน หมดเมื่อเหลือน้อยกว่า Speed 💫 Stun ใช้ตัวนั้นไม่ได้ 🔇 Silence ใช้สกิลไม่ได้ ⛓️ Root เดินไม่ได้ 🧊 Slow เดินใช้มานา +1</li>
+  <li>DOT ทิกตอนจบทุก Turn ไม่สนโล่และเกราะ ลดได้แค่ DEF และ Fortitude โดนขั้นต่ำ 1</li>
+  <li>👻 ล่องหนและ ☁️ ควัน: โดนตีปกติและสกิลเล็งเป้าไม่ได้ แต่สกิลพื้นที่ยังโดน 🤍 คือยูนิตที่ Bianca คุ้มกันอยู่</li>
+  <li>ตีหอคอยได้ด้วยตีปกติเท่านั้น ต้องยืนในคอลัมน์ของหอ อยู่ในระยะ และไม่มีศัตรูขวางในคอลัมน์นั้น</li>
+  <li>ร้านค้าอยู่ในช่วงเตรียมตัว เริ่มเกมได้ 800 ทอง รอบต่อไปได้รอบละ 300 ฆ่าฮีโร่ได้ค่าหัว 400 + มูลค่าไอเทม ÷ 4 ยูนิตเรียกได้ 100</li>
+  <li>ระยะตีปกติของสายยิงสูงสุด 2 ช่อง</li>
+  <li>ต้นแบบนี้ยังไม่มี: ดันเจี้ยน อีเวนต์ Aggro และ Manual Interject</li></ul>
+  <div class="row"><button class="btn pri" data-act="close">ปิด</button></div></div>`;ov.classList.add('show');}
+function closeOv(){ov.classList.remove('show');ov.innerHTML='';ov.dataset.kind='';}
+
+/* ---------- เล่นออนไลน์แบบ P2P ผ่าน PeerJS: เครื่องเจ้าของห้องเป็นที่เก็บเกม ส่งสถานะทั้งเกมทุกครั้งที่มีการเปลี่ยน ---------- */
+let NET=null,NET_MSG='';
+const PREFIX='hcd-v1-';
+const viewSide=()=>(S&&S.mode==='online'&&NET&&NET.side===1)?1:0;
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function seatTag(s){if(!S||S.mode!=='online'||!NET)return '';if(NET.side===s)return ' (คุณ)';const nm=NET.names[s];return nm?` (${esc(nm)})`:'';}
+function serialize(st){return JSON.stringify(st,(k,v)=>{
+  if(k==='sel'||k==='act'||k==='pv'||k==='flash'||k==='shopSel'||k==='timer')return undefined;
+  if(k==='def'&&v&&typeof v==='object')return(HB[v.id]===v?'h:':'u:')+v.id;
+  if(v instanceof Set)return{$set:[...v]};
+  return v;});}
+function deserialize(js){const st=JSON.parse(js,(k,v)=>{
+  if(k==='def'&&typeof v==='string')return v[0]==='h'?HB[v.slice(2)]:UNITS[v.slice(2)];
+  if(v&&typeof v==='object'&&Array.isArray(v.$set))return new Set(v.$set);
+  return v;});
+  Object.assign(st,{sel:null,act:null,pv:null,flash:null,shopSel:null,timer:90});return st;}
+const CODE_CH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const genCode=()=>Array.from({length:5},()=>CODE_CH[Math.floor(Math.random()*CODE_CH.length)]).join('');
+function myName(){const el=document.getElementById('nick');const v=el&&el.value?el.value.trim().slice(0,20):'';if(v)lsSet('hcd-nick',v);return v||lsGet('hcd-nick')||'';}
+function guestToken(){let t=lsGet('hcd-token');if(!t){t=Math.random().toString(36).slice(2)+Date.now().toString(36);lsSet('hcd-token',t);}return t;}
+const peerOk=()=>typeof Peer!=='undefined';
+function saveLocal(){if(NET&&S)lsSet('hcd-save-'+NET.code,JSON.stringify({ver:NET.ver,state:NET.last,host:NET.host,names:NET.names,guestToken:NET.guestToken||null}));}
+function loadLocal(code){try{return JSON.parse(lsGet('hcd-save-'+code)||'null');}catch(e){return null;}}
+function netLeave(){if(NET){try{if(NET.conn)NET.conn.close();if(NET.peer)NET.peer.destroy();}catch(e){}}NET=null;}
+function applyState(my,ver,state){if(!(ver>my.ver)||typeof state!=='string')return false;let st;try{st=deserialize(state);}catch(e){return false;}
+  const keep=S&&S.sel;my.ver=ver;S=st;my.last=serialize(S);if(keep&&byUid(keep))S.sel=keep;saveLocal();return true;}
+function sendState(my){if(my.conn&&my.conn.open&&my.last)try{my.conn.send({t:'state',ver:my.ver,state:my.last,names:my.names});}catch(e){}}
+function bindConn(my,conn){
+  conn.on('data',m=>{if(NET!==my||!m||typeof m!=='object')return;
+    if(m.t==='hello'&&my.host){
+      if(my.guestToken&&my.guestToken!==m.token){try{conn.send({t:'full'});}catch(e){}setTimeout(()=>conn.close(),400);if(my.conn===conn)my.conn=null;return;}
+      my.guestToken=m.token;my.names[1]=String(m.name||'').slice(0,20);my.seats[1]=true;NET_MSG='';
+      applyState(my,m.ver,m.state);sendState(my);saveLocal();render();return;}
+    if(m.t==='full'){NET_MSG='ห้องนี้มีผู้เล่นครบสองคนแล้ว';render();return;}
+    if(m.t==='state'){if(Array.isArray(m.names))my.names=[String(m.names[0]||'').slice(0,20),my.host?my.names[1]:String(m.names[1]||'').slice(0,20)];
+      my.seats=[true,true];NET_MSG='';applyState(my,m.ver,m.state);render();}});
+  conn.on('open',()=>{if(NET!==my)return;if(!my.host){try{conn.send({t:'hello',name:my.names[1],token:guestToken(),ver:my.ver,state:my.last});}catch(e){}}});
+  conn.on('close',()=>{if(NET!==my||my.conn!==conn)return;my.conn=null;NET_MSG='คู่แข่งหลุดการเชื่อมต่อ เกมจะรอจนกว่าจะกลับมา';render();
+    if(!my.host)setTimeout(()=>{if(NET===my&&!my.conn)guestConnect(my);},3000);});
+  conn.on('error',()=>{});}
+function netCreate(){if(!peerOk()){NET_MSG='โหลดระบบออนไลน์ไม่สำเร็จ ลองรีเฟรชหน้า';return render();}hostOpen(genCode(),null);}
+function hostOpen(code,saved){netLeave();lsSet('hcd-last',code);
+  const my={code,host:true,side:0,seats:[true,!!(saved&&saved.guestToken)],ver:0,last:null,names:[myName(),''],guestToken:null,conn:null,peer:null};NET=my;
+  if(saved&&saved.state){applyState(my,saved.ver,saved.state);my.guestToken=saved.guestToken;if(saved.names)my.names[1]=saved.names[1]||'';}
+  else{S=newState('online');my.last=serialize(S);my.ver=1;saveLocal();}
+  NET_MSG='กำลังเปิดห้อง…';render();
+  const peer=new Peer(PREFIX+code);my.peer=peer;
+  peer.on('open',()=>{if(NET!==my)return;NET_MSG=my.seats[1]?'รอคู่แข่งกลับเข้าห้อง…':'';render();});
+  peer.on('error',e=>{if(NET!==my)return;NET_MSG=e.type==='unavailable-id'?'รหัสห้องนี้ยังค้างอยู่บนเซิร์ฟเวอร์ รอประมาณครึ่งนาทีแล้วกดกลับเข้าห้องอีกครั้ง':'เชื่อมต่อไม่ได้ ('+e.type+')';render();});
+  peer.on('disconnected',()=>{if(NET===my&&!peer.destroyed)try{peer.reconnect();}catch(e){}});
+  peer.on('connection',conn=>{if(NET!==my)return;
+    if(my.conn&&my.conn.open){conn.on('open',()=>{try{conn.send({t:'full'});}catch(e){}setTimeout(()=>conn.close(),400);});return;}
+    my.conn=conn;bindConn(my,conn);});}
+function guestOpen(code,saved){if(!peerOk()){NET_MSG='โหลดระบบออนไลน์ไม่สำเร็จ ลองรีเฟรชหน้า';return render();}
+  netLeave();lsSet('hcd-last',code);
+  const my={code,host:false,side:1,seats:[true,false],ver:0,last:null,names:['',myName()],conn:null,peer:null};NET=my;S=null;
+  if(saved&&saved.state&&!saved.host){applyState(my,saved.ver,saved.state);my.seats=[true,true];if(saved.names)my.names[0]=saved.names[0]||'';}
+  NET_MSG='กำลังเข้าห้อง '+code+'…';render();
+  const peer=new Peer();my.peer=peer;
+  peer.on('open',()=>{if(NET===my)guestConnect(my);});
+  peer.on('error',e=>{if(NET!==my)return;
+    NET_MSG=e.type==='peer-unavailable'?'ยังไม่พบห้อง '+code+' เจ้าของห้องต้องเปิดหน้าเกมค้างไว้ กำลังลองใหม่…':'เชื่อมต่อไม่ได้ ('+e.type+')';render();
+    if(e.type==='peer-unavailable')setTimeout(()=>{if(NET===my&&!(my.conn&&my.conn.open))guestConnect(my);},4000);});
+  peer.on('disconnected',()=>{if(NET===my&&!peer.destroyed)try{peer.reconnect();}catch(e){}});}
+function guestConnect(my){if(!my.peer||my.peer.destroyed)return;const conn=my.peer.connect(PREFIX+my.code,{reliable:true});my.conn=conn;bindConn(my,conn);}
+function netRejoin(){const code=lsGet('hcd-last');if(!code)return;const sv=loadLocal(code);if(sv&&sv.host)return hostOpen(code,sv);return guestOpen(code,sv);}
+/* ส่งสถานะเมื่อเครื่องนี้เปลี่ยนเกมจริงเท่านั้น */
+function netSync(){const my=NET;if(!my||!S||S.mode!=='online')return;const js=serialize(S);if(js===my.last)return;
+  my.last=js;my.ver++;saveLocal();sendState(my);}
+function onlineMenu(){const last=lsGet('hcd-last'),nick=lsGet('hcd-nick')||'';
+  if(!peerOk())return '<div class="online"><h3>เล่นออนไลน์</h3><p class="muted">กำลังโหลดระบบออนไลน์ ถ้าไม่ขึ้นลองรีเฟรชหน้า</p></div>';
+  return `<div class="online"><h3>เล่นออนไลน์</h3><p class="muted">สร้างห้องแล้วส่งลิงก์หน้านี้กับรหัส 5 ตัวให้เพื่อน เจ้าของห้องต้องเปิดหน้าเกมค้างไว้ตลอดเกม</p>
+    <div class="row"><input id="nick" class="codein nick" maxlength="20" autocomplete="off" placeholder="ชื่อของคุณ" aria-label="ชื่อของคุณ" value="${esc(nick)}"></div>
+    <div class="row"><button class="btn pri" data-act="net-create">สร้างห้อง</button><input id="joincode" class="codein" maxlength="5" autocomplete="off" placeholder="รหัสห้อง" aria-label="รหัสห้อง" value="${esc(JOIN_HINT)}"><button class="btn" data-act="net-join">เข้าห้อง</button></div>
+    ${last?`<button class="ghost" data-act="net-rejoin">กลับเข้าห้องล่าสุด ${esc(last)}</button>`:''}${NET_MSG?`<p class="warn">${esc(NET_MSG)}</p>`:''}</div>`;}
+function waitHTML(){const link=location.href.split('#')[0]+'#'+NET.code;
+  return `<div class="menu">${dayband(-1)}<h1 class="title">รอคู่แข่ง</h1>
+  <p class="lead">ส่งลิงก์นี้ให้เพื่อน เพื่อนเปิดแล้วกดเข้าห้องได้เลย และเปิดหน้านี้ค้างไว้ระหว่างเล่น</p>
+  <p class="bigcode">${esc(NET.code)}</p><p class="linkbox">${esc(link)}</p>
+  <div class="mbtns"><button class="btn pri" data-act="copy-link">คัดลอกลิงก์</button><button class="btn" data-act="menu">ออกจากห้อง</button></div>
+  ${NET_MSG?`<p class="warn">${esc(NET_MSG)}</p>`:''}</div>`;}
+/* ลิงก์แบบ #รหัส จะเติมรหัสห้องให้อัตโนมัติ */
+const JOIN_HINT=(/^#[A-Z0-9]{5}$/i.test(location.hash)?location.hash.slice(1).toUpperCase():'');
+setInterval(()=>{if(!S||S.phase!=='prep'||!isHumanSide(S.prepSide))return;S.timer--;const t=document.getElementById('timer');if(t)t.textContent=S.timer;if(S.timer<=0)finishPrep(S.prepSide);},1000);
+render();
+
+
+</script>
+</body>
+</html>
