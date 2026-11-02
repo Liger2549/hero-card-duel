@@ -1,0 +1,161 @@
+/// <reference path="./globals.d.ts" />
+import type { Pos } from "./board.ts";
+import type { Seat, TimeOfDay } from "./config.ts";
+import type { AbilityRef, Content } from "./content.ts";
+import type { GameEvent } from "./events.ts";
+import { abilityOf } from "./content.ts";
+import { applyUseAbility, validateUseAbility } from "./rules/abilities.ts";
+import { applyPlayCard, validatePlayCard } from "./rules/cards.ts";
+import {
+  applyBan,
+  applyChooseTimeOfDay,
+  applyDraftTimeUp,
+  applyPick,
+  validateBan,
+  validateChooseTimeOfDay,
+  validatePick,
+} from "./rules/draft.ts";
+import { applyPrepMove, applyStep, applyUndo, validatePrepMove, validateStep, validateUndo } from "./rules/movement.ts";
+import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "./rules/shop.ts";
+import { checkWin } from "./rules/status.ts";
+import type { Aim } from "./rules/targeting.ts";
+import {
+  applyEndTurn,
+  applyPlaceHero,
+  applyPrepTimeUp,
+  applyReady,
+  endTurn,
+  validateEndTurn,
+  validatePlaceHero,
+  validateReady,
+} from "./rules/turn.ts";
+import { findUnit, type GameState } from "./state.ts";
+
+// Everything that can change a match. `seat` is the player who sent it.
+// The *TimeUp actions have no seat: only the server's clock sends them.
+export type Action =
+  // Draft
+  | { type: "ChooseTimeOfDay"; seat: Seat; time: TimeOfDay }
+  | { type: "Ban"; seat: Seat; heroId: string }
+  | { type: "Pick"; seat: Seat; heroId: string }
+  | { type: "DraftTimeUp" }
+  // Preparation Phase
+  | { type: "PlaceHero"; seat: Seat; unitId: string; to: Pos }
+  | { type: "PrepMove"; seat: Seat; unitId: string; to: Pos }
+  | { type: "BuyItem"; seat: Seat; unitId: string; itemId: string }
+  | { type: "SellItem"; seat: Seat; unitId: string; itemId: string }
+  | { type: "Ready"; seat: Seat }
+  | { type: "PrepTimeUp" }
+  // Combat Phase (PlayCard also in the Preparation Phase, for unit cards)
+  | { type: "Step"; seat: Seat; unitId: string; to: Pos }
+  | { type: "Undo"; seat: Seat }
+  | { type: "UseAbility"; seat: Seat; unitId: string; ability: AbilityRef; aim: Aim }
+  | { type: "PlayCard"; seat: Seat; card: number; aim: Aim } // card = index in hand
+  | { type: "EndTurn"; seat: Seat };
+
+export type ActionOf<T extends Action["type"]> = Extract<Action, { type: T }>;
+
+export type ApplyResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: string };
+
+// Returns why the action is not allowed, or null if it is.
+export function validate(s: GameState, a: Action, c: Content): string | null {
+  if (s.phase === "over") return "the game is over";
+  switch (a.type) {
+    case "ChooseTimeOfDay":
+      return validateChooseTimeOfDay(s, a);
+    case "Ban":
+      return validateBan(c, s, a);
+    case "Pick":
+      return validatePick(c, s, a);
+    case "DraftTimeUp":
+      return s.phase === "draft" ? null : "not in the draft";
+    case "PlaceHero":
+      return validatePlaceHero(s, a);
+    case "PrepMove":
+      return validatePrepMove(s, a);
+    case "BuyItem":
+      return validateBuyItem(c, s, a);
+    case "SellItem":
+      return validateSellItem(s, a);
+    case "Ready":
+      return validateReady(s, a);
+    case "PrepTimeUp":
+      return s.phase === "prep" ? null : "only in the Preparation Phase";
+    case "Step":
+      return validateStep(s, a);
+    case "Undo":
+      return validateUndo(s, a);
+    case "UseAbility":
+      return validateUseAbility(c, s, a);
+    case "PlayCard":
+      return validatePlayCard(c, s, a);
+    case "EndTurn":
+      return validateEndTurn(s, a);
+  }
+}
+
+// Checks the action, then returns the new state. The old state is never changed,
+// so the UI can also call this to preview an action (see preview()).
+export function apply(state: GameState, a: Action, c: Content): ApplyResult {
+  const error = validate(state, a, c);
+  if (error) return { ok: false, error };
+
+  const s = structuredClone(state);
+  const events: GameEvent[] = [];
+  switch (a.type) {
+    case "ChooseTimeOfDay":
+      applyChooseTimeOfDay(s, a, events);
+      break;
+    case "Ban":
+      applyBan(s, a, events);
+      break;
+    case "Pick":
+      applyPick(c, s, a, events);
+      break;
+    case "DraftTimeUp":
+      applyDraftTimeUp(c, s, events);
+      break;
+    case "PlaceHero":
+      applyPlaceHero(s, a, events);
+      break;
+    case "PrepMove":
+      applyPrepMove(s, a, events);
+      break;
+    case "BuyItem":
+      applyBuyItem(c, s, a, events);
+      break;
+    case "SellItem":
+      applySellItem(c, s, a, events);
+      break;
+    case "Ready":
+      applyReady(c, s, a, events);
+      break;
+    case "PrepTimeUp":
+      applyPrepTimeUp(c, s, events);
+      break;
+    case "Step":
+      applyStep(s, a, events);
+      break;
+    case "Undo":
+      applyUndo(s, events);
+      break;
+    case "UseAbility": {
+      applyUseAbility(c, s, a, events);
+      const free = abilityOf(c, findUnit(s, a.unitId)!.defId, a.ability)!.freeAction;
+      if (!checkWin(s, events) && !free) endTurn(c, s, events);
+      break;
+    }
+    case "PlayCard":
+      applyPlayCard(c, s, a, events);
+      checkWin(s, events);
+      break;
+    case "EndTurn":
+      applyEndTurn(c, s, events);
+      break;
+  }
+  return { ok: true, state: s, events };
+}
+
+// What an action would do, without doing it: the events it would produce and the state after.
+// ui.md "Damage preview" reads the Damaged / Healed events from this.
+export const preview = apply;

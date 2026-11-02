@@ -1,0 +1,173 @@
+import { ATK, defineHero } from "../define.ts";
+
+// Support heroes added in the prototype ("new"). Placeholders until each gets its own sheet in docs/heroes.
+
+export const priest = defineHero({
+  id: "priest",
+  name: "นักบวชหยก",
+  icon: "🌿",
+  role: "Support / Healer",
+  origin: "new",
+  attackType: "ranged",
+  damageType: "magic",
+  bounty: 400,
+  stats: { maxHp: 18, atk: 2, def: 1, speed: 95, move: 1, breakBar: 12, aggroBar: 5 },
+  passive: { text: "ต้นรอบใหญ่ ฟื้น HP 2 ให้พวกที่ยืนติดกัน" },
+  normalAttack: {
+    name: "ยิงแสง",
+    mana: 2,
+    text: "ยิงแสง 1 ตัวในระยะ 2 เวท ATK",
+    targeting: { type: "enemy", range: 2 },
+    magic: ATK,
+    break: 1,
+  },
+  skills: [
+    {
+      name: "พรหยก",
+      mana: 3,
+      text: "ฟื้น HP 6 ให้พวก 1 ตัวในระยะ 3",
+      targeting: { type: "ally", range: 3 },
+      heal: 6,
+    },
+  ],
+  ultimate: {
+    name: "สายธารหยก",
+    mana: 4,
+    ultCost: 5,
+    ultMax: 5,
+    text: "ทั้งทีมฟื้น HP 5 และได้โล่ 4 นาน 4 Turns",
+    targeting: { type: "team" },
+    heal: 5,
+    shield: { mode: "add", amount: 4, turns: 4 },
+  },
+});
+
+export const bard = defineHero({
+  id: "bard",
+  name: "นักกวีศึก",
+  icon: "🎺",
+  role: "Support / Buffer",
+  origin: "new",
+  attackType: "ranged",
+  damageType: "magic",
+  bounty: 400,
+  stats: { maxHp: 17, atk: 2, def: 0, speed: 110, move: 1, breakBar: 11, aggroBar: 5 },
+  passive: { text: "พวกที่ยืนติดตัว (8 ทิศ) ATK +1" },
+  normalAttack: {
+    name: "คลื่นเสียง",
+    mana: 2,
+    text: "ยิงคลื่นเสียง 1 ตัวในระยะ 2 เวท ATK",
+    targeting: { type: "enemy", range: 2 },
+    magic: ATK,
+    break: 1,
+  },
+  skills: [
+    {
+      name: "บทเพลงฮึกเหิม",
+      mana: 3,
+      text: "พวก 1 ตัวในระยะ 3 ATK +2 นาน 4 Turns",
+      targeting: { type: "ally", range: 3 },
+      buffs: [{ stat: "atk", amount: 2, turns: 4 }],
+    },
+    {
+      name: "จังหวะเจาะเกราะ",
+      mana: 2,
+      text: "พวก 1 ตัวในระยะ 3 Penetration +2 นาน 4 Turns",
+      targeting: { type: "ally", range: 3 },
+      buffs: [{ stat: "penetration", amount: 2, turns: 4 }],
+      ultGain: 1,
+    },
+  ],
+  ultimate: {
+    name: "ซิมโฟนีสงคราม",
+    mana: 4,
+    ultCost: 5,
+    ultMax: 5,
+    text: "ทั้งทีม ATK +2 และ Break Boost +1 นาน 4 Turns",
+    targeting: { type: "team" },
+    buffs: [
+      { stat: "atk", amount: 2, turns: 4 },
+      { stat: "breakBoost", amount: 1, turns: 4 },
+    ],
+  },
+});
+
+export const aegis = defineHero({
+  id: "aegis",
+  name: "ผู้พิทักษ์ผลึก",
+  icon: "💎",
+  role: "Support / Shield",
+  origin: "new",
+  attackType: "ranged",
+  damageType: "magic",
+  bounty: 400,
+  stats: { maxHp: 20, atk: 2, def: 1, speed: 95, move: 1, breakBar: 14, aggroBar: 5, magicArmor: 1 },
+  passive: { text: "โล่ที่ตัวนี้ให้ ได้เพิ่ม 2 ถ้าเป้าหมายมี HP ไม่ถึงครึ่ง" },
+  normalAttack: {
+    name: "ยิงผลึก",
+    mana: 2,
+    text: "ยิงผลึก 1 ตัวในระยะ 2 เวท ATK",
+    targeting: { type: "enemy", range: 2 },
+    magic: ATK,
+    break: 1,
+  },
+  skills: [
+    {
+      name: "ผลึกคุ้มภัย",
+      mana: 3,
+      text: "ตั้งโล่แบบ Set 6 ให้พวก 1 ตัวในระยะ 2 นาน 4 Turns",
+      targeting: { type: "ally", range: 2 },
+      shield: { mode: "set", amount: 6, turns: 4 },
+    },
+  ],
+  ultimate: {
+    name: "ปราการผลึก",
+    mana: 4,
+    ultCost: 5,
+    ultMax: 5,
+    text: "ทั้งทีมได้โล่แบบ Add 5 และ Armor +1 นาน 4 Turns",
+    targeting: { type: "team" },
+    shield: { mode: "add", amount: 5, turns: 4 },
+    buffs: [{ stat: "armor", amount: 1, turns: 4 }],
+  },
+});
+
+export const medic = defineHero({
+  id: "medic",
+  name: "หมอธารา",
+  icon: "💧",
+  role: "Support / Healer",
+  origin: "new",
+  attackType: "ranged",
+  damageType: "magic",
+  bounty: 400,
+  stats: { maxHp: 18, atk: 2, def: 0, speed: 105, move: 1, breakBar: 11, aggroBar: 5 },
+  passive: { text: "ฮีลจากตัวนี้ได้เพิ่ม ATK ÷ 2" },
+  normalAttack: {
+    name: "ยิงน้ำ",
+    mana: 2,
+    text: "ยิงน้ำ 1 ตัวในระยะ 2 เวท ATK",
+    targeting: { type: "enemy", range: 2 },
+    magic: ATK,
+    break: 1,
+  },
+  skills: [
+    {
+      name: "สายธารชำระ",
+      mana: 3,
+      text: "ฟื้น HP 5 และ Cleanse ล้าง CC กับ DOT ให้พวก 1 ตัวในระยะ 2",
+      targeting: { type: "ally", range: 2 },
+      heal: 5,
+      cleanse: true,
+    },
+  ],
+  ultimate: {
+    name: "ฝนชุบชีวิต",
+    mana: 4,
+    ultCost: 5,
+    ultMax: 5,
+    text: "ทั้งทีมฟื้น HP 6",
+    targeting: { type: "team" },
+    heal: 6,
+  },
+});
