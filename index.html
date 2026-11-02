@@ -155,7 +155,7 @@ button:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
 .pk{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:18px;min-width:150px}
 .pk b{font-size:14px;font-family:'Mitr',system-ui,sans-serif;font-weight:500;margin-right:6px}
 .pk.s0 b{color:var(--p1)}.pk.s1 b{color:var(--p2)}
-.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
 .hcard{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
 .hcard.tk{opacity:.5}
 .hcard.tk.s0{border:2px solid var(--p1)}.hcard.tk.s1{border:2px solid var(--p2)}
@@ -202,6 +202,33 @@ button:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
 .online h3{font-size:18px;margin-bottom:4px}
 .codein{width:7.5em;font:inherit;font-size:16px;text-transform:uppercase;letter-spacing:2px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--ink)}
 .bigcode{font-family:'Mitr',system-ui,sans-serif;font-size:56px;letter-spacing:10px;margin:10px 0}
+.act.ab{grid-template-columns:auto 1fr auto;align-items:start;gap:0 10px}
+.act.ab:disabled{opacity:.72}
+.act.ro{cursor:default}
+.abm{display:flex;flex-direction:column;gap:3px;min-width:0}
+.abh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.abt{font-size:11px;line-height:1.6;padding:0 6px;border-radius:6px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.act.ult .abt{background:var(--orb);color:#2A1E00;border-color:transparent}
+.act.skill .abt{color:var(--p1);border-color:color-mix(in srgb,var(--p1) 50%,var(--line))}
+.ara{font-size:12px;color:var(--muted)}
+.abl{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.45;border-left:2px solid var(--line);padding-left:7px}
+.abl b{font-weight:700}
+.abw{font-size:12px;color:var(--p2);font-weight:600}
+.pg{display:grid;gap:1px;align-self:start;margin-top:2px}
+.pg i,.pgl i{width:9px;height:9px;background:var(--line);border-radius:2px;display:inline-block}
+.pg i.me,.pgl i.me{background:var(--ink)}
+.pg i.hit,.pgl i.hit{background:var(--p2)}
+.pg i.rng,.pgl i.rng{background:color-mix(in srgb,var(--hl) 75%,transparent)}
+.pg i.al,.pgl i.al{background:var(--heal)}
+.pg i.al2{background:color-mix(in srgb,var(--heal) 55%,transparent)}
+.pg i.mv,.pgl i.mv{background:var(--p1)}
+.pgl{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:8px 0 0}
+.pgl i{margin-right:3px;vertical-align:-1px}
+.hab{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.hcard .act{background:var(--surface2)}
+.hcard{gap:6px}
+.netb{font-size:12px;display:inline-flex;gap:6px;align-items:center}
+.netb.bad{color:var(--p2);font-weight:600}
 .nick{width:12em;letter-spacing:0;text-transform:none}
 .linkbox{font-size:13px;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:8px 10px}
 </style>
@@ -794,6 +821,7 @@ function onTower(s,k){if(!humanTurn()||!S.act||S.act.type!=='attack')return;cons
 function onAct(a){
   if(a==='start-ai')return startGame('ai');if(a==='start-hot')return startGame('hot');
   if(a==='menu'){netLeave();S=null;closeOv();return render();}
+  if(a==='resync')return netResync();
   if(a==='net-create')return netCreate();
   if(a==='net-join'){const v=((document.getElementById('joincode')||{}).value||'').trim().toUpperCase();if(!/^[A-Z0-9]{5}$/.test(v)){NET_MSG='รหัสห้องต้องเป็นตัวอักษรหรือตัวเลข 5 ตัว';return render();}return guestOpen(v,null);}
   if(a==='net-rejoin')return netRejoin();
@@ -850,6 +878,94 @@ function towerStrip(s){if(!towersOn())return s!==viewSide()?`<div class="towers 
 function btn(id,name,cost,dis,desc,on){return `<button class="act${on?' on':''}" data-act="${id}" ${dis?'disabled':''}><span class="cost">${cost}</span><span class="an">${name}</span>${desc?`<span class="ad">${desc}</span>`:''}</button>`;}
 function naDesc(h){return(h.na&&h.na.desc)||'ตีปกติ';}
 const gaugeName=d=>(d.ult&&d.ult.gauge)||'อัลติ';
+
+/* ---------- รายละเอียดความสามารถ: คำนวณตัวเลขจริงจากค่าสถานะปัจจุบัน ---------- */
+const STATN={atk:'ATK',armor:'Armor',marmor:'Magic Armor',pen:'Penetration',brk:'Break Boost'};
+const fmtPM=(p,m)=>{const a=[];if(p>0)a.push(`กายภาพ <b>${p}</b>`);if(m>0)a.push(`เวท <b>${m}</b>`);return a.join(' + ')||'<b>0</b>';};
+function pseudoUnit(d){return{def:d,kind:'hero',side:0,x:-9,y:-9,placed:false,alive:true,atk:d.atk,defn:d.def,hp:d.hp,maxHp:d.hp,range:d.range||1,dmg:d.dmg,buffs:[],items:[],dots:[],cc:{},shields:[],spd:d.spd};}
+function shapeName(sh){if(sh===PLUS)return 'กากบาท 5 ช่อง';if(sh===SQ3)return 'สี่เหลี่ยม 3x3';if(sh===RING8)return '8 ช่องรอบตัว';if(sh===ADJ4)return '4 ช่องรอบตัว (บน ล่าง ซ้าย ขวา)';if(sh===R2)return 'ทุกช่องในระยะ 2';return sh.length+' ช่อง';}
+function areaText(u,ab,type){
+  if(type==='na')return ab.adj8?'ระยะ 1 รอบตัว 8 ทิศ โดนเป้าเดียว':`ระยะ ${u.range} ช่อง โดนเป้าเดียว`;
+  switch(ab.kind){
+  case 'dirShape':return `${ab.shape.length} ช่องด้านหน้า หันได้ 4 ทิศ โดนทุกตัวในพื้นที่`;
+  case 'adj8':return '1 ช่องรอบตัว เลือกได้ 8 ทิศ';
+  case 'line':return `เส้นตรง ${ab.len} ช่อง หันได้ 4 ทิศ ${ab.pierce?'ทะลุโดนทุกตัว':'โดนตัวแรกที่ขวาง'}`;
+  case 'burst':return `เลือกจุดในระยะ ${ab.cast} ระเบิดเป็น${shapeName(ab.shape)}`;
+  case 'multi':return `เลือก ${ab.count} ช่องในระยะ ${ab.cast} (เลือกช่องเดิมซ้ำได้)`;
+  case 'self':return `รอบตัว ${shapeName(ab.shape)}`;
+  case 'enemy':return ab.blink?`วาร์ปไปข้างศัตรู 1 ตัวในระยะ ${ab.cast}`:`ศัตรู 1 ตัวในระยะ ${ab.cast}`;
+  case 'ally':return `พวก 1 ตัวในระยะ ${ab.cast} (รวมตัวเอง)`;
+  case 'team':return 'พวกทุกตัวบนกระดาน';
+  case 'summon':return 'ลงในช่องว่างติดตัว 8 ทิศ';
+  case 'dash':return `พุ่งตรงสูงสุด ${ab.len} ช่อง หันได้ 4 ทิศ`;
+  case 'shuffle':return 'ยูนิตทุกตัวบนกระดาน';}
+  return '';}
+function effText(e,u){const boost=(u.def.dotBoost||0)+itemSum(u,'dot');
+  if(e.cc)return `${CCI[e.cc]} ${CCN[e.cc]} ${e.v} (ประมาณ ${Math.floor(e.v/100)} Turns ถ้าเป้า Speed 100)`;
+  if(e.dot==='voidmark'){const t=Math.floor(getAtk(u)/2)+boost;return `🌀 Voidmark ${e.turns} Turns: ทิกละเวท <b>${t}</b> (ATK÷2 + DOT Boost ${boost}) และลด DEF เป้า ${1+Math.floor(boost/3)}`;}
+  if(e.dot)return `🔥 Burn ${e.turns} Turns: ทิกละเวท <b>${e.magic+boost}</b>${boost?` (${e.magic} + DOT Boost ${boost})`:''} ไม่สนโล่และเกราะ`;
+  return '';}
+function dmgLines(u,ab,n){
+  if(ab.tru!==undefined)return ['ดาเมจทะลุทุกอย่าง <b>22%</b> ของ HP สูงสุดเป้า (เป้า HP 20 โดน 4)'];
+  if(ab.P===undefined&&ab.M===undefined)return [];
+  const vals=[];for(let i=0;i<Math.max(1,n);i++)vals.push(fmtPM(Math.max(0,ev(ab.P,u,i,null)),Math.max(0,ev(ab.M,u,i,null))));
+  if(new Set(vals).size===1)return [`ดาเมจ ${vals[0]}${ab.count?` ต่อดาบ × ${ab.count} เล่ม`:''}`];
+  return vals.map((v,i)=>`ช่อง ${i+1}: ${v}`);}
+function abilityDetail(u,ab,type){const L=[];
+  dmgLines(u,ab,ab.kind==='dirShape'?ab.shape.length:1).forEach(x=>L.push(x));
+  if(ab.pen)L.push(`Penetration +${ab.pen} เฉพาะท่านี้`);
+  if(ab.brk)L.push(`Break ${ab.brk}${ab.breakPerHit?' ต่อดาบ':''}`);
+  if(u.kind==='hero'){const gn=gaugeName(u.def);
+    if(type==='ult')L.push(`ใช้ ${gn} ${u.def.ult.need} (เก็บได้สูงสุด ${u.def.ult.max})`);
+    else{const g=ab.ultGain===undefined?(type==='na'?1:2):ab.ultGain;L.push(g?`ได้ ${gn} +${g}`:`ไม่ได้ ${gn}`);}}
+  if(ab.hpCost)L.push(`เสีย HP ตัวเอง ${ab.hpCost}`);
+  (ab.onHit||[]).forEach(e=>L.push(effText(e,u)));
+  if(ab.heal)L.push(`ฟื้น HP <b>${ab.heal+(u.def.id==='medic'?Math.floor(getAtk(u)/2):0)}</b>`);
+  if(ab.shield)L.push(`โล่แบบ Add <b>${ab.shield.amt}</b> นาน ${ab.shield.turns} Turns${u.def.id==='aegis'?' (+2 ถ้าเป้า HP ไม่ถึงครึ่ง)':''}`);
+  if(ab.setShield)L.push(`โล่แบบ Set <b>${ab.setShield.amt}</b> นาน ${ab.setShield.turns} Turns${u.def.id==='aegis'?' (+2 ถ้าเป้า HP ไม่ถึงครึ่ง)':''}`);
+  for(const b of [ab.buff,ab.buff2])if(b)L.push(`${STATN[b.stat]||b.stat} +${b.amt} นาน ${b.turns} Turns`);
+  if(ab.selfBuff)L.push(`ตัวเอง ${STATN[ab.selfBuff.stat]||ab.selfBuff.stat} +${ab.selfBuff.amt} นาน ${ab.selfBuff.turns} Turns`);
+  if(ab.cleanse)L.push('Cleanse ล้าง CC และ DOT ทั้งหมด');
+  if(ab.selfHeal)L.push(`ฟื้น HP ตัวเอง <b>${ab.selfHeal}</b>`);
+  if(ab.lifesteal)L.push('ฟื้น HP ตัวเองครึ่งหนึ่งของดาเมจที่ทำ');
+  if(ab.knock)L.push('ผลักเป้าถอย 1 ช่อง');
+  if(ab.zone)L.push(`☁️ ควัน ${ab.zone.turns} Turns พวกในควันโดนตีปกติและสกิลเล็งเป้าไม่ได้`);
+  if(ab.kind==='summon'){const d=UNITS[ab.summon];L.push(`เรียก ${d.ic} ${d.name} สูงสุด ${ab.count} ตัว (HP ${d.hp} ATK ${d.atk} ระยะ ${d.range})`);}
+  if(ab.oath){const D0=rawDef(u),ven=ab.oath==='vendetta';
+    L.push(`${ven?'Vendetta della Cittadella':'Giuramento d\u2019Avorio'}: ตัวเองและพวกในระยะ 1 ได้ Armor +2 Magic Armor +1 นาน 4 Turns`);
+    L.push(`ศัตรูตีคนที่คุ้มกัน สวนกลับกายภาพ <b>${ven?2+3*Math.floor(D0/2):1+D0}</b> Break ${ven?3:2} สูงสุด 2 ครั้ง ถ้า Bianca เดิน คุ้มกันจบ`);}
+  if(ab.collapse)L.push(`Collapse: Voidmark ทุกตัวบนกระดานระเบิด = ดาเมจทิก × ทิกที่เหลือ + ATK ${getAtk(u)} แล้วติด Voidmark ใหม่ 1 Turn`);
+  if(ab.rehide)L.push('ถ้าฆ่าได้ จะล่องหนอีกครั้ง');
+  return L.filter(Boolean);}
+function patternHTML(u,ab,type){const m=new Map();const set=(x,y,c)=>m.set(x+','+y,c);
+  const ring=(r,c,c8)=>{for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=c8?Math.max(Math.abs(x),Math.abs(y)):Math.abs(x)+Math.abs(y);if(d>=1&&d<=r)set(x,y,c);}};
+  const k=type==='na'?(ab.adj8?'na8':'nar'):ab.kind,cap=n=>Math.min(n,3);
+  switch(k){
+  case 'na8':case 'adj8':ring(1,'rng',true);set(0,-1,'hit');break;
+  case 'nar':ring(cap(u.range),'rng');set(0,-cap(u.range),'hit');break;
+  case 'dirShape':case 'self':ab.shape.forEach(([x,y])=>set(x,y,'hit'));break;
+  case 'line':for(let i=1;i<=cap(ab.len);i++)set(0,-i,ab.pierce||i===1?'hit':'rng');break;
+  case 'dash':for(let i=1;i<=cap(ab.len);i++)set(0,-i,'mv');break;
+  case 'burst':{ring(cap(ab.cast),'rng');const cy=-Math.min(ab.cast,2);ab.shape.forEach(([x,y])=>{if(Math.abs(x)<=3&&Math.abs(cy+y)<=3)set(x,cy+y,'hit');});break;}
+  case 'multi':case 'enemy':ring(cap(ab.cast),'rng');set(0,-cap(Math.min(ab.cast,2)),'hit');break;
+  case 'ally':ring(cap(ab.cast),'al2');break;
+  case 'summon':ring(1,'al',true);break;
+  default:return '';}
+  let R=1;for(const key of m.keys()){const [x,y]=key.split(',').map(Number);R=Math.max(R,Math.abs(x),Math.abs(y));}R=Math.min(3,R);
+  let h=`<span class="pg" style="grid-template-columns:repeat(${2*R+1},9px)" aria-hidden="true">`;
+  for(let y=-R;y<=R;y++)for(let x=-R;x<=R;x++)h+=`<i class="${x===0&&y===0?'me':(m.get(x+','+y)||'')}"></i>`;
+  return h+'</span>';}
+/* id=null คือแสดงอย่างเดียว */
+function abilityCard(id,u,ab,type,dis,on,warn){
+  const tag={na:'ตีปกติ',skill:'สกิล',ult:'อัลติ'}[type],cost=type==='na'?costNA(u):ab.cost;
+  const tg=id?'button':'span',attrs=id?` data-act="${id}" ${dis?'disabled':''}`:'';
+  return `<${tg} class="act ab ${type}${on?' on':''}${id?'':' ro'}"${attrs}><span class="cost">${cost}</span>
+    <span class="abm"><span class="abh"><span class="abt">${tag}</span><span class="an">${ab.name||'ตีปกติ'}</span></span>
+    <span class="ara">${areaText(u,ab,type)}</span>
+    <span class="abl">${abilityDetail(u,ab,type).map(l=>`<span>${l}</span>`).join('')}</span>
+    ${warn?`<span class="abw">${warn}</span>`:''}</span>${patternHTML(u,ab,type)}</${tg}>`;}
+const PG_LEGEND='<p class="pgl"><i class="me"></i>ตัวเอง <i class="hit"></i>ช่องที่โดน <i class="rng"></i>ระยะที่เลือกได้ <i class="al"></i>พวก <i class="mv"></i>ทางเดิน</p>';
+
 function unitInfo(u,mine){const d=u.def;let h=`<div class="uinfo s${u.side}"><div class="uh"><span class="big">${u.ic}</span><div><h3>${u.name}</h3><div class="sub">${sideName(u.side)}${d.role?' / '+d.role:' / ยูนิตเรียก'}</div></div></div>`;
   h+=`<div class="stats"><span>HP <b>${u.hp}/${u.maxHp}</b></span><span>ATK <b>${getAtk(u)}</b></span><span>DEF <b>${getDef(u)}${u.def.id==='bianca'?` (ก่อนแปลง ${rawDef(u)})`:''}</b></span><span>Armor <b>${getArmor(u)}</b></span><span>Magic Armor <b>${getMArmor(u)}</b></span><span>Speed <b>${u.spd}</b></span><span>Break <b>${u.bb}/${u.maxBb}</b></span>${d.pen?`<span>Penetration <b>${d.pen}</b></span>`:''}${d.dotBoost?`<span>DOT Boost <b>${d.dotBoost}</b></span>`:''}</div>`;
   const tags=[];if(isHidden(u))tags.push('👻 ล่องหน');if(inSmoke(u))tags.push('☁️ อยู่ในควัน');
@@ -866,10 +982,13 @@ function unitInfo(u,mine){const d=u.def;let h=`<div class="uinfo s${u.side}"><di
   if(u.kind==='hero')h+=`<p class="pas">พาสซีฟ: ${d.passive}</p><div class="ultm">${gaugeName(d)} ${u.ult}/${u.ultMax} (ใช้ ${u.ultNeed})<span class="bar"><i style="width:${Math.round(100*u.ult/u.ultMax)}%"></i></span></div>`;
   if(mine){if(isStunned(u))h+='<p class="warn">ตัวนี้ติด Stun ใช้ไม่ได้ใน Turn นี้</p>';else{const o=S.orbs[u.side],Ac=S.act||{},mc=costMove(u),na=naOf(u),nc=costNA(u),sil=!!u.cc.silence;
     h+='<div class="acts">'+btn('move','เดิน 1 ช่อง'+(u.def.move8?' (8 ทิศ)':''),mc,o<mc||!moveTargets(u).length,(u.cc.root?'ติด Root เดินไม่ได้':(mc===0?'ฟรี ตัวประชิดเดินฟรีได้ 1 ครั้งต่อรอบใหญ่ ':(mc>1?'ติด Slow เดินแพงขึ้น ':''))+'ไม่เสีย Turn ย้อนได้'+(u.oath?' ถ้าเดิน คำสาบานจะจบ':'')),Ac.type==='move')
-      +btn('attack',(na.name||'ตีปกติ'),nc,!canNA(u)||!attackTargets(u).length,(u.kind==='hero'?naDesc(d):'')+(na.hpCost?` เสีย HP ${na.hpCost}`:''),Ac.type==='attack');
-    if(u.kind==='hero'){d.skills.forEach((sk,i)=>{h+=btn('skill:'+i,sk.name,sk.cost,sil||o<sk.cost||!getOpts(u,sk).length,sk.desc+(sil?' (ติด Silence)':''),Ac.type==='skill'&&!Ac.ult&&Ac.ab===sk);});
-      const ul=d.ult;h+=btn('ult','อัลติ: '+ul.name,ul.cost,sil||u.ult<u.ultNeed||o<ul.cost||!getOpts(u,ul).length,ul.desc+(u.ult<u.ultNeed?` (${gaugeName(d)} ${u.ult}/${u.ultNeed})`:''),Ac.type==='skill'&&Ac.ult);}
+      +abilityCard('attack',u,na,'na',!canNA(u)||!attackTargets(u).length,Ac.type==='attack',o<nc?'มานาไม่พอ':(!attackTargets(u).length?'ไม่มีเป้าในระยะ':(na.hpCost&&u.hp<=na.hpCost?'HP ไม่พอ':'')));
+    if(u.kind==='hero'){d.skills.forEach((sk,i)=>{const op=getOpts(u,sk).length;h+=abilityCard('skill:'+i,u,sk,'skill',sil||o<sk.cost||!op,Ac.type==='skill'&&!Ac.ult&&Ac.ab===sk,sil?'ติด Silence ใช้สกิลไม่ได้':(o<sk.cost?'มานาไม่พอ':(!op?'ไม่มีเป้าหรือช่องที่ใช้ได้':'')));});
+      const ul=d.ult,op=getOpts(u,ul).length;h+=abilityCard('ult',u,ul,'ult',sil||u.ult<u.ultNeed||o<ul.cost||!op,Ac.type==='skill'&&Ac.ult,sil?'ติด Silence ใช้สกิลไม่ได้':(u.ult<u.ultNeed?`${gaugeName(d)} ${u.ult}/${u.ultNeed} ยังไม่พอ`:(o<ul.cost?'มานาไม่พอ':(!op?'ไม่มีเป้าหรือช่องที่ใช้ได้':''))));}
+    h+=PG_LEGEND;
     h+='</div>';}}
+  else if(u.kind==='hero'||u.kind==='unit'){h+='<div class="acts"><p class="muted" style="margin:0">ความสามารถ</p>'+abilityCard(null,u,naOf(u),'na');
+    if(u.kind==='hero'){u.def.skills.forEach(sk=>{h+=abilityCard(null,u,sk,'skill');});h+=abilityCard(null,u,u.def.ult,'ult');}h+=PG_LEGEND+'</div>';}
   return h+'</div>';}
 function statusText(){if(S.phase==='prep'){const s=S.prepSide;if(!isHumanSide(s))return S.mode==='online'?'รอคู่แข่งเตรียมตัวและซื้อของ…':'AI กำลังเตรียมตัว';
     return S.round===1?`<b>${sideName(s)}</b> วางฮีโร่ทั้ง 4 ตัวในสองแถวฝั่งของคุณ แตะฮีโร่ที่วางแล้วเพื่อย้ายที่ได้ และลงยูนิตจากการ์ดได้ (ใช้มานา ต้องลงติดกับพวกเรา) มานาของรอบนี้ใช้ได้ตั้งแต่ตอนนี้`
@@ -918,16 +1037,14 @@ function draftHTML(){const st=DRAFT[S.draftStep],s=st[1],ban=st[0]==='ban';
   <p class="status" style="margin-top:10px">${isHumanSide(s)?`ตาของ<b>${sideName(s)}</b> ${ban?'แบน 1 ตัว (ฝั่งละ 2 ตัว)':'เลือก 1 ตัว (ฝั่งละ 4 ตัว ห้ามซ้ำ)'}`:`${S.mode==='online'?'รอคู่แข่ง':'AI กำลัง'}${ban?'แบน':'เลือก'}…`}</p>
   <div class="picks">${[0,1].map(i=>`<div class="pk s${i}"><b>${sideName(i)}</b>${S.picks[i].map(id=>HB[id].ic).join(' ')||'–'}<span class="bans">แบน ${S.bans[i].map(id=>HB[id].ic).join(' ')||'–'}</span></div>`).join('')}</div>
   <div class="hgrid">${HEROES.map(h=>{const t=takenBy(h.id),ul=h.ult;const cls=t==='ban'?' bn':t?' tk s'+t[1]:'';const na=Object.assign({cost:2},h.na);
-    return `<button class="hcard${cls}" data-pick="${h.id}" ${t||!isHumanSide(s)?'disabled':''}>
+    return `<button class="hcard${cls}" data-pick="${h.id}" ${t||!isHumanSide(s)?'disabled':''} aria-label="${ban?'แบน':'เลือก'} ${h.name}">
       <span class="org ${h.origin}">${t==='ban'?'ถูกแบน':ORIGIN[h.origin]}</span>
       <span class="hn"><span>${h.ic}</span><span><h3>${h.name}</h3><span class="sub">${h.role}</span></span></span>
       <p>HP ${h.hp}  ATK ${h.atk}  DEF ${h.def}  Speed ${h.spd}  Break ${h.bb}${h.armor?'  Armor '+h.armor:''}${h.marmor?'  Magic Armor '+h.marmor:''}${h.pen?'  Pen '+h.pen:''}${h.dotBoost?'  DOT Boost '+h.dotBoost:''}</p>
       <p><span class="k">พาสซีฟ</span> ${h.passive}</p>
-      <p><span class="k">${na.name||'ตีปกติ'}</span> (${na.cost} มานา) ${naDesc(h)}</p>
-      ${h.skills.map(x=>`<p><span class="k">${x.name}</span> (${x.cost} มานา) ${x.desc}</p>`).join('')}
-      <p><span class="k">อัลติ ${ul.name}</span> (${ul.cost} มานา ใช้ ${gaugeName(h)} ${ul.need}) ${ul.desc}</p></button>`;}).join('')}</div>`;}
+      <span class="hab">${(pu=>abilityCard(null,pu,Object.assign({cost:2,ultGain:1,hpCost:0,brk:1},h.na),'na')+h.skills.map(x=>abilityCard(null,pu,x,'skill')).join('')+abilityCard(null,pu,ul,'ult'))(pseudoUnit(h))}</span></button>`;}).join('')}</div>${PG_LEGEND}`;}
 function gameHTML(){HLc=hl();
-  return `<header class="top"><div class="tl"><h1>Hero Card Duel</h1><span class="rd">รอบที่ ${S.round} Turn ${S.gturn+1}</span><button class="ghost" data-act="rules">กติกา</button></div>${dayband(S.time)}</header>
+  return `<header class="top"><div class="tl"><h1>Hero Card Duel</h1><span class="rd">รอบที่ ${S.round} Turn ${S.gturn+1}</span>${netBadge()}<button class="ghost" data-act="rules">กติกา</button></div>${dayband(S.time)}</header>
   <div class="layout"><section class="field">${sideBar(1-viewSide())}${towerStrip(1-viewSide())}${board()}${towerStrip(viewSide())}${sideBar(viewSide())}</section>
   <section class="side"><div class="panel">${panel()}</div>${controls()}${handHTML()}<ol class="log" aria-live="polite">${S.log.slice(0,30).map(l=>`<li class="${typeof l.c==='number'?'c'+l.c:l.c}">${l.t}</li>`).join('')}</ol></section></div>`;}
 function render(){document.documentElement.style.setProperty('--skyc',TIMES[S?S.time:0].sky);
@@ -957,9 +1074,15 @@ function showRules(){ov.dataset.kind='rules';ov.innerHTML=`<div class="modal"><h
   <div class="row"><button class="btn pri" data-act="close">ปิด</button></div></div>`;ov.classList.add('show');}
 function closeOv(){ov.classList.remove('show');ov.innerHTML='';ov.dataset.kind='';}
 
+function netBadge(){return '';}
+function netResync(){}
 /* ---------- เล่นออนไลน์แบบ P2P ผ่าน PeerJS: เครื่องเจ้าของห้องเป็นที่เก็บเกม ส่งสถานะทั้งเกมทุกครั้งที่มีการเปลี่ยน ---------- */
 let NET=null,NET_MSG='';
 const PREFIX='hcd-v1-';
+const TURN={username:'openrelayproject',credential:'openrelayproject'};
+const PEER_OPTS={config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'},
+  {urls:'turn:openrelay.metered.ca:80',...TURN},{urls:'turn:openrelay.metered.ca:443',...TURN},{urls:'turn:openrelay.metered.ca:443?transport=tcp',...TURN}]}};
+const hashStr=t=>{let x=0;for(let i=0;i<(t||'').length;i++)x=(x*31+t.charCodeAt(i))|0;return x;};
 const viewSide=()=>(S&&S.mode==='online'&&NET&&NET.side===1)?1:0;
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -988,14 +1111,20 @@ function applyState(my,ver,state){if(!(ver>my.ver)||typeof state!=='string')retu
 function sendState(my){if(my.conn&&my.conn.open&&my.last)try{my.conn.send({t:'state',ver:my.ver,state:my.last,names:my.names});}catch(e){}}
 function bindConn(my,conn){
   conn.on('data',m=>{if(NET!==my||!m||typeof m!=='object')return;
+    if(my.host&&m.t!=='hello'&&my.conn!==conn)return;
+    my.lastSeen=Date.now();
+    if(m.t==='ping'){if(m.ver<my.ver)sendState(my);else if(m.ver>my.ver){try{conn.send({t:'need'});}catch(e){}}
+      else if(m.h!==hashStr(my.last)&&my.host){my.ver++;saveLocal();sendState(my);}return;}
+    if(m.t==='need'){sendState(my);return;}
     if(m.t==='hello'&&my.host){
-      if(my.guestToken&&my.guestToken!==m.token){try{conn.send({t:'full'});}catch(e){}setTimeout(()=>conn.close(),400);if(my.conn===conn)my.conn=null;return;}
+      if(my.guestToken&&my.guestToken!==m.token){try{conn.send({t:'full'});}catch(e){}setTimeout(()=>conn.close(),400);return;}
+      const old=my.conn;my.conn=conn;if(old&&old!==conn)try{old.close();}catch(e){}
       my.guestToken=m.token;my.names[1]=String(m.name||'').slice(0,20);my.seats[1]=true;NET_MSG='';
       applyState(my,m.ver,m.state);sendState(my);saveLocal();render();return;}
     if(m.t==='full'){NET_MSG='ห้องนี้มีผู้เล่นครบสองคนแล้ว';render();return;}
     if(m.t==='state'){if(Array.isArray(m.names))my.names=[String(m.names[0]||'').slice(0,20),my.host?my.names[1]:String(m.names[1]||'').slice(0,20)];
       my.seats=[true,true];NET_MSG='';applyState(my,m.ver,m.state);render();}});
-  conn.on('open',()=>{if(NET!==my)return;if(!my.host){try{conn.send({t:'hello',name:my.names[1],token:guestToken(),ver:my.ver,state:my.last});}catch(e){}}});
+  conn.on('open',()=>{if(NET!==my)return;my.lastSeen=Date.now();if(!my.host){try{conn.send({t:'hello',name:my.names[1],token:guestToken(),ver:my.ver,state:my.last});}catch(e){}}});
   conn.on('close',()=>{if(NET!==my||my.conn!==conn)return;my.conn=null;NET_MSG='คู่แข่งหลุดการเชื่อมต่อ เกมจะรอจนกว่าจะกลับมา';render();
     if(!my.host)setTimeout(()=>{if(NET===my&&!my.conn)guestConnect(my);},3000);});
   conn.on('error',()=>{});}
@@ -1005,25 +1134,33 @@ function hostOpen(code,saved){netLeave();lsSet('hcd-last',code);
   if(saved&&saved.state){applyState(my,saved.ver,saved.state);my.guestToken=saved.guestToken;if(saved.names)my.names[1]=saved.names[1]||'';}
   else{S=newState('online');my.last=serialize(S);my.ver=1;saveLocal();}
   NET_MSG='กำลังเปิดห้อง…';render();
-  const peer=new Peer(PREFIX+code);my.peer=peer;
+  const peer=new Peer(PREFIX+code,PEER_OPTS);my.peer=peer;
   peer.on('open',()=>{if(NET!==my)return;NET_MSG=my.seats[1]?'รอคู่แข่งกลับเข้าห้อง…':'';render();});
   peer.on('error',e=>{if(NET!==my)return;NET_MSG=e.type==='unavailable-id'?'รหัสห้องนี้ยังค้างอยู่บนเซิร์ฟเวอร์ รอประมาณครึ่งนาทีแล้วกดกลับเข้าห้องอีกครั้ง':'เชื่อมต่อไม่ได้ ('+e.type+')';render();});
   peer.on('disconnected',()=>{if(NET===my&&!peer.destroyed)try{peer.reconnect();}catch(e){}});
-  peer.on('connection',conn=>{if(NET!==my)return;
-    if(my.conn&&my.conn.open){conn.on('open',()=>{try{conn.send({t:'full'});}catch(e){}setTimeout(()=>conn.close(),400);});return;}
-    my.conn=conn;bindConn(my,conn);});}
+  peer.on('connection',conn=>{if(NET!==my)return;bindConn(my,conn);});}
 function guestOpen(code,saved){if(!peerOk()){NET_MSG='โหลดระบบออนไลน์ไม่สำเร็จ ลองรีเฟรชหน้า';return render();}
   netLeave();lsSet('hcd-last',code);
   const my={code,host:false,side:1,seats:[true,false],ver:0,last:null,names:['',myName()],conn:null,peer:null};NET=my;S=null;
   if(saved&&saved.state&&!saved.host){applyState(my,saved.ver,saved.state);my.seats=[true,true];if(saved.names)my.names[0]=saved.names[0]||'';}
   NET_MSG='กำลังเข้าห้อง '+code+'…';render();
-  const peer=new Peer();my.peer=peer;
+  const peer=new Peer(PEER_OPTS);my.peer=peer;
   peer.on('open',()=>{if(NET===my)guestConnect(my);});
   peer.on('error',e=>{if(NET!==my)return;
     NET_MSG=e.type==='peer-unavailable'?'ยังไม่พบห้อง '+code+' เจ้าของห้องต้องเปิดหน้าเกมค้างไว้ กำลังลองใหม่…':'เชื่อมต่อไม่ได้ ('+e.type+')';render();
     if(e.type==='peer-unavailable')setTimeout(()=>{if(NET===my&&!(my.conn&&my.conn.open))guestConnect(my);},4000);});
   peer.on('disconnected',()=>{if(NET===my&&!peer.destroyed)try{peer.reconnect();}catch(e){}});}
 function guestConnect(my){if(!my.peer||my.peer.destroyed)return;const conn=my.peer.connect(PREFIX+my.code,{reliable:true});my.conn=conn;bindConn(my,conn);}
+/* ส่ง ping ทุก 2 วินาที เทียบเวอร์ชันและ hash ถ้าไม่ตรงกันจะขอสถานะใหม่ ถ้าเงียบเกิน 9 วินาทีถือว่าหลุดแล้วต่อใหม่ */
+let NET_BADGE='';
+setInterval(()=>{const my=NET;if(!my)return;const c=my.conn;
+  if(c&&c.open){try{c.send({t:'ping',ver:my.ver,h:hashStr(my.last)});}catch(e){}
+    if(my.lastSeen&&Date.now()-my.lastSeen>9000){my.lastSeen=0;try{c.close();}catch(e){}if(my.conn===c){my.conn=null;if(!my.host)setTimeout(()=>{if(NET===my&&!my.conn)guestConnect(my);},500);}}}
+  const b=netBadge();if(b!==NET_BADGE&&S&&S.mode==='online'){NET_BADGE=b;render();}},2000);
+function netOnline(){const my=NET;return !!(my&&my.conn&&my.conn.open&&my.lastSeen&&Date.now()-my.lastSeen<6000);}
+function netBadge(){if(!S||S.mode!=='online'||!NET)return '';return netOnline()?'<span class="netb ok">🟢 เชื่อมต่ออยู่</span>':'<span class="netb bad">🔴 ขาดการเชื่อมต่อ กำลังต่อใหม่ <button class="mini" data-act="resync">ต่อใหม่</button></span>';}
+function netResync(){const my=NET;if(!my)return;if(my.conn&&my.conn.open){try{my.conn.send({t:'need'});}catch(e){}sendState(my);}
+  else if(!my.host){guestConnect(my);}NET_MSG='กำลังซิงค์ใหม่…';render();setTimeout(()=>{if(NET===my){NET_MSG='';render();}},2000);}
 function netRejoin(){const code=lsGet('hcd-last');if(!code)return;const sv=loadLocal(code);if(sv&&sv.host)return hostOpen(code,sv);return guestOpen(code,sv);}
 /* ส่งสถานะเมื่อเครื่องนี้เปลี่ยนเกมจริงเท่านั้น */
 function netSync(){const my=NET;if(!my||!S||S.mode!=='online')return;const js=serialize(S);if(js===my.last)return;
