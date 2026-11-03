@@ -24,12 +24,19 @@
   - Its other attacks cost its normal attack's mana (prototype units: 2).
 - Unit cards can be played in the Preparation Phase and the Combat Phase. Other cards only in the Combat Phase (as in the prototype).
 - Playing a card does not end the Turn (`combat.md` "Turn Flow").
+- **Off-field cards (การ์ดนอกสนาม)**: cards that stay in play off the board after they are played (e.g. a buff for the whole team).
+  - Up to 4 active at once per player.
+  - Each card states how long it lasts.
+  - The enemy can remove one only with a skill or card made for that.
 
 ## Shop and Items (from the prototype, for now)
 
 - Gold: 800 at the start of the match, +300 at the start of every later round, plus bounties.
 - Each hero has 2 item slots. Items come in 3 tiers; buying an upgrade replaces the lower item it is built from and costs only the difference.
 - Selling gives back half of the item's total value. An item's total value is its price plus the total value of the item it is built from.
+- **Stash**: 12 slots for items not on a hero.
+  - Items move between the stash and heroes only in the Preparation Phase.
+  - When a hero dies, only the items on that hero are cleared. The stash is kept.
 
 ## Game Modes
 

@@ -20,7 +20,7 @@ Base Bounty : 400
 
 ## Combat Modifiers
 Break Boost   : 3
-Break Boost % : 10%   (formula not set yet, see `ideas.md` question 11)
+Break Power%  : 110%
 
 ## Passive: Exfil
 - Effect: When Falka's HP is below 25%, she gains **2 free steps** (no mana). She can use them in her player's Turn (no one moves on the enemy's Turn). Unused free steps are kept until the end of that Round.

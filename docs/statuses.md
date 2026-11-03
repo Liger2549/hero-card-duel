@@ -8,19 +8,34 @@ DOT rules (kinds, formula, stacking): `combat.md` "Damage over Time".
 
 ### Nocturnal Flame (เพลิงรัตติกาล)
 - **Kind**: Turn DOT
-- **Damage per tick**: 2
+- **Damage per tick**: 50% ATK (Karas 2, Zoran 1)
 - **Break per tick**: 1 (only this DOT reduces the Break Bar)
   - Break Boost and Break Resistance do not change it.
   - It cannot lower the Break Bar below 1, so it never breaks a unit by itself.
-- **Used by**: Karas, h4
+- **Used by**: Karas, Zoran
 
 ### Voidmark
 - **Kind**: Round DOT
-- **Damage per tick**: 1 per 2 ATK
-- **Erosion**: while Voidmark is active, the enemy's DEF is reduced by 1 + 1 per 3 DOT Boost (DEF cannot go below 0).
+- **Damage per tick**: 40% ATK
+- **Erosion**: while Voidmark is active, the enemy's DEF is reduced by 1 + 20% DOT Boost (DEF cannot go below 0).
 - **Used by**: Serie (each tick that deals damage gives her +1 Singularity, see her Passive).
 
 ## Other Statuses
+
+### Physical ATK +N
+- A buff that adds N to the **Physical** damage of each of the unit's hits.
+- A hit with no Physical damage gets nothing.
+- N is worked out when the buff is given, using the giver's stats at that moment (e.g. Linnet's Speed), and does not change after.
+- **Used by**: Linnet
+
+### Wither N (เหี่ยวเฉา)
+- A debuff that lowers the unit's **Max HP by N**. The skill that applies it states N and the duration.
+- It stacks. Each stack counts its own duration.
+- Max HP never goes below 1.
+- When Max HP drops below the unit's HP, the HP is kept (Keep, `combat.md` "Max Value Changes").
+- When a stack ends, Max HP goes back up by N. HP does not come back with it.
+- N is worked out when it is applied, using the applier's stats at that moment.
+- **Used by**: Pley (Fallen Halo)
 
 ### Stealth (ล่องหน)
 - **Hidden**: while no enemy hero/unit is in the 8 tiles around the stealthed unit, the enemy player cannot see where it is.

@@ -6,7 +6,7 @@ Layout of the client. The owner designs the look; this file records what goes wh
 
 ```
  [ action order: interjects  ]   [   clock: time of day, Round, Turn   ]
- [Shop | Dungeon | Team buffs]   [ enemy hand: card backs only         ]
+ [Shop | Dungeon | Off-field]     [ enemy hand: card backs only         ]
  (collapsible)                                                            [ selected unit stats ]
  [ hero cards x4 + items     ]
  [ stash                     ]          [     board 9x9     ]             [ skills              ]
@@ -19,11 +19,11 @@ Layout of the client. The owner designs the look; this file records what goes wh
 - **Action order** (top left, above the tabbed panel): pending interjects in resolution order, with Turns left (`combat.md` "Action Order", "Interject").
 - **Board** (center): 9x9, the player's own side at the bottom. Towers sit on the edges and show their HP.
 - **Left column**, top to bottom:
-  - **Tabbed panel**, can be collapsed: Shop, Dungeon, and (planned) Team buffs. Shop and Dungeon only work in a Major Phase.
-    - When the Combat Phase starts, the panel switches to the Team buffs tab by itself.
-    - While collapsed, its tab bar still shows the active team buffs as small icons; hovering one shows its details.
+  - **Tabbed panel**, can be collapsed: Shop, Dungeon, and Off-field cards (`rules.md` "Cards"). Shop and Dungeon only work in a Major Phase.
+    - When the Combat Phase starts, the panel switches to the Off-field cards tab by itself.
+    - While collapsed, its tab bar still shows the active off-field cards as small icons; hovering one shows its details.
   - **Hero cards** (one per hero): portrait, HP, Break Bar, Ult Points, 2 item slots, Melee free step marker, statuses.
-  - **Stash**: items not on a hero (rule not written yet, see `ideas.md`).
+  - **Stash**: 12 slots for items not on a hero (`rules.md` "Shop and Items").
   - **Log**: what happened, with damage numbers.
 - **Right column**:
   - **Selected unit**: stats of the clicked unit, ally or enemy, with statuses and time left (Turns / Own Turns / Rounds), shields, Break Bar.

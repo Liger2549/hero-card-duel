@@ -4,19 +4,7 @@ Things to design or decide later. Not rules yet; move them into the rule docs wh
 
 ## Open questions (ask the owner before building these)
 
-1. **Ultimate twice in one Turn**: `heroes/README.md` says a hero may cast their Ultimate more than once in the same Turn, but now an Ultimate ends the Turn. Is that only possible when the Ultimate is a Free Action?
-2. **Preparation Phase move and swap**: can the free move in the Preparation Phase swap with an ally?
-3. **Summoned units and the Melee free step**: do Melee summoned units also get the free step?
-4. **Free Action and Own Turn**: confirm that a Free Action skill neither ends the Turn nor uses the hero's Own Turn.
-5. **Shields and the new Durations rule**: confirm that a shield's duration also skips the Turn it was given in, like buffs.
-6. **Bianca's counter**: once per enemy Action, or once per guarded unit hit by an AoE?
-7. **Repeated skill use** (owner is designing it): using the same skill again costs more mana, or deals less damage. Still to decide: which one, how much, and whether the count is per Turn or per Round.
-8. **Manual interject delay**: it resolves "N Turns" after being cast. Does that delay also skip the Turn it was cast in, like Durations?
-9. **Stash** (from the UI design): a place for items that are not on a hero. How many slots? Can items move between the stash and heroes at any time, or only in the Preparation Phase? Does a hero's death clear only its own 2 slots?
-10. **Team buff cards** (from the UI design): cards that buff the whole team and stay in play. How many can be active at once, how long do they last, and can the enemy remove them?
-11. **Boost stats as %**: decided (2026-11-03) that Boost stats have a flat and a % version (Falka has Break Boost % 10%). Still to write: the formulas, e.g. `Break = (Break + Break Boost) × (1 + Break Boost %)`, and where the % goes in the Break Resistance step.
-12. **Steps to %**: change skills written as steps ("+1 per N", e.g. Bianca, Leilani, Voidmark) to % of a stat? Keep steps until the owner decides.
-
+1. **Repeated skill use** (owner is designing it): a cooldown, or more mana for each repeat. Still to decide: which one, how much, and whether the count is per Turn or per Round.
 ## Board
 
 - **Placement Range**: some heroes may place summons farther than 1 tile (8 directions) from themselves.

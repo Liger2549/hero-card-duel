@@ -61,8 +61,8 @@ X X X
 - Magic: 1
 - Break: 1
 - Tags: DOT
-- Effect: Deals damage to the enemies in the hit form, then **collapses** every Voidmark on the board.
-  - **Collapse**: every enemy with Voidmark, anywhere on the board, instantly takes:
+- Effect: Deals damage to the enemies in the hit form, then **collapses** every Voidmark Serie applied, anywhere on the board.
+  - **Collapse**: every enemy with Serie's Voidmark, anywhere on the board, instantly takes:
     ```
     Collapse Damage = (Voidmark tick damage × remaining ticks) + ATK
     ```

@@ -45,6 +45,7 @@ Each tile has two parts:
 - Each hero/unit has a **Step Cost** stat: the mana one of its steps costs. Default **1**. Cards and skills can change it with a stat modifier (e.g. Override 0 = free steps).
 - **Melee free step**: the **first step** a Melee hero/unit takes in each Round costs **0** mana. Its later steps that Round cost its Step Cost. Ranged heroes/units always pay their Step Cost. The free step comes back at the start of every Round.
   - Each hero/unit sheet states its **Attack Type**: **Melee**, **Ranged** or **Mixed**. A Mixed sheet also states whether it gets the free step.
+  - This includes units summoned by hero skills, by their own Attack Type.
 - Every hero/unit pays for its own step. Moving 3 units in one Turn costs the sum of their 3 step costs.
 - A swap is a step for both units, so it costs both units' step costs (see Occupancy). A Melee ally that still has its free step pays 0 for its part.
 
@@ -53,6 +54,7 @@ Each tile has two parts:
 - Round 1: heroes are **placed**, not stepped (`rules.md` "Preparation Phase").
 - From round 2, in the Preparation Phase each hero/unit may **move once**, to any free tile of its team's zone. Distance and direction do not matter, and it costs **no mana**. It does not use up the Melee free step of that Round.
   - It must stay inside its team's zone, and cannot end on a part of the zone that has disappeared (destroyed tower, `rules.md`).
+  - It may swap with an ally standing in the zone (see Occupancy). The swap is that ally's Preparation move too.
   - A hero/unit standing outside its team's zone cannot move in this phase.
 
 ### Undo
@@ -67,6 +69,17 @@ Each tile has two parts:
 - Range is measured with **Manhattan distance**: horizontal tiles + vertical tiles.
 - Diagonal movement does not change how attack/skill range is measured, unless the skill states otherwise.
 - **Off-board objects** (e.g. towers at the board edge) are treated as adjacent to the edge tiles next to them. Range to an off-board object = Manhattan distance to the nearest of those edge tiles + 1.
+- A skill may use a **square** range instead (e.g. "the 5x5 square around him"): every tile within that many tiles in both directions.
+
+### Blocked Shots
+
+- A hit form that says **cannot shoot over units** can be blocked. Blocking uses **square rings** around the caster: ring 1 is the 8 tiles around it, ring 2 the next 16 tiles.
+- Ring 1 tiles are never blocked.
+- A ring 2 tile is blocked when any unit (ally or enemy) stands on the ring 1 tile on the way to it:
+  - Straight (e.g. 2 N): blocked by the tile 1 N.
+  - Diagonal (e.g. 2 NE): blocked by the tile 1 NE.
+  - Knight-move (e.g. 1 E and 2 N): blocked by either of the two ring 1 tiles next to it on the way (1 N or 1 NE).
+- Used by: Zoran (Lanternlight), Ribu (Pley's Normal Attack).
 
 ## Placement
 

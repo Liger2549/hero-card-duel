@@ -2,6 +2,73 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — Leilani
+
+- **Leilani** is finished (`heroes/Leilani.md`). Healing Bonus % +25% became Healing Power 125%. Her emergency heal "2 + 1 per 4 Max Hp" became 2 + 25% Max HP (her own Max HP).
+- Lifebuoy: not herself; triggers at once as an interject; cooldown 4 Turns of her team. "Not played for 3 Turns" counts her team's Turns.
+- Rolling Tide works like Zoran's lantern: pulses on cast, then once in each of the next 3 Turns of her team, centered on her.
+- Whale Breach: landing tile on the ring 3 tiles away; the player turns the area to any of 4 directions. Its heal reaches every ally hero and unit, including Leilani, but not objects.
+
+## 2026-11-03 — Old open questions
+
+- **Ultimate twice in one Turn**: depends on the Ultimate. One that ends the Turn cannot; a Free Action one can if the hero has enough Ult Points (`heroes/README.md`).
+- **Preparation move** can swap with an ally (`board.md`).
+- **Summoned units** get the Melee free step too, by their own Attack Type; each unit sheet comes later.
+- **Shields** skip the Turn they were given in, like buffs (already in `combat.md` "Durations").
+- **Manual interject delay** does not count the Turn it was cast in (`combat.md`).
+- **Repeated skill use**: the owner is now thinking of a cooldown or extra mana.
+- **Free Action** does not use the hero's Own Turn (it is not really their turn). Already in `combat.md` "Turn Flow".
+- **Bianca's counter**: counts per guarded unit hit. Her counter range is now the 5x5 square around her. She can counter several times in one Turn, one interject after another. Damage from stepping onto a hidden unit counts too.
+- **Stash** (`rules.md`): 12 slots; items move only in the Preparation Phase; a hero's death does not clear the stash.
+- **Off-field cards (การ์ดนอกสนาม)** (`rules.md` "Cards"), the new name for "team buff cards": up to 4 active per player; each card states its duration; the enemy can remove one only with a skill or card made for that.
+- **Valen**: Penetration +2 during Morning, Day and Evening.
+
+## 2026-11-03 — % notation
+
+- **100% is normal**: every % value is a multiplier (80% = × 80%, 120% = × 120%). Buffs and debuffs add or subtract percentage points (`combat.md` "Stat Modifiers").
+- Each stat can also be multiplied as a Stat Modifier (e.g. Armor 150%).
+- **% Multipliers** (`combat.md` "% Multipliers"): new % stats that multiply a formula's result. Dealer: Armor Shred%, Break Power%, Break DMG Power%, DOT Power%, Resonance Power%, Healing Power%. Receiver: Physical / Magic / Damage Taken%, Break Taken%, DOT Taken%, Drain Taken%, Healing Taken%, CC Taken%. All formulas in `combat.md` were rewritten with them.
+- New **Heal** formula: `((Base heal + Healing Bonus) × Healing Power% + Healing Received) × Healing Taken%`. Life Steal does not use it.
+- Formulas round once, at the end (stats are rounded when worked out).
+- Falka: Break Boost % 110% became **Break Power 110%**. Pley's weak healing became **Healing Taken 25%**.
+- **Nocturnal Flame** damage is now 50% of the applier's ATK (Karas 2, Zoran 1), locked when applied.
+- **DOT stacking is per applier**: the same applier refreshes its own copy; copies from different appliers stack and each ticks on its own (`combat.md` "Damage over Time"). Serie's Collapse only affects her own Voidmark.
+- **Steps to %**: Bianca: Armor + 100% DEF, Magic Armor + 50% DEF, Vendetta 2 + 150% DEF (same values as before). Voidmark 40% ATK and Erosion 1 + 20% DOT Boost, chosen to keep Serie's current values.
+
+## 2026-11-03 — Pley (Ribu / Pley forms)
+
+- New two-form hero **Pley** (`heroes/Pley.md`): starts as Ribu; Pley replaces him when he dies or uses his Ultimate. Pley's death is final.
+- Speed dodge works on hits only. He receives only 25% of healing from skills, cards and items; his own Life Steal is not reduced.
+- **Life Steal** heals only when the hit lowers the target's HP; a hit fully absorbed by shields heals nothing. The heal is capped by the HP damage the hit dealt: `min(Life Steal − Resistance, HP damage)` (`combat.md` "Healing"). Wither still applies to a fully shielded hit.
+- **Wither** is now a shared status (`statuses.md`), so other skills can lower Max HP too.
+- Blocked Shots for knight-move tiles: either ring 1 tile on the way blocks. The Ribu Ultimate's Revenant's Cross uses Pley's ATK.
+- Paradox Gauge: Speed +5 and Life Steal +2 per point, for the rest of the game; counted before the Ultimate spends the points. The owner accepts that a skilled player can make him very strong, balanced by how easily Ribu dies early.
+- Pley's arrival strike: a plus shape 3 tiles wide, reaching the board edges.
+- Mixed, gets the Melee free step (plus Ribu's own free step every Turn).
+- **Blocked Shots** (`board.md`): square rings, as for Zoran; now written as a general rule.
+- Volatile Core: the 2x2 corner is picked when placing. Cores are removed when Ribu dies or uses his Ultimate.
+- Wither lowers enemy Max HP with type Keep. Pley's Max HP cap is 250% of base Max HP (items raise the base). The Ultimate's Max HP +90% ATK lasts 2 Own Turns.
+- Pley's Ultimate: range 2; DOTs stay on him while in the air; the dive follows the normal interject order.
+
+## 2026-11-03 — Zoran
+
+- New hero **Zoran** (`heroes/Zoran.md`), from the draft `h4.md`. Role: Support / Damage.
+- **Stats in formulas** belong to the skill owner unless the skill says otherwise (`heroes/README.md`).
+- Guiding Light: not Zoran himself; Wicks max 2, start at 1, +1 at the start of every Round. Each ally can get the shield once per Turn; allies that drop at the same time are shielded in one interject.
+- A new Vigil Lantern replaces the old one. The lantern is a zone: it does not block movement and can sit on any tile.
+- Lanternlight cannot shoot over units: blocking uses square rings, and only the outer ring (2 tiles straight) can be blocked.
+- Veil of Nightflame burns forward (8 directions).
+- Vigil Lantern: enemies get Nocturnal Flame for 1 Turn. Lantern shields last until 2 Turns of his team after the lantern is gone, stacking until then. The lantern cannot be hit and disappears if Zoran dies. Its Speed (50% of Zoran's) is only for action order.
+
+## 2026-11-03 — Linnet
+
+- New hero **Linnet** (`heroes/Linnet.md`), from the draft `h2.md`.
+- **Physical ATK +N** (`statuses.md`): adds N to the Physical damage of each hit; hits with no Physical damage get nothing. N uses the giver's stats when the buff is given.
+- Tidal Chorus: allies in the 8 tiles around her, not herself; up to 5 stacks, each with its own duration.
+- Her buffs never include herself. Her Ultimate cannot target herself.
+- **Rising Chorus** state lasts until Crescendo. Echoes of the Elder Flock: max 3, extra points are lost, reset to 0 after Crescendo. Points add up (above 50% to dead in one hit = +3). Crescendo's buff lasts 1 Own Turn of each ally.
+- **Max Ult Points**: when a hero sheet does not state it, it equals the Ult Point usage (`heroes/README.md`).
+
 ## 2026-11-03 — Falka
 
 - New hero **Falka** (`heroes/Falka.md`), from the draft `h1.md`. Her kestrel is named **Kestrel**.
@@ -11,7 +78,7 @@ Answers the owner gave to rule questions, newest first. The rule docs already in
 - **Kestrel's Eye** (Free Action): a Scanner within 3 tiles; 3x3 Scan Field; Scanner HP 25% ATK, hit only by skills that do not lock onto a target. Her lanes that line up with the Scan Field go on to its far edge (straight lines only). Hits on enemies in the field get Break +30% ATK.
 - **Vanishing Point** (Free Action): Stealth and 2 free steps. Costs 3 Ult Points, then 1 per Turn of her player. Max Ult Points 7. She can end it any time, for free.
 - **Stealth** (`statuses.md`): hidden while no enemy is next to her; next to an enemy she is shown but cannot be targeted by skills that lock onto a target; being hit ends it.
-- **Break Boost %**: Boost stats get a % version (Falka has Break Boost % 10%). The formula comes later.
+- **Break Boost %**: Boost stats get a % version (Falka has Break Boost % 110%; 100% is normal). The formula comes later.
 - **Lock-on / No lock** (`board.md` "Anchor"): skills anchored on `T` lock onto a target; skills anchored on `C` (areas, Hit: First lanes) do not. Every hit form header says which.
 - **Stealth details**: "next to" means the 8 tiles around. Falka's own attacks do not end her Stealth. She pays 1 Ult Point at the start of each of her team's Turns. An enemy that steps onto her hidden tile is pushed back and takes 130% of her ATK, and her Stealth ends. While she is hidden, the enemy cannot undo steps and is warned first.
 - **Team Turns**: a new duration kind that counts only one team's Turns (`combat.md` "Durations"). Falka's Scanner lasts 3 Turns of her team; up to 2 at once; it does not block movement and the enemy can see it.

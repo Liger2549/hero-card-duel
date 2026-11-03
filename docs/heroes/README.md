@@ -16,18 +16,19 @@ Each hero has the following skill types. The number of skills varies by hero.
 - A normal attack, skill or ultimate ends the player's Turn, unless it has the **Free Action** tag (`combat.md` "Turn Flow").
 - Each timed effect states its duration in Turns, Own Turns (and whose) (`combat.md` "Durations"). A DOT states Rounds or the target team's Turns (`combat.md` "Damage over Time").
 - Statuses that several heroes can use (every DOT) are defined in `docs/statuses.md`. The hero file links to them.
+- A stat in a skill formula (ATK, Max HP, Speed, ...) is the skill owner's, unless the skill says whose.
 - Every hit form header says **Lock-on** (anchored on `T`) or **No lock** (anchored on `C`) (`board.md` "Anchor").
 
 ### Ult Points
 
 - Each hero has two values. Both vary by hero:
-  - **Max Ult Points**: how many Ult Points the hero can store.
+  - **Max Ult Points**: how many Ult Points the hero can store. If the hero sheet does not state it, it equals the Ult Point usage.
   - **Ult Point usage**: how many Ult Points one Ultimate costs. It is never more than Max Ult Points.
 - A hero can use their Ultimate when their Ult Points are **equal to or higher than** the usage.
 - Using the Ultimate subtracts the usage. Any remaining points are kept.
   - Example: Max 8, usage 4. At 8 points the hero can cast the Ultimate twice. At 6 points, one cast leaves 2.
   - A hero whose usage equals their Max (e.g. Max 5, usage 5) needs a full gauge, and casting empties it.
-- A hero may cast their Ultimate more than once in the same Turn if they have enough Ult Points.
+- Whether a hero can cast their Ultimate more than once in the same Turn depends on that Ultimate. One that ends the Turn cannot be cast again. One with the Free Action tag can, if the hero has enough Ult Points, unless the skill says otherwise.
 - Ult Points cannot go above Max. Any extra points gained are lost.
 - Ult Points are gained by using skills. Each skill states how many Ult Points it gives.
 - Some heroes may have other ways to gain Ult Points. These are described on the hero.

@@ -6,7 +6,7 @@ The yellow light men named Valen.
 - **Role**: Damage
 - **Damage Type**: Physical and Magic
 - **Combat Types**: Penetration
-- **Attack Type**: (not set yet: Melee / Ranged / Mixed)
+- **Attack Type**: Mixed (gets the Melee free step)
 
 ## Base Stats
 Max Hp      : 20
@@ -28,6 +28,8 @@ Penetration : 2
   Bonus = max((Penetration − Target Armor Average) / 2, 0)
 
   (Each division is rounded to the nearest whole number, combat.md "General".)
+
+- **Daylight**: while the time of day is Morning, Day or Evening (`rules.md`), Valen gets Penetration +2.
 
 ## Normal Attack: The Sword's Radiant Waltz
 - Mana: 2

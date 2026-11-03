@@ -4,6 +4,7 @@
 
 - All values are integers.
 - **Rounding**: any result that is not a whole number (division, %, stat modifiers) is **rounded to the nearest whole number**, looking only at the first 2 decimal places (.50 and above rounds up). This applies unless a rule states otherwise.
+  - Stats are rounded when they are worked out (Stat Modifiers). Inside a formula, round **once, at the end** of that formula, not after each step.
   - Example: 120% of ATK 4 = 4.80 → 5. 25% of ATK 3 = 0.75 → 1. 30% of ATK 4 = 1.20 → 1. 7 / 2 = 3.50 → 4. 2.495 is read as 2.49 → 2.
 - Scaling effects may be written as a percentage of a stat (e.g. "75% ATK") or as steps (e.g. "+1 per 3 ATK"). Steps count only whole steps (ATK 5 gives 1 step of 3).
 
@@ -97,7 +98,7 @@ There are two kinds of interject.
 ### Manual Interject (player-activated)
 
 - Can only be cast during the caster's owner's own Turn.
-- Each manual interject skill states a delay: it resolves **N Turns** after being cast.
+- Each manual interject skill states a delay: it resolves **N Turns** after being cast. The Turn it was cast in is not counted (as in Durations).
 - The target is locked to a **tile** when cast, not to a unit. Units can move out of the targeted tile before it resolves.
 - Targeted tiles and remaining Turns must always be visible on the board.
 
@@ -116,15 +117,22 @@ There are two kinds of interject.
 - **ATK** is the normal attack value.
 - **Physical ATK** and **Magic ATK** are derived from ATK. How each is scaled is defined per hero/unit skill.
 - **Penetration** reduces the target's Armor and Magic Armor by a flat amount for this attacker's hits only (minimum 0). It does not reduce DEF or shields.
+- **Armor Shred%** (attacker) multiplies the target's Armor and Magic Armor before Penetration.
+- **Physical Taken%**, **Magic Taken%** and **Damage Taken%** (target) multiply the damage the target takes. All % stats are 100% by default (see "% Multipliers").
 
 ```
-Effective Armor       = max(Armor − Penetration, 0)
-Effective Magic Armor = max(Magic Armor − Penetration, 0)
+Effective Armor       = max( Armor × Armor Shred% − Penetration, 0 )
+Effective Magic Armor = max( Magic Armor × Armor Shred% − Penetration, 0 )
 
-Damage = max( max(Physical ATK − Effective Armor, 0)
-            + max(Magic ATK − Effective Magic Armor, 0)
-            − DEF, 0 )
+Physical part = max( Physical ATK − Effective Armor, 0 ) × Physical Taken%
+Magic part    = max( Magic ATK − Effective Magic Armor, 0 ) × Magic Taken%
+
+Damage = max( (Physical part + Magic part − DEF) × Damage Taken%, 0 )
 ```
+
+- Example: Physical 10, Magic 4, Penetration 1, Armor Shred 50% against Armor 4, Magic Armor 2, DEF 1, Physical Taken 80%.
+  Effective Armor = 4 × 50% − 1 = 1. Effective Magic Armor = 2 × 50% − 1 = 0.
+  Physical part = 9 × 80% = 7.2. Magic part = 4. Damage = (7.2 + 4 − 1) × 100% = 10.2 → 10.
 
 ## Resonance
 
@@ -133,8 +141,12 @@ Damage = max( max(Physical ATK − Effective Armor, 0)
 
 ```
 n   = number of resonating skills that hit this target
-Raw = Σ(raw damage of those skills) × floor(log2(n))
-    + Σ(Resonance Boost of each hero whose skill hit this target)
+Raw = ( Σ(raw damage of those skills) × floor(log2(n))
+      + Σ(Resonance Boost of each hero whose skill hit this target) )
+    × Resonance Power%
+
+Resonance Power% = 100% + Σ(each of those heroes' Resonance Power% − 100%)
+                   (e.g. 120% and 110% → 130%)
 
 Resonance Damage = Raw, then mitigated once as normal
                    (Penetration, Armor, Magic Armor, DEF)
@@ -160,7 +172,7 @@ Resonance Damage = Raw, then mitigated once as normal
 - When a CC status is applied:
 
 ```
-Remaining Recovery = max(Recovery value − Tenacity, 0)
+Remaining Recovery = max( Recovery value × CC Taken% − Tenacity, 0 )
 ```
 
 - At the end of **every Turn**:
@@ -185,8 +197,10 @@ Remaining Recovery = Remaining Recovery − Speed   (current Speed)
 - Each skill and normal attack states a **Break** value: how much it reduces the target's Break Bar.
 
 ```
-Break Bar reduction per action = max( Break + Break Boost − Break Resistance, 1 )
-Break DMG dealt             = max( Target Max Break Bar / 5, 1 ) + attacker's Break DMG Bonus
+Break Bar reduction per action = max( (Break + Break Boost) × Break Power% × Break Taken%
+                                      − Break Resistance, 1 )
+Break DMG dealt = ( max(Target Max Break Bar / 5, 1) + attacker's Break DMG Bonus )
+                  × attacker's Break DMG Power%
 ```
 
 - When the Break Bar reaches 0, the hero/unit:
@@ -211,15 +225,19 @@ Break DMG dealt             = max( Target Max Break Bar / 5, 1 ) + attacker's Br
 - DOT damage **ignores DEF, Armor and Magic Armor** (so Penetration has no effect on it). It is reduced only by Fortitude:
 
 ```
-DOT Damage  = Damage per tick + DOT Boost
-Tick Damage = max( DOT Damage − Fortitude, 1 )
+DOT Damage  = (Damage per tick + DOT Boost) × DOT Power%      (applier's, when applied)
+Tick Damage = max( DOT Damage × DOT Taken% − Fortitude, 1 )  (target's, on every tick)
 ```
 
 - The target's Fortitude is checked **on every tick**, so buffs and debuffs on the target take effect immediately.
 - Every tick deals at least **1 damage**.
 - A DOT tick is **not an attack or a hit**. It does not trigger counter-attacks, Life Steal or on-hit effects.
 - A DOT tick does not reduce the Break Bar, unless that DOT states its own **Break** per tick (e.g. Nocturnal Flame).
-- If the same DOT is applied to a unit that already has it, the new one replaces the old one (new damage and full duration). Different DOTs stack.
+- **Stacking is per applier**:
+  - The same applier applying the same DOT again replaces its own copy (new damage and full duration).
+  - The same DOT from different appliers stacks. Each copy ticks on its own: its own damage, DOT Taken%, Fortitude and 1-damage minimum, and its own Break if the DOT has one.
+  - Different DOTs stack.
+  - Example: Karas's Nocturnal Flame (2) and Zoran's Nocturnal Flame (1) on a target with Fortitude 1. Each tick: Karas's copy deals max(2 − 1, 1) = 1, Zoran's copy deals max(1 − 1, 1) = 1. Total 2 per tick.
 - If the applier dies, their DOTs keep ticking until they expire.
 - **Cleanse** removes DOT statuses only if the Cleanse skill says so.
 
@@ -276,11 +294,26 @@ These are skill keywords defined per skill, not stats.
 
 ## Healing
 
-- **Life Steal**: Each damaging hit heals the attacker by:
+- **Life Steal**: Each hit that lowers the target's HP (after shields) heals the attacker by the amount below. A hit fully absorbed by shields, or that deals 0 damage, heals nothing. On-hit effects still apply.
 
 ```
-Life Steal heal = max(Life Steal − Life Steal Resistance, 0)
+Life Steal heal = min( max(Life Steal × Drain Taken% − Life Steal Resistance, 0),
+                       HP damage dealt by this hit )
 ```
+
+- Drain Taken% and Life Steal Resistance are the target's.
+- The heal is never more than the HP the hit took away (after shields).
+  - Example: Life Steal 15. A hit that takes 3 HP heals 3. A hit that takes 9 HP heals 9. A hit that takes 20 HP heals 15.
+- Life Steal does not go through the Heal formula below.
+
+- **Heal** from skills, cards and items:
+
+```
+Heal = ( (Base heal + Healing Bonus) × Healing Power% + Healing Received ) × Healing Taken%
+```
+
+- Healing Bonus and Healing Power% are the healer's. Healing Received and Healing Taken% are the receiver's.
+  - Example: Zoran heals 2 (Healing Bonus 0, Healing Power 100%) on Pley (Healing Taken 25%): 2 × 25% = 0.5 → 1.
 
 ## Max Value Changes
 
@@ -311,6 +344,8 @@ These rules apply to **Max HP**, **Max HP Hits** and **Max Break Bar**, on heroe
 Final stat = (Base + all Flat) × (1 + all Additive %) × every Multiplicative
 ```
 
+- **% values are written as a multiplier where 100% is normal.** A stat at 80% is × 80%; at 120% it is × 120%. Buffs and debuffs move it by percentage points: 100% + 20% − 10% = 110%. It never goes below 0%.
+  - In the formula above, `(1 + all Additive %)` is this value (e.g. +20% → 120%).
 - **Override** fixes the stat to its value, ignoring the others. If there is more than one, the latest wins.
 - Final stats are rounded (see General "Rounding"), so every stat is a whole number.
 - A final stat is never below 0, except **Tenacity** (it can be negative). **Speed** is at least 1.
@@ -349,6 +384,23 @@ Final stat = (Base + all Flat) × (1 + all Additive %) × every Multiplicative
 - Tenacity
 - Fortitude
 - DOT Boost
+
+## % Multipliers
+
+Every % stat is 100% by default (100% = normal, see Stat Modifiers). They multiply a formula's result, not a stat.
+
+| Dealer's | Used in | Receiver's | Used in |
+|---|---|---|---|
+| Armor Shred% | Damage Resolution | Physical Taken% | Damage Resolution |
+| Break Power% | Break | Magic Taken% | Damage Resolution |
+| Break DMG Power% | Break | Damage Taken% | Damage Resolution |
+| DOT Power% | DOT | Break Taken% | Break |
+| Resonance Power% | Resonance | DOT Taken% | DOT |
+| Healing Power% | Healing | Drain Taken% | Healing (Life Steal) |
+| | | Healing Taken% | Healing |
+| | | CC Taken% | Crowd Control |
+
+- A % of a stat itself (e.g. Armor 150% = Armor × 150%) is a Stat Modifier, not one of these.
 
 ---
 

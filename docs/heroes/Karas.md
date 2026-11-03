@@ -96,4 +96,4 @@ b b b b b
 ```
 
 ## Nocturnal Flame (เพลิงรัตติกาล)
-A Turn DOT, defined in `statuses.md` (damage 2 and Break 1 per tick). Other heroes from the same origin (e.g. h4) can also apply it.
+A Turn DOT, defined in `statuses.md` (damage 50% ATK and Break 1 per tick). Other heroes from the same origin (e.g. Zoran) can also apply it.

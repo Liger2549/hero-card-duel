@@ -11,8 +11,11 @@ The rule docs were copied from the user's C++ project (`../card-game/docs`) on 2
 - `docs/rules.md` — game modes (Normal / Custom room), board size, zones, towers and tower HP, win conditions, draft, rounds and phases.
 - `docs/board.md` — tiles, occupancy and swap, movement and step cost, undo, range, placement, skill areas (hit form notation).
 - `docs/combat.md` — Turn/Round terms, hits, HP types, damage formula, Break, CC Recovery, DOT, shields (Add/Set), Aggro, Resonance, Interject, stat modifiers. Follow it exactly.
-- `docs/heroes/README.md` — hero system and hero file template.
-- `docs/heroes/*.md` — finished heroes: Valen, Bianca, Serie. Leilani is unfinished. Implement heroes exactly as written.
+- `docs/statuses.md` — shared statuses: every DOT (Nocturnal Flame, Voidmark), Stealth, Physical ATK +N, Wither.
+- `docs/ui.md` — match screen layout and pages.
+- `docs/heroes/README.md` — hero system, hero file template and defaults (stats in formulas are the skill owner's; Max Ult Points = usage when not stated).
+- `docs/heroes/*.md` — finished heroes: Valen, Bianca, Serie, Karas, Falka, Linnet, Zoran, Pley (two forms: Ribu / Pley), Leilani. Implement heroes exactly as written.
+- New hero drafts arrive in Thai (often as `h<N>.md`). To finish one: propose names first without editing, ask only real rule gaps, then format it like the finished heroes with Thai names in brackets.
 - `docs/decisions.md` — the user's answers to rule questions, with dates.
 - `docs/ideas.md` — open questions and ideas not decided yet. Ask the user before building anything listed there.
 - `prototype/index.html` — the old single-file prototype (playable, online via PeerJS). Its rules are older than the docs; when they differ, the docs win. Reference only. Do not extend it.
