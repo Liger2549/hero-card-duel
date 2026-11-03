@@ -1,13 +1,12 @@
 import {
   abilityOf,
+  abilityRefs,
   apply,
   botAction,
   candidateAims,
-  heroDef,
   newMatch,
   normalConfig,
   validate,
-  type AbilityRef,
   type Action,
   type GameState,
 } from "@hcd/engine";
@@ -29,9 +28,7 @@ function timeUpBot(s: GameState): Action {
   };
   const ok = (a: Action) => validate(s, a, content) === null && (a.type !== "UseAbility" || hurts(a));
   for (const u of s.units.filter((x) => x.owner === seat && !x.dead && x.pos)) {
-    const hero = heroDef(content, u.defId);
-    const refs: AbilityRef[] = hero ? ["ultimate", ...hero.skills.map((_, i) => i), "normal"] : ["normal"];
-    for (const ability of refs) {
+    for (const ability of abilityRefs(content, u.defId).reverse()) {
       const ab = abilityOf(content, u.defId, ability)!;
       for (const aim of candidateAims(s, u, ab.form, ability === "normal")) {
         const a: Action = { type: "UseAbility", seat, unitId: u.id, ability, aim };

@@ -17,6 +17,7 @@ import {
 } from "./rules/draft.ts";
 import { applyPrepMove, applyStep, applyUndo, validatePrepMove, validateStep, validateUndo } from "./rules/movement.ts";
 import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "./rules/shop.ts";
+import { notify } from "./rules/interject.ts";
 import { checkWin } from "./rules/status.ts";
 import type { Aim } from "./rules/targeting.ts";
 import {
@@ -146,6 +147,7 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       break;
     case "UseAbility": {
       applyUseAbility(c, s, a, events);
+      notify(c, s, events); // hooks may queue interjects; they resolve when the Turn ends
       const free = abilityOf(c, findUnit(s, a.unitId)!.defId, a.ability)!.freeAction;
       if (!checkWin(s, events) && !free) endTurn(c, s, events);
       break;
@@ -161,6 +163,7 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       applyEndRound(c, s, events);
       break;
   }
+  if (s.phase === "combat" || s.phase === "prep") notify(c, s, events);
   return { ok: true, state: s, events };
 }
 

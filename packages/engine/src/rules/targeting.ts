@@ -36,9 +36,14 @@ export interface Cell {
   lane: number;
 }
 
-// Reads a grid. Cells are separated by spaces, or are one character each.
+// One grid row as cells: separated by spaces, or one character each.
+export function gridRow(row: string): string[] {
+  return row.trim().includes(" ") ? row.trim().split(/\s+/) : [...row.trim()];
+}
+
+// Reads a grid.
 export function parseGrid(rows: readonly string[]): { anchor: "C" | "P"; cells: Cell[] } {
-  const table = rows.map((r) => (r.trim().includes(" ") ? r.trim().split(/\s+/) : [...r.trim()]));
+  const table = rows.map(gridRow);
   let ax = -1;
   let ay = -1;
   let anchor: "C" | "P" = "C";

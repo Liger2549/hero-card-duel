@@ -1,3 +1,5 @@
+import type { UnitHooks } from "./rules/interject.ts";
+
 // What a hero or unit sheet says, as data (docs/heroes/README.md).
 // The shape follows the prototype's hero list; it will move toward the docs' notation later.
 
@@ -149,6 +151,7 @@ export interface AbilityDef {
   selfBuff?: Buff;
 
   freeAction?: boolean; // combat.md "Turn Flow": does not end the Turn
+  interject?: { delay: number }; // combat.md "Manual Interject": resolves `delay` Turns after it is cast
   special?: string; // hero-specific effect, run by that hero's hooks
 }
 
@@ -166,6 +169,7 @@ export interface UnitDef {
   damageType: DamageType;
   stats: Stats;
   normalAttack: AbilityDef;
+  hooks?: UnitHooks; // its own mechanics, in its own file (rules/interject.ts)
 }
 
 // rules.md "Cards"

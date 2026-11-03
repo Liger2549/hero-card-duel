@@ -1,6 +1,7 @@
 import type { Pos } from "./board.ts";
 import type { MatchConfig, Seat } from "./config.ts";
-import { heroDef, unitDef, type Content } from "./content.ts";
+import { heroDef, unitDef, type AbilityRef, type Content } from "./content.ts";
+import type { Aim } from "./rules/targeting.ts";
 import type { BuffStat, CcKind, ModifierKind } from "./defs.ts";
 
 export const Seats = ["A", "B"] as const;
@@ -79,6 +80,23 @@ export interface Unit {
 
   // combat.md "Turn Flow": did a normal attack, skill or ultimate this Turn (a Free Action does not count).
   usedOwnTurn: boolean;
+  // combat.md "Action Order": Actions (normal or interject) this Turn.
+  actionCount: number;
+}
+
+// combat.md "Interject": an Action waiting to resolve.
+export interface Pending {
+  id: number; // also the order it was cast or triggered in
+  unitId: string;
+  name: string; // shown in the action order panel
+  actionValue: number; // stored when cast or triggered
+  key: string; // the hero hook that resolves it (hooks.interjects), or "ability" for a manual interject skill
+  ability?: AbilityRef; // manual interject: the skill, with its aim locked to tiles
+  aim?: Aim;
+  turnsLeft: number; // 0 = resolves at the next resolution point
+  count: Countdown;
+  appliedTurn: number;
+  data?: Record<string, number | string>; // anything the hook wants to keep
 }
 
 // One step that can still be undone (board.md "Undo").
@@ -128,6 +146,8 @@ export interface GameState {
   towers: Record<Seat, Tower[]>;
   shieldSeq: number;
   nextUnitId: number; // for summoned units
+  pending: Pending[]; // combat.md "Interject"
+  nextPendingId: number;
 
   // Preparation Phase
   ready: Record<Seat, boolean>;
@@ -169,6 +189,7 @@ export function createUnit(c: Content, defId: string, owner: Seat, id: string, s
     summonedRound,
     attacksThisRound: 0,
     usedOwnTurn: false,
+    actionCount: 0,
   };
 }
 

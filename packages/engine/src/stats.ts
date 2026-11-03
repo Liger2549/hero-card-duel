@@ -22,11 +22,23 @@ const percentStats: ReadonlySet<StatName> = new Set<PercentStat>([
   "ccTaken",
 ]);
 
+// A final stat (combat.md "Stat Modifiers"), after the unit's own passive hook if it has one
+// (e.g. Bianca's DEF → Armor). Never below 0, except Tenacity; Speed and Max HP are at least 1.
+export function stat(c: Content, u: Unit, name: StatName): number {
+  const hook = unitDef(c, u.defId).hooks?.stat;
+  return clamp(name, hook ? hook(u, name, statBeforeHooks(c, u, name), (n) => statBeforeHooks(c, u, n)) : statBeforeHooks(c, u, name));
+}
+
+function clamp(name: StatName, total: number): number {
+  if (name === "tenacity") return total;
+  if (name === "speed" || name === "maxHp") return Math.max(total, 1); // statuses.md "Wither": Max HP at least 1
+  return Math.max(total, 0);
+}
+
 // combat.md "Stat Modifiers":
 //   Final stat = (Base + all Flat) × (100% + all pct points) × every mult, rounded once.
 // A % Multiplier ("% Multipliers") starts at 100; flat buffs move it by percentage points.
-// A final stat is never below 0, except Tenacity; Speed is at least 1.
-export function stat(c: Content, u: Unit, name: StatName): number {
+export function statBeforeHooks(c: Content, u: Unit, name: StatName): number {
   let flat = baseStat(c, u, name);
   let pctPoints = 0;
   const mults: number[] = [];
@@ -40,11 +52,7 @@ export function stat(c: Content, u: Unit, name: StatName): number {
 
   let hv = mulPct(h(flat), 100 + pctPoints);
   for (const m of mults) hv = mulPct(hv, m);
-  const total = roundH(hv);
-
-  if (name === "tenacity") return total;
-  if (name === "speed" || name === "maxHp") return Math.max(total, 1); // statuses.md "Wither": Max HP at least 1
-  return Math.max(total, 0);
+  return clamp(name, roundH(hv));
 }
 
 function baseStat(c: Content, u: Unit, name: StatName): number {

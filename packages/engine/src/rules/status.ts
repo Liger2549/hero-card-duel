@@ -84,17 +84,16 @@ function counts(s: GameState, count: Countdown, appliedTurn: number): boolean {
   return true;
 }
 
-// Called at the end of every Turn, while s.activeSeat is still the player whose Turn is ending.
+// combat.md "Manual Interject": a delayed interject counts down like a Duration; at 0 it resolves when the Turn ends.
+// Called first at the end of a Turn, while s.activeSeat is still the player whose Turn is ending.
+export function countdownInterjects(s: GameState): void {
+  for (const p of s.pending) if (p.turnsLeft > 0 && counts(s, p.count, p.appliedTurn)) p.turnsLeft -= 1;
+}
+
+// Called at the end of every Turn after its interjects have resolved, while s.activeSeat is still the
+// player whose Turn is ending: CC, buffs and shields count down, then Turn DOTs tick last.
 export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
   for (const u of s.units) {
-    if (u.dead) continue;
-
-    // Turn DOT: ticks at the end of each Turn of the target's team, not in the Turn it was applied in.
-    for (const d of u.dots.filter((x) => x.kind === "turn" && x.appliedTurn < s.turn && u.owner === s.activeSeat)) {
-      if (u.dead) break;
-      tick(c, s, u, d, events);
-    }
-    dropEndedDots(u, events);
     if (u.dead) continue;
 
     // Remaining Recovery − Speed; the CC ends when it drops below Speed.
@@ -123,7 +122,21 @@ export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
     for (const sh of u.shields) if (sh.turnsLeft > 0 && counts(s, sh.count, sh.appliedTurn)) sh.turnsLeft -= 1;
     u.shields = u.shields.filter((sh) => sh.turnsLeft !== 0);
   }
-  for (const u of s.units) u.usedOwnTurn = false;
+
+  // Turn DOT: ticks at the end of each Turn of the target's team, not in the Turn it was applied in.
+  for (const u of s.units) {
+    if (u.dead || u.owner !== s.activeSeat) continue;
+    for (const d of u.dots.filter((x) => x.kind === "turn" && x.appliedTurn < s.turn)) {
+      if (u.dead) break;
+      tick(c, s, u, d, events);
+    }
+    dropEndedDots(u, events);
+  }
+
+  for (const u of s.units) {
+    u.usedOwnTurn = false;
+    u.actionCount = 0; // combat.md "Action Order": Action Counts reset at the end of each Turn
+  }
 }
 
 // Round DOT: ticks at the end of every Round, the first time at the end of the Round it was applied in.

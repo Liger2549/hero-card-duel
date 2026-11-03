@@ -1,10 +1,10 @@
 // Normal attacks, skills and ultimates (heroes/README.md, combat.md "Turn Flow" and "Damage Resolution").
 import type { ActionOf } from "../actions.ts";
-import { abilityOf, heroDef, unitDef, type AbilityRef, type Content } from "../content.ts";
-import type { AbilityDef, Falloff, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
+import { abilityOf, evalFormula, heroDef, unitDef, type AbilityRef, type Content } from "../content.ts";
+import type { AbilityDef, Falloff, FormulaInput, OnHit, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { findUnit, unitAt, type GameState, type Unit } from "../state.ts";
-import { stat } from "../stats.ts";
+import { stat, statBeforeHooks } from "../stats.ts";
 import {
   applyCc,
   giveShield,
@@ -17,10 +17,11 @@ import {
   useShields,
 } from "./damage.ts";
 import { addBuff, applyDot, countdown } from "./status.ts";
-import { resolveArea, type Area } from "./targeting.ts";
+import { hookApi, queueInterject, takeAction } from "./interject.ts";
+import { resolveArea, type Aim, type Area } from "./targeting.ts";
 import { hitTower, towerAt, validateTowerAttack } from "./towers.ts";
 
-const evalF = (f: Formula | undefined, input: FormulaInput) => (f === undefined ? 0 : typeof f === "number" ? f : f(input));
+const evalF = evalFormula;
 
 // rules.md "Cards": a summoned unit's first attack each Round is cheaper.
 export function manaCost(c: Content, s: GameState, u: Unit, ref: AbilityRef, ab: AbilityDef): number {
@@ -41,8 +42,8 @@ export function validateUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbi
   // CC effects as in the prototype: Stun stops everything, Silence stops skills and ultimates.
   if (u.cc.stun !== undefined) return "stunned";
   if (a.ability !== "normal" && u.cc.silence !== undefined) return "silenced";
-  // Effects that need hero hooks, which are not written yet.
-  if (ab.special) return "not available yet";
+  // A special needs its hero's hook (interject.ts "UnitHooks").
+  if (ab.special && !unitDef(c, u.defId).hooks?.specials?.[ab.special]) return "not available yet";
   if (s.players[a.seat].mana < manaCost(c, s, u, a.ability, ab)) return "not enough mana";
   if (a.ability === "ultimate" && u.ult < heroDef(c, u.defId)!.ultimate.ultCost) return "not enough Ult Points";
   const tower = towerTile(s, a);
@@ -50,8 +51,9 @@ export function validateUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbi
   const area = resolveArea(s, u, ab.form, a.aim);
   if (typeof area === "string") return area;
   // An attack must hit someone (as in the prototype: no swinging at empty air).
+  // A manual interject is locked to tiles, so units may still walk in before it resolves.
   const damages = ab.physical !== undefined || ab.magic !== undefined || (ab.onHit?.length ?? 0) > 0;
-  if (damages && (ab.form.hit === "all" || ab.form.hit === "first") && area.enemies.length === 0) return "no enemy in the area";
+  if (damages && !ab.interject && (ab.form.hit === "all" || ab.form.hit === "first") && area.enemies.length === 0) return "no enemy in the area";
   return null;
 }
 
@@ -68,11 +70,19 @@ function towerTile(s: GameState, a: ActionOf<"UseAbility">) {
   return p && towerAt(s, p) ? p : null;
 }
 
+// What a formula reads (defs.ts "FormulaInput"). DEF is the value before hero hooks (Bianca's conversion).
+function formulaInput(c: Content, u: Unit, index: number, target: Unit | null): FormulaInput {
+  return {
+    atk: stat(c, u, "atk"),
+    def: statBeforeHooks(c, u, "def"),
+    index,
+    target: target ? { hp: target.hp, maxHp: stat(c, target, "maxHp") } : null,
+  };
+}
+
 export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbility">, events: GameEvent[]): void {
   const u = findUnit(s, a.unitId)!;
   const ab = abilityOf(c, u.defId, a.ability)!;
-  const tower = towerTile(s, a);
-  const area: Area = tower ? { tiles: [tower], enemies: [], allies: [] } : (resolveArea(s, u, ab.form, a.aim) as Area);
   const mana = manaCost(c, s, u, a.ability, ab);
 
   s.players[a.seat].mana -= mana;
@@ -80,19 +90,30 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   if (a.ability === "normal") u.attacksThisRound += 1;
   if (!ab.freeAction) u.usedOwnTurn = true; // combat.md "Turn Flow": a Free Action does not use the Own Turn
   gainOrSpendUlt(c, u, a.ability, ab);
-  events.push({ type: "AbilityUsed", unitId: u.id, ability: a.ability, name: ab.name, tiles: area.tiles, mana });
 
-  const input = (index: number, target: Unit | null): FormulaInput => ({
-    atk: stat(c, u, "atk"),
-    def: stat(c, u, "def"),
-    index,
-    target: target ? { hp: target.hp, maxHp: stat(c, target, "maxHp") } : null,
-  });
+  const tower = towerTile(s, a);
+  const tiles = tower ? [tower] : (resolveArea(s, u, ab.form, a.aim) as Area).tiles;
+  events.push({ type: "AbilityUsed", unitId: u.id, ability: a.ability, name: ab.name, tiles, mana });
 
-  if (tower) {
-    hitTower(s, tower, evalF(ab.physical, input(0, null)) + evalF(ab.magic, input(0, null)), events);
+  // combat.md "Manual Interject": the aim is locked now, the effects come `delay` Turns later.
+  if (ab.interject) {
+    queueInterject(c, s, u, ab.name, "ability", events, false, { turns: ab.interject.delay, ability: a.ability, aim: a.aim });
     return;
   }
+  takeAction(c, u);
+  if (tower) {
+    const input = formulaInput(c, u, 0, null);
+    hitTower(s, tower, evalF(ab.physical, input) + evalF(ab.magic, input), events);
+    return;
+  }
+  resolveAbility(c, s, u, ab, a.aim, events);
+}
+
+// An ability's effects on its area. False if the aim no longer gives an area (e.g. a manual interject's tiles).
+export function resolveAbility(c: Content, s: GameState, u: Unit, ab: AbilityDef, aim: Aim, events: GameEvent[]): boolean {
+  const area = resolveArea(s, u, ab.form, aim);
+  if (typeof area === "string") return false;
+  const input = (index: number, target: Unit | null) => formulaInput(c, u, index, target);
 
   // Damage and on-hit effects on enemies. A zone's values replace the main ones (board.md "Zones").
   const through = new Map<string, boolean>(); // per unit: did any hit get past its shield?
@@ -149,6 +170,10 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   // On the user
   if (ab.selfHeal !== undefined) healFrom(c, u, u, evalF(ab.selfHeal, input(0, u)), events);
   if (ab.selfBuff) addBuff(s, u, u, ab.selfBuff, events);
+
+  // The hero's own mechanic, if the ability has one (interject.ts "UnitHooks").
+  if (ab.special) unitDef(c, u.defId).hooks?.specials?.[ab.special]?.(hookApi(c, s, events, u), area);
+  return true;
 }
 
 // heroes/README.md "Ult Points". Summons have no Ult Points.

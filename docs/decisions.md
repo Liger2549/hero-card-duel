@@ -2,6 +2,10 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — Interjects resolve when the Turn ends
+
+- Every interject resolves when a Turn ends, right after its Action, never in the middle of a Turn. Then CC, buffs and shields count down, and Turn DOTs tick last. This covers counters, Karas's raven, Zoran's lantern, Leilani's wave, Ribu's Core and Pley's dive (`combat.md` "Interject").
+
 ## 2026-11-03 — P for the picked tile
 
 - Hit form notation (`board.md` "Notation"): `T` marks tiles the player may pick (range drawings); `P` marks the picked tile in a drawing of the area around it. P is hit too, and a Rotating area turns around it. Karas's raven, Zoran's lantern, Ribu's Core and Pley's dive now use P.

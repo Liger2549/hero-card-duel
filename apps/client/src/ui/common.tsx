@@ -9,9 +9,10 @@ import {
   unitDef,
   type AbilityDef,
   type AbilityRef,
-  type Formula,
   type FormulaInput,
   type HitForm,
+  evalFormula,
+  gridRow,
   inRange,
   type Seat,
   type Unit,
@@ -91,7 +92,7 @@ export function Countdown({ deadline }: { deadline: number | null }) {
 
 // ---- Ability cards (prototype abilityCard / areaText / abilityDetail / patternHTML) ----
 
-const evalF = (f: Formula | undefined, input: FormulaInput) => (f === undefined ? 0 : typeof f === "number" ? f : f(input));
+const evalF = evalFormula;
 const fmtPM = (p: number, m: number) => {
   const parts = [p > 0 && `กายภาพ ${p}`, m > 0 && `เวท ${m}`].filter(Boolean);
   return parts.join(" + ") || "0";
@@ -161,7 +162,7 @@ function Pattern({ ab }: { ab: AbilityDef }) {
   const f = ab.form;
   let rows: string[][];
   if (f.grid) {
-    rows = f.grid.map((r) => (r.trim().includes(" ") ? r.trim().split(/\s+/) : [...r.trim()]));
+    rows = f.grid.map(gridRow);
   } else if (f.range) {
     const n = Math.min("manhattan" in f.range ? f.range.manhattan : "square" in f.range ? f.range.square : f.range.ring, 3);
     rows = Array.from({ length: 2 * n + 1 }, (_, y) =>

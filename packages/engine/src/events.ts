@@ -32,6 +32,10 @@ export type GameEvent =
   | { type: "StatusEnded"; unitId: string; status: string }
   | { type: "DotTick"; unitId: string; dot: string; damage: number }
   | { type: "UnitDied"; unitId: string; killerSeat: Seat | null; bounty: number }
+  // combat.md "Interject": queued (with its Action Value), resolved, or fizzled
+  | { type: "InterjectQueued"; id: number; unitId: string; name: string; actionValue: number; turnsLeft: number }
+  | { type: "InterjectResolved"; id: number; unitId: string; name: string }
+  | { type: "InterjectFizzled"; id: number; unitId: string; name: string }
   // Towers
   | { type: "TowerShieldBlocked"; seat: Seat; index: number; left: number }
   | { type: "TowerDamaged"; seat: Seat; index: number; amount: number; hp: number }

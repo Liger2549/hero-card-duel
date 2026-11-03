@@ -3,7 +3,7 @@
 import { apply, type Action } from "./actions.ts";
 import { chebyshev, inZone, type Pos } from "./board.ts";
 import { TimesOfDay, type Seat } from "./config.ts";
-import { abilityOf, heroDef, type AbilityRef, type Content } from "./content.ts";
+import { abilityOf, abilityRefs, type Content } from "./content.ts";
 import { candidateAims } from "./rules/targeting.ts";
 import { towerRow } from "./rules/towers.ts";
 import { destroyedTowers, otherSeat, unitAt, type GameState, type Unit } from "./state.ts";
@@ -50,9 +50,7 @@ function prepAction(s: GameState, seat: Seat): Action | null {
 function combatAction(s: GameState, c: Content, seat: Seat): Action {
   // 1. Anything that deals damage (ultimate first, then skills, then the normal attack).
   for (const u of mine(s, seat)) {
-    const hero = heroDef(c, u.defId);
-    const refs: AbilityRef[] = hero ? ["ultimate", ...hero.skills.map((_, i) => i), "normal"] : ["normal"];
-    for (const ability of refs) {
+    for (const ability of abilityRefs(c, u.defId).reverse()) {
       const ab = abilityOf(c, u.defId, ability)!;
       for (const aim of candidateAims(s, u, ab.form, ability === "normal")) {
         const a: Action = { type: "UseAbility", seat, unitId: u.id, ability, aim };

@@ -1,4 +1,4 @@
-import type { AbilityDef, CardDef, HeroDef, ItemDef, SummonDef, UnitDef } from "./defs.ts";
+import type { AbilityDef, CardDef, Formula, FormulaInput, HeroDef, ItemDef, SummonDef, UnitDef } from "./defs.ts";
 
 // Everything the engine reads from the content package. Kept out of GameState
 // because formulas are functions and the state must stay plain data.
@@ -45,6 +45,17 @@ export function checkDeck(c: Content, deck: readonly string[], size: number): st
 
 // Which ability an action means.
 export type AbilityRef = "normal" | "ultimate" | number; // number = index in skills
+
+// Every ability of a unit: normal attack, skills, then ultimate (a summon has only its normal attack).
+export function abilityRefs(c: Content, defId: string): AbilityRef[] {
+  const h = heroDef(c, defId);
+  return h ? ["normal", ...h.skills.map((_, i) => i), "ultimate"] : ["normal"];
+}
+
+// A sheet value: a number, or a formula worked out now (defs.ts "Formula"). Missing = 0.
+export function evalFormula(f: Formula | undefined, input: FormulaInput): number {
+  return f === undefined ? 0 : typeof f === "number" ? f : f(input);
+}
 
 export function abilityOf(c: Content, defId: string, ref: AbilityRef): AbilityDef | undefined {
   const d = unitDef(c, defId);

@@ -3,6 +3,7 @@
 import { content } from "@hcd/content";
 import {
   abilityOf,
+  abilityRefs,
   apply,
   candidateAims,
   allowedDirs,
@@ -574,7 +575,7 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
   for (const [k, v] of Object.entries(u.cc)) tags.push(`${CCI[k]} ${k} ${v} (≈${Math.max(1, Math.floor(v / st("speed")))} Turns)`);
   if (u.broken) tags.push("💥 Break");
   for (const b of u.buffs) tags.push(`${b.stat} +${b.amount} (${b.turnsLeft} Turns)`);
-  const refs: AbilityRef[] = hero ? ["normal", ...hero.skills.map((_, i) => i), "ultimate"] : ["normal"];
+  const refs = abilityRefs(content, u.defId);
   const sellable = (itemId: string) => validate(s, { type: "SellItem", seat: u.owner, unitId: u.id, itemId }, content) === null;
 
   // Why an ability cannot be used, from the engine's own check (prototype "warn").

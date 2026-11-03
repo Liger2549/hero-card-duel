@@ -2,14 +2,15 @@
 import type { ActionOf } from "../actions.ts";
 import { inZone, type Pos } from "../board.ts";
 import { TimesOfDay, type MatchConfig, type Seat } from "../config.ts";
-import { abilityOf, heroDef, type AbilityRef, type Content } from "../content.ts";
+import { abilityOf, abilityRefs, type Content } from "../content.ts";
 import type { GameEvent } from "../events.ts";
 import { randInt } from "../rng.ts";
 import { destroyedTowers, findUnit, otherSeat, Seats, unitAt, type GameState, type Unit } from "../state.ts";
 import { validateUseAbility } from "./abilities.ts";
 import { canPlayAnyCard, draw } from "./cards.ts";
 import { canStepAny } from "./movement.ts";
-import { checkWin, endOfRoundDots, endOfTurn } from "./status.ts";
+import { resolveInterjects } from "./interject.ts";
+import { checkWin, countdownInterjects, endOfRoundDots, endOfTurn } from "./status.ts";
 import { candidateAims } from "./targeting.ts";
 import { decayTowers, newTowers, updateTowersForRound } from "./towers.ts";
 
@@ -29,6 +30,8 @@ export function baseState(config: MatchConfig, seed: number): GameState {
     units: [],
     towers: { A: newTowers(config), B: newTowers(config) },
     shieldSeq: 0,
+    pending: [],
+    nextPendingId: 1,
     nextUnitId: 1,
     ready: { A: false, B: false },
     nextStarter: config.firstRoundStarter,
@@ -164,7 +167,11 @@ export function applyEndRound(c: Content, s: GameState, events: GameEvent[]): vo
 // Every Turn ends here: by End Turn, or by an Action that is not a Free Action.
 // The other player goes next; if they are out, the same player goes again.
 export function endTurn(c: Content, s: GameState, events: GameEvent[]): void {
+  // combat.md "Interject": interjects resolve when the Turn ends; then the end-of-Turn countdowns, DOT last.
+  countdownInterjects(s);
+  resolveInterjects(c, s, events);
   endOfTurn(c, s, events);
+  if (checkWin(s, events)) return;
   decayTowers(s);
   giveTurn(c, s, [otherSeat(s.activeSeat), s.activeSeat], events);
 }
@@ -201,9 +208,7 @@ function canDoAnything(c: Content, s: GameState, seat: Seat): boolean {
 }
 
 function canUseAnyAbility(c: Content, s: GameState, u: Unit): boolean {
-  const hero = heroDef(c, u.defId);
-  const refs: AbilityRef[] = hero ? ["normal", ...hero.skills.map((_, i) => i), "ultimate"] : ["normal"];
-  return refs.some((ability) => {
+  return abilityRefs(c, u.defId).some((ability) => {
     const ab = abilityOf(c, u.defId, ability)!;
     return candidateAims(s, u, ab.form, ability === "normal").some(
       (aim) => validateUseAbility(c, s, { type: "UseAbility", seat: u.owner, unitId: u.id, ability, aim }) === null,

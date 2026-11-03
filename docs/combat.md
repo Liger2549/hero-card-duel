@@ -96,6 +96,9 @@ When more than one Action resolves at the same point (e.g. interject skills land
 
 There are two kinds of interject.
 
+- **When**: an interject always resolves **when a Turn ends**: right after that Turn's Action. Then the end-of-Turn countdowns run (CC, buffs, shields) and Turn DOTs tick **last**, before the next Turn starts. An interject triggered during a Turn (even by a Free Action) waits until that Turn ends. Interjects that resolve then may trigger more, which resolve right after.
+- A skill that "interjects in a Turn" (e.g. Zoran's lantern, Leilani's wave, Ribu's Core, Pley's dive) resolves when that Turn ends.
+
 ### Manual Interject (player-activated)
 
 - Can only be cast during the caster's owner's own Turn.
@@ -218,7 +221,7 @@ Break DMG dealt = ( max(Target Max Break Bar / 5, 1) + attacker's Break DMG Bonu
 - Each DOT is one of two kinds:
   - **Round DOT**: ticks at the **end of every Round** (when the Combat Phase ends). Its duration is in **Rounds**. The first tick happens at the end of the Round the DOT was applied in.
     - Example: in round 3, a hero applies a Round DOT for 2 Rounds. It ticks at the end of round 3 and at the end of round 4, then expires.
-  - **Turn DOT**: ticks at the **end of each Turn of the target's team**. Turns of the applier's team do not count. Its duration is in those Turns. The Turn it was applied in is not counted.
+  - **Turn DOT**: ticks at the **end of each Turn of the target's team**, after that Turn's interjects (DOT is the last thing in a Turn). Turns of the applier's team do not count. Its duration is in those Turns. The Turn it was applied in is not counted.
     - Example: on A's Turn, Karas applies Nocturnal Flame for 2 Turns to a hero of B. It ticks at the end of B's next Turn and at the end of B's Turn after that, then expires.
 - Each DOT states its **Damage** per tick. DOT damage has no type (not Physical or Magic).
 - The damage per tick is calculated and **stored when the DOT is applied**, using the applier's stats at that moment (ATK, DOT Boost).
