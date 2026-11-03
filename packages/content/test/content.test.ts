@@ -1,4 +1,4 @@
-import { normalConfig } from "@hcd/engine";
+import { normalConfig, parseGrid } from "@hcd/engine";
 import { describe, expect, it } from "vitest";
 import { cards, heroes, items, starterDeck, totalValue, units } from "../src/index.ts";
 
@@ -15,11 +15,11 @@ describe("content", () => {
     expect(heroes.length).toBeGreaterThanOrEqual(needed);
   });
 
-  it("every summon names a unit that exists", () => {
-    const unitIds = new Set(units.map((u) => u.id));
-    for (const h of heroes) {
-      for (const a of [h.normalAttack, ...h.skills, h.ultimate]) {
-        if (a.targeting.type === "summon") expect(unitIds, `${h.id}: ${a.name}`).toContain(a.targeting.unit);
+  it("every hit form grid has a C or a P (board.md Skill Areas)", () => {
+    for (const d of [...heroes, ...units]) {
+      const abilities = "skills" in d ? [d.normalAttack, ...d.skills, d.ultimate] : [d.normalAttack];
+      for (const a of abilities) {
+        for (const g of [a.form.grid, a.form.diagonal]) if (g) expect(() => parseGrid(g), `${d.id}: ${a.name}`).not.toThrow();
       }
     }
   });

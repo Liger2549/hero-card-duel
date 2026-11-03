@@ -127,10 +127,10 @@ describe("countdowns (combat.md Durations)", () => {
       ability,
       aim: { tiles: [{ x, y }] },
     });
-    let s = state([unit("h", "A", 4, 4, { defId: "archer" }), unit("e", "B", 4, 6)]);
+    let s = state([unit("h", "A", 4, 4, { defId: "archer" }), unit("k", "A", 3, 4), unit("e", "B", 4, 6)]);
     addBuff(s, null, get(s, "h"), { stat: "atk", amount: 1, turns: 1, per: "own" }, []);
     s.turn += 1;
-    s = play(s, use("h", 2, 4, 4)); // Ward on herself: Free Action, the Turn goes on
+    s = play(s, use("h", 2, 3, 4)); // Ward on an ally: Free Action, the Turn goes on
     expect(get(s, "h").usedOwnTurn).toBe(false);
     s = play(s, use("h", "normal", 4, 6)); // the normal attack ends the Turn and uses her Own Turn
     expect(get(s, "h").buffs.filter((b) => b.stat === "atk")).toEqual([]);

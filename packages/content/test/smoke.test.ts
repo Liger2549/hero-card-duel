@@ -1,4 +1,5 @@
 import {
+  abilityOf,
   apply,
   botAction,
   candidateAims,
@@ -31,16 +32,16 @@ function timeUpBot(s: GameState): Action {
     const hero = heroDef(content, u.defId);
     const refs: AbilityRef[] = hero ? ["ultimate", ...hero.skills.map((_, i) => i), "normal"] : ["normal"];
     for (const ability of refs) {
-      const ab = hero ? (ability === "normal" ? hero.normalAttack : ability === "ultimate" ? hero.ultimate : hero.skills[ability]!) : null;
-      const targeting = ab?.targeting ?? { type: "adjacent" as const };
-      for (const aim of candidateAims(s, targeting)) {
+      const ab = abilityOf(content, u.defId, ability)!;
+      for (const aim of candidateAims(s, u, ab.form, ability === "normal")) {
         const a: Action = { type: "UseAbility", seat, unitId: u.id, ability, aim };
         if (ok(a)) return a;
       }
     }
   }
   for (let card = 0; card < s.players[seat].hand.length; card++) {
-    for (const aim of [{}, ...candidateAims(s, { type: "tile", range: 99, shape: [[0, 0]] })]) {
+    const tiles = Array.from({ length: s.config.boardWidth * s.config.boardHeight }, (_, i) => ({ tiles: [{ x: i % s.config.boardWidth, y: Math.floor(i / s.config.boardWidth) }] }));
+    for (const aim of [{}, ...tiles]) {
       const a: Action = { type: "PlayCard", seat, card, aim };
       if (ok(a)) return a;
     }

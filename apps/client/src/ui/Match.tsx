@@ -5,7 +5,7 @@ import {
   abilityOf,
   apply,
   candidateAims,
-  Dirs,
+  allowedDirs,
   heroDef,
   inZone,
   manaCost,
@@ -79,7 +79,7 @@ export function Match({ snap }: { snap: Snapshot }) {
 
   const abilityAction = (aim: Aim): Action | null =>
     act?.type === "ability" ? { type: "UseAbility", seat: me, unitId: act.unitId, ability: act.ref, aim } : act?.type === "card" ? { type: "PlayCard", seat: me, card: act.index, aim } : null;
-  const targeting = act?.type === "ability" && actUnit ? abilityOf(content, actUnit.defId, act.ref)!.targeting : null;
+  const form = act?.type === "ability" && actUnit ? abilityOf(content, actUnit.defId, act.ref)!.form : null;
   const cardDef = act?.type === "card" ? content.cards.find((c) => c.id === s.players[me].hand[act.index]) : undefined;
 
   const preview = (action: Action | null) => {
@@ -90,9 +90,9 @@ export function Match({ snap }: { snap: Snapshot }) {
     setPv({ action, events: r.events, area: used && used.type === "AbilityUsed" ? used.tiles : [] });
   };
 
-  // Abilities with no aim (around / team / board) and no-target cards preview at once.
+  // Fixed areas around the caster and no-target cards need no aim: preview at once.
   useEffect(() => {
-    if ((targeting && ["around", "team", "board"].includes(targeting.type)) || cardDef?.target === "none") preview(abilityAction({}));
+    if ((form && !form.range && form.rotate === 0) || cardDef?.target === "none") preview(abilityAction({}));
   }, [act]); // eslint-disable-line
 
   // Tiles a click would act on (.t), and the previewed area (.a).
@@ -104,19 +104,23 @@ export function Match({ snap }: { snap: Snapshot }) {
     if (pv) return { targets: t, dirOf };
     if (act?.type === "move" && actUnit) {
       for (const p of all) if (ok({ type: "Step", seat: me, unitId: actUnit.id, to: p })) t.add(key(p));
-    } else if (act?.type === "ability" && actUnit && targeting) {
-      if (["shape", "line", "dash"].includes(targeting.type)) {
-        for (const dir of Dirs) {
+    } else if (act?.type === "ability" && actUnit && form) {
+      if (!form.range) {
+        // Around the caster, turned to a direction: a click on any tile of a direction's area picks it.
+        for (const dir of allowedDirs(form)) {
           const aim = { dir };
           if (!ok(abilityAction(aim)!)) continue;
-          const area = resolveArea(s, actUnit, targeting, aim);
+          const area = resolveArea(s, actUnit, form, aim);
           if (typeof area !== "string") for (const p of area.tiles) if (!dirOf.has(key(p))) (t.add(key(p)), dirOf.set(key(p), aim));
         }
+        if (act.ref === "normal") {
+          for (const aim of candidateAims(s, actUnit, form, true)) if (aim.tiles && ok(abilityAction(aim)!)) t.add(key(aim.tiles[0]!));
+        }
       } else {
-        const n = targeting.type === "tiles" ? targeting.count : 1;
-        for (const aim of candidateAims(s, targeting)) {
+        // A picked tile (Lock-on). A rotating area takes the first direction that works (a turn control comes later).
+        for (const aim of candidateAims(s, actUnit, form, act.ref === "normal")) {
           const p = aim.tiles?.[0];
-          if (p && ok(abilityAction({ tiles: Array.from({ length: n }, () => p) })!)) t.add(key(p));
+          if (p && !t.has(key(p)) && ok(abilityAction(aim)!)) (t.add(key(p)), aim.dir && dirOf.set(key(p), aim));
         }
       }
     } else if (act?.type === "card") {
@@ -140,9 +144,9 @@ export function Match({ snap }: { snap: Snapshot }) {
     }
     if (targets.has(k)) {
       if (act?.type === "move" && actUnit) return session.dispatch({ type: "Step", seat: me, unitId: actUnit.id, to: p });
-      if (act?.type === "ability" && targeting) {
+      if (act?.type === "ability" && form) {
         if (dirOf.has(k)) return preview(abilityAction(dirOf.get(k)!));
-        const n = targeting.type === "tiles" ? targeting.count : 1;
+        const n = form.picks ?? 1;
         if (n === 1) return preview(abilityAction({ tiles: [p] }));
         // Several tiles (Valen's swords): count each pick, the same tile may be picked again.
         const picks = [...act.picks, p];
@@ -576,7 +580,7 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
   // Why an ability cannot be used, from the engine's own check (prototype "warn").
   const warnFor = (ref: AbilityRef): string => {
     const ab = abilityOf(content, u.defId, ref)!;
-    const aims = candidateAims(s, ab.targeting);
+    const aims = candidateAims(s, u, ab.form, ref === "normal");
     const errors = aims.map((aim) => validate(s, { type: "UseAbility", seat: u.owner, unitId: u.id, ability: ref, aim }, content));
     if (errors.some((e) => e === null)) return "";
     const first = errors[0] ?? "";

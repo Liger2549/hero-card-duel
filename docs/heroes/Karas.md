@@ -33,10 +33,10 @@ DOT Boost : 1
 - Hit form:
 ```
 Fixed | Hit: All | Lock-on
-T = the enemy the ally attacked
+P = the enemy the ally attacked
 
 X X X
-X T X
+X P X
 X X X
 ```
 

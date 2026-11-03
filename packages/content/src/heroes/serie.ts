@@ -1,5 +1,5 @@
 import { pctOf } from "@hcd/engine";
-import { ATK, defineHero } from "../define.ts";
+import { ATK, defineHero, FRONT1 } from "../define.ts";
 
 // docs/heroes/Serie.md
 export const serie = defineHero({
@@ -20,7 +20,7 @@ export const serie = defineHero({
     name: "Hollow Edge",
     mana: 2,
     text: "ฟัน 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK − 1 + เวท 1",
-    targeting: { type: "adjacent" },
+    form: FRONT1,
     physical: (f) => Math.max(f.atk - 1, 0),
     magic: 1,
     break: 1,
@@ -30,8 +30,8 @@ export const serie = defineHero({
     {
       name: "Voidrend Crescent",
       mana: 3,
-      text: "ฟันแถวหน้า 3 ช่อง กายภาพ 2 + เวท ATK ติด Voidmark 2 Rounds",
-      targeting: { type: "shape", shape: [[-1, 1], [0, 1], [1, 1]] },
+      text: "ฟันแถวหน้า 3 ช่อง กายภาพ 2 + เวท ATK ติด Voidmark 2 Turns",
+      form: { rotate: 4, hit: "all", grid: ["X X X", ". C ."] },
       physical: 2,
       magic: ATK,
       break: 2,
@@ -46,8 +46,8 @@ export const serie = defineHero({
     ultCost: 8,
     ultMax: 8,
     gaugeName: "Singularity",
-    text: "ฟันแถวหน้า 3 ช่อง แล้วระเบิด Voidmark ทุกตัวบนกระดาน: (ดาเมจทิก × ทิกที่เหลือ) + ATK แล้วติด Voidmark ใหม่ 1 Round",
-    targeting: { type: "shape", shape: [[-1, 1], [0, 1], [1, 1]] },
+    text: "ฟันแถวหน้า 3 ช่อง แล้วระเบิด Voidmark ทุกตัวบนกระดาน: (ดาเมจทิก × ทิกที่เหลือ) + ATK แล้วติด Voidmark ใหม่ 1 Turn",
+    form: { rotate: 4, hit: "all", grid: ["X X X", ". C ."] },
     physical: 1,
     magic: 1,
     break: 1,

@@ -2,6 +2,11 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — P for the picked tile
+
+- Hit form notation (`board.md` "Notation"): `T` marks tiles the player may pick (range drawings); `P` marks the picked tile in a drawing of the area around it. P is hit too, and a Rotating area turns around it. Karas's raven, Zoran's lantern, Ribu's Core and Pley's dive now use P.
+- Zones (`a`, `b`, …) can have their own effects as well as their own damage (e.g. Karas's Ravenous Eclipse).
+
 ## 2026-11-03 — Voidmark is a Turn DOT
 
 - Serie's **Voidmark** is now a Turn DOT: 2 Turns from Voidrend Crescent, 1 Turn after a Collapse (the numbers kept, the unit changed from Rounds to the target team's Turns). Round DOTs stay in the rules for later DOTs.

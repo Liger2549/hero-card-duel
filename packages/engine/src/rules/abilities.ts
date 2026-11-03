@@ -1,10 +1,9 @@
 // Normal attacks, skills and ultimates (heroes/README.md, combat.md "Turn Flow" and "Damage Resolution").
 import type { ActionOf } from "../actions.ts";
 import { abilityOf, heroDef, unitDef, type AbilityRef, type Content } from "../content.ts";
-import type { AbilityDef, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
+import type { AbilityDef, Falloff, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { findUnit, unitAt, type GameState, type Unit } from "../state.ts";
-import { divRound } from "../num.ts";
 import { stat } from "../stats.ts";
 import {
   applyCc,
@@ -43,14 +42,24 @@ export function validateUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbi
   if (u.cc.stun !== undefined) return "stunned";
   if (a.ability !== "normal" && u.cc.silence !== undefined) return "silenced";
   // Effects that need hero hooks, which are not written yet.
-  if (ab.special === "shuffle" || ab.special === "oath" || ab.zone) return "not available yet";
+  if (ab.special) return "not available yet";
   if (s.players[a.seat].mana < manaCost(c, s, u, a.ability, ab)) return "not enough mana";
   if (a.ability === "ultimate" && u.ult < heroDef(c, u.defId)!.ultimate.ultCost) return "not enough Ult Points";
-  if (ab.hpCost && u.hp <= ab.hpCost) return "not enough HP";
   const tower = towerTile(s, a);
   if (tower) return a.ability === "normal" ? validateTowerAttack(s, u, ab, tower) : "only normal attacks can hit towers";
-  const area = resolveArea(s, u, ab.targeting, a.aim);
-  return typeof area === "string" ? area : null;
+  const area = resolveArea(s, u, ab.form, a.aim);
+  if (typeof area === "string") return area;
+  // An attack must hit someone (as in the prototype: no swinging at empty air).
+  const damages = ab.physical !== undefined || ab.magic !== undefined || (ab.onHit?.length ?? 0) > 0;
+  if (damages && (ab.form.hit === "all" || ab.form.hit === "first") && area.enemies.length === 0) return "no enemy in the area";
+  return null;
+}
+
+// board.md "Falloff": after zone values, before mitigation; only on a type the tile has, never below 1.
+function falloff(value: number, f: Falloff | undefined, step: number): number {
+  if (!f || value <= 0 || step <= 1) return value;
+  const cut = "each" in f ? f.each * (step - 1) : f.steps[Math.min(step - 2, f.steps.length - 1)]!;
+  return Math.max(value - cut, 1);
 }
 
 // The aimed tile, if it is a tower's (rules.md "Tower").
@@ -63,14 +72,13 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   const u = findUnit(s, a.unitId)!;
   const ab = abilityOf(c, u.defId, a.ability)!;
   const tower = towerTile(s, a);
-  const area: Area = tower ? { tiles: [tower], enemies: [], allies: [] } : (resolveArea(s, u, ab.targeting, a.aim) as Area);
+  const area: Area = tower ? { tiles: [tower], enemies: [], allies: [] } : (resolveArea(s, u, ab.form, a.aim) as Area);
   const mana = manaCost(c, s, u, a.ability, ab);
 
   s.players[a.seat].mana -= mana;
   s.undoSteps = []; // board.md "Undo": steps cannot be undone after an action
   if (a.ability === "normal") u.attacksThisRound += 1;
   if (!ab.freeAction) u.usedOwnTurn = true; // combat.md "Turn Flow": a Free Action does not use the Own Turn
-  if (ab.hpCost) u.hp -= ab.hpCost;
   gainOrSpendUlt(c, u, a.ability, ab);
   events.push({ type: "AbilityUsed", unitId: u.id, ability: a.ability, name: ab.name, tiles: area.tiles, mana });
 
@@ -86,19 +94,21 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
     return;
   }
 
-  // Damage and on-hit effects on enemies
-  const hasDamage = ab.physical !== undefined || ab.magic !== undefined || ab.trueDamage !== undefined;
+  // Damage and on-hit effects on enemies. A zone's values replace the main ones (board.md "Zones").
   const through = new Map<string, boolean>(); // per unit: did any hit get past its shield?
-  let dealt = 0;
-  for (const { unit: t, index } of area.enemies) {
+  const breakOf = new Map<string, number>(); // per unit: the Break of the tile it was hit on
+  for (const { unit: t, index, zone: zoneId, step } of area.enemies) {
     if (t.dead) continue;
+    const zone = zoneId ? ab.zones?.[zoneId] : undefined;
+    const inp = input(index, t);
+    const physical = falloff(evalF(zone?.physical ?? ab.physical, inp), ab.falloff?.physical, step);
+    const magic = falloff(evalF(zone?.magic ?? ab.magic, inp), ab.falloff?.magic, step);
+    const brk = evalF(zone?.break ?? ab.break, inp);
     let damage = 0;
     let wentThrough = true;
-    if (ab.trueDamage !== undefined) {
-      damage = Math.max(evalF(ab.trueDamage, input(index, t)), 0);
-    } else if (hasDamage) {
+    if (physical > 0 || magic > 0) {
       const hadShield = shieldTotal(t) > 0;
-      const r = hitDamage(c, u, t, evalF(ab.physical, input(index, t)), evalF(ab.magic, input(index, t)), ab.penetration ?? 0);
+      const r = hitDamage(c, u, t, physical, magic, ab.penetration ?? 0);
       if (r.absorbed > 0) {
         useShields(t, r.absorbed);
         events.push({ type: "ShieldAbsorbed", unitId: t.id, amount: r.absorbed });
@@ -108,35 +118,36 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
     }
     loseHp(c, s, t, damage, u, events);
     lifeStealOnHit(c, u, t, damage, events);
-    dealt += damage;
     through.set(t.id, (through.get(t.id) ?? false) || wentThrough);
+    if (!breakOf.has(t.id)) breakOf.set(t.id, brk);
 
     // combat.md "Break": with a shield that held the whole action, the Break Bar is not reduced.
-    if (ab.break && ab.breakPerHit && wentThrough) reduceBreakBar(c, s, u, t, ab.break, events);
-    if (!t.dead) for (const e of ab.onHit ?? []) applyOnHit(c, s, u, t, e, input(index, t), events);
+    if (brk > 0 && ab.breakPerHit && wentThrough) reduceBreakBar(c, s, u, t, brk, events);
+    if (!t.dead) for (const e of [...(ab.onHit ?? []), ...(zone?.onHit ?? [])]) applyOnHit(c, s, u, t, e, inp, events);
     if (!t.dead && ab.knockback) push(s, u, t, events);
   }
-  if (ab.break && !ab.breakPerHit) {
+  if (!ab.breakPerHit) {
     for (const [id, ok] of through) {
-      const t = findUnit(s, id)!;
-      if (ok) reduceBreakBar(c, s, u, t, ab.break, events);
+      const brk = breakOf.get(id) ?? 0;
+      if (ok && brk > 0) reduceBreakBar(c, s, u, findUnit(s, id)!, brk, events);
     }
   }
 
   // Support on allies
   for (const ally of area.allies) {
-    if (ab.heal) healFrom(c, u, ally, ab.heal, events);
+    const inp = input(0, ally);
+    if (ab.heal !== undefined) healFrom(c, u, ally, evalF(ab.heal, inp), events);
     if (ab.shield) {
-      giveShield(s, ally, ab.shield.mode, ab.shield.amount, ab.shield.turns, countdown(ab.shield.per, u, ally));
-      events.push({ type: "ShieldGained", unitId: ally.id, amount: ab.shield.amount, mode: ab.shield.mode });
+      const amount = evalF(ab.shield.amount, inp);
+      giveShield(s, ally, ab.shield.mode, amount, ab.shield.turns, countdown(ab.shield.per, u, ally));
+      events.push({ type: "ShieldGained", unitId: ally.id, amount, mode: ab.shield.mode });
     }
     for (const b of ab.buffs ?? []) addBuff(s, u, ally, b, events);
     if (ab.cleanse) cleanse(c, ally, events);
   }
 
   // On the user
-  if (ab.lifeSteal === "half") healFrom(c, u, u, divRound(dealt, 2), events);
-  if (ab.selfHeal) healFrom(c, u, u, ab.selfHeal, events);
+  if (ab.selfHeal !== undefined) healFrom(c, u, u, evalF(ab.selfHeal, input(0, u)), events);
   if (ab.selfBuff) addBuff(s, u, u, ab.selfBuff, events);
 }
 

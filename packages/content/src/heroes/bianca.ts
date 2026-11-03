@@ -1,4 +1,4 @@
-import { defineHero, SQ3 } from "../define.ts";
+import { defineHero, FRONT1 } from "../define.ts";
 
 // docs/heroes/Bianca.md
 export const bianca = defineHero({
@@ -19,7 +19,7 @@ export const bianca = defineHero({
     name: "Pugno d'Acciaio",
     mana: 2,
     text: "ต่อย 1 ช่องรอบตัว 8 ทิศ กายภาพ ATK + DEF",
-    targeting: { type: "adjacent" },
+    form: FRONT1,
     physical: (f) => f.atk + f.def,
     break: 1,
   },
@@ -28,7 +28,7 @@ export const bianca = defineHero({
       name: "Martello del Giuramento",
       mana: 3,
       text: "ทุบ 1 ช่องรอบตัว 8 ทิศ กายภาพ DEF + ATK Break 3",
-      targeting: { type: "adjacent" },
+      form: FRONT1,
       physical: (f) => f.def + f.atk,
       break: 3,
     },
@@ -38,7 +38,7 @@ export const bianca = defineHero({
       text:
         "Giuramento d'Avorio: ตัวเองและพวกในระยะ 1 ได้ Armor +2 Magic Armor +1 นาน 4 Turns " +
         "ถ้าศัตรูตีคนที่คุ้มกัน สวนกลับ 1 + DEF (สูงสุด 2 ครั้ง)",
-      targeting: { type: "around", shape: SQ3 },
+      form: { rotate: 0, hit: "allies", self: true, grid: ["X X X", "X C X", "X X X"] },
       special: "oath",
     },
   ],
@@ -48,7 +48,7 @@ export const bianca = defineHero({
     ultCost: 5,
     ultMax: 5,
     text: "ฟาดเส้นตรง 2 ช่อง กายภาพ 5 + DEF Break 5 แล้วได้ Vendetta della Cittadella (สวนกลับ 2 + 3 ต่อ DEF 2)",
-    targeting: { type: "shape", shape: [[0, 1], [0, 2]] },
+    form: { rotate: 4, hit: "all", grid: ["X", "X", "C"] },
     physical: (f) => 5 + f.def,
     break: 5,
     special: "vendetta",

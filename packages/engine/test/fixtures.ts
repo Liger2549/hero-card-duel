@@ -1,7 +1,11 @@
 import type { Content } from "../src/content.ts";
-import type { HeroDef, SummonDef } from "../src/defs.ts";
+import type { HeroDef, HitForm, SummonDef } from "../src/defs.ts";
 
-const RING8 = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]] as const;
+// Hit forms in the docs' notation (board.md "Skill Areas").
+const adjacent: HitForm = { rotate: 8, hit: "all", grid: ["X", "C"] };
+const lane3: HitForm = { rotate: 4, hit: "first", grid: ["3", "2", "1", "C"] };
+const ring8: HitForm = { rotate: 0, hit: "all", grid: ["X X X", "X C X", "X X X"] };
+const pick = (n: number, hit: HitForm["hit"] = "all"): HitForm => ({ rotate: 0, hit, range: { manhattan: n } });
 
 // Test-only units with round numbers, so expected values are easy to work out by hand.
 const knight: HeroDef = {
@@ -15,12 +19,12 @@ const knight: HeroDef = {
   bounty: 400,
   stats: { maxHp: 20, atk: 4, def: 0, speed: 100, move: 1, breakBar: 10, aggroBar: 5, armor: 1 },
   passive: { text: "" },
-  normalAttack: { name: "Slash", mana: 2, text: "", targeting: { type: "adjacent" }, physical: (f) => f.atk, break: 1 },
+  normalAttack: { name: "Slash", mana: 2, text: "", form: adjacent, physical: (f) => f.atk, break: 1 },
   skills: [
-    { name: "Lunge", mana: 3, text: "", targeting: { type: "line", length: 3, pierce: false }, physical: (f) => f.atk + 1, break: 3 },
-    { name: "Stun", mana: 3, text: "", targeting: { type: "adjacent" }, break: 0, onHit: [{ type: "cc", cc: "stun", recovery: 300 }] },
+    { name: "Lunge", mana: 3, text: "", form: lane3, physical: (f) => f.atk + 1, break: 3 },
+    { name: "Stun", mana: 3, text: "", form: adjacent, break: 0, onHit: [{ type: "cc", cc: "stun", recovery: 300 }] },
   ],
-  ultimate: { name: "Whirl", mana: 4, ultCost: 2, ultMax: 4, text: "", targeting: { type: "around", shape: RING8 }, physical: 5, break: 5 },
+  ultimate: { name: "Whirl", mana: 4, ultCost: 2, ultMax: 4, text: "", form: ring8, physical: 5, break: 5 },
 };
 
 const archer: HeroDef = {
@@ -34,13 +38,13 @@ const archer: HeroDef = {
   bounty: 400,
   stats: { maxHp: 16, atk: 3, def: 1, speed: 100, move: 1, breakBar: 8, aggroBar: 5 },
   passive: { text: "" },
-  normalAttack: { name: "Shoot", mana: 2, text: "", targeting: { type: "enemy", range: 2 }, magic: (f) => f.atk, break: 1 },
+  normalAttack: { name: "Shoot", mana: 2, text: "", form: pick(2), magic: (f) => f.atk, break: 1 },
   skills: [
-    { name: "Mend", mana: 3, text: "", targeting: { type: "ally", range: 2 }, heal: 5 },
-    { name: "Burn", mana: 3, text: "", targeting: { type: "enemy", range: 3 }, onHit: [{ type: "dot", id: "burn", kind: "round", damage: 2, duration: 2 }] },
-    { name: "Ward", mana: 1, text: "", targeting: { type: "ally", range: 2 }, buffs: [{ stat: "armor", amount: 2, turns: 2 }], freeAction: true },
+    { name: "Mend", mana: 3, text: "", form: pick(2, "allies"), heal: 5 },
+    { name: "Burn", mana: 3, text: "", form: pick(3), onHit: [{ type: "dot", id: "burn", kind: "round", damage: 2, duration: 2 }] },
+    { name: "Ward", mana: 1, text: "", form: pick(2, "allies"), buffs: [{ stat: "armor", amount: 2, turns: 2 }], freeAction: true },
   ],
-  ultimate: { name: "Aegis", mana: 4, ultCost: 3, ultMax: 3, text: "", targeting: { type: "team" }, shield: { mode: "add", amount: 3, turns: 2 } },
+  ultimate: { name: "Aegis", mana: 4, ultCost: 3, ultMax: 3, text: "", form: { rotate: 0, hit: "allies", self: true, grid: ["X X X", "X C X", "X X X"] }, shield: { mode: "add", amount: 3, turns: 2 } },
 };
 
 const pup: SummonDef = {
@@ -52,7 +56,7 @@ const pup: SummonDef = {
   bounty: 100,
   stats: { maxHp: 6, atk: 2, def: 0, speed: 100, move: 1, breakBar: 4, aggroBar: 5 },
   firstAttackMana: { summonRound: 0, laterRounds: 1 },
-  normalAttack: { name: "Bite", mana: 2, text: "", targeting: { type: "adjacent" }, physical: (f) => f.atk, break: 1 },
+  normalAttack: { name: "Bite", mana: 2, text: "", form: adjacent, physical: (f) => f.atk, break: 1 },
 };
 
 export const fixtures: Content = {

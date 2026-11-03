@@ -65,23 +65,37 @@ export interface FormulaInput {
 // A value on the sheet: a fixed number, or worked out when the ability is used.
 export type Formula = number | ((f: FormulaInput) => number);
 
-// A tile offset, drawn facing north: [x, y] with +y = forward. Turned to the chosen direction.
+// A tile offset: [x, y] with +y = forward (north).
 export type Offset = readonly [number, number];
 
-// Which tiles or units an ability reaches (the prototype's "kind").
-export type Targeting =
-  | { type: "adjacent" } // one of the 8 tiles around the user
-  | { type: "shape"; shape: readonly Offset[] } // around the user, turned to 1 of 4 directions
-  | { type: "around"; shape: readonly Offset[] } // around the user, no direction
-  | { type: "line"; length: number; pierce: boolean } // 4 directions; without pierce, stops at the first unit
-  | { type: "tile"; range: number; shape: readonly Offset[] } // a tile within range, shape around it
-  | { type: "tiles"; range: number; count: number } // several tiles within range, may repeat
-  | { type: "enemy"; range: number; blink?: boolean } // one enemy within range; blink = move next to it first
-  | { type: "ally"; range: number } // one ally within range
-  | { type: "team" } // every ally
-  | { type: "dash"; length: number } // move straight up to `length` tiles
-  | { type: "summon"; unit: string; count: number } // empty tiles around the user
-  | { type: "board" }; // every unit on the board
+// board.md "Range": where a picked tile (P) may be. manhattan / square: within n tiles; ring: exactly n tiles (square).
+export type Range = { manhattan: number } | { square: number } | { ring: number };
+
+// board.md "Skill Areas", written in the docs' notation (a grid facing north, top row = forward).
+//   C caster · P picked tile (also hit) · X hit · 1 2 3 lanes (Hit: First) · a b c zones · . not hit
+// Without a range the area is around the caster (No lock). With a range the player picks P (Lock-on);
+// a form with a range and no grid hits the picked tile only.
+export interface HitForm {
+  grid?: readonly string[];
+  diagonal?: readonly string[]; // rotate 8 with a second shape for NE / SE / SW / NW, drawn facing NW
+  rotate: 0 | 4 | 8; // 0 = Fixed
+  hit: "all" | "first" | "allies" | "both";
+  range?: Range;
+  picks?: number; // several picked tiles, may repeat (e.g. Valen's swords); default 1
+  blocked?: boolean; // cannot shoot over units (board.md "Blocked Shots")
+  self?: boolean; // the caster's own tile is part of the area (e.g. a heal that includes the caster)
+}
+
+// board.md "Falloff". each: −N for every step after the first. steps: total reduction at step 2, 3, … (last repeats).
+export type Falloff = { each: number } | { steps: readonly number[] };
+
+// board.md "Zones": values a zone sets instead of the ability's main ones, and its own effects.
+export interface ZoneDef {
+  physical?: Formula;
+  magic?: Formula;
+  break?: Formula;
+  onHit?: readonly OnHit[];
+}
 
 // Status put on each unit hit.
 export type OnHit =
@@ -110,33 +124,31 @@ export interface AbilityDef {
   name: string;
   mana: number;
   text: string; // shown in the hero viewer
-  targeting: Targeting;
+  form: HitForm;
 
-  // Damage to each enemy hit
+  // Damage to each enemy hit (zones may change these)
   physical?: Formula;
   magic?: Formula;
-  trueDamage?: Formula; // ignores shields, Armor, Magic Armor and DEF
   penetration?: number; // extra, this ability only
-  break?: number;
+  break?: Formula;
   breakPerHit?: boolean; // Break on every hit instead of once per action
+  falloff?: { physical?: Falloff; magic?: Falloff };
+  zones?: Readonly<Record<string, ZoneDef>>;
   onHit?: readonly OnHit[];
-  knockback?: boolean; // push each unit hit 1 tile away
+  knockback?: boolean; // push each unit hit 1 tile straight away from the user, if free
 
-  // On allies (ally / team targeting)
-  heal?: number;
-  shield?: { mode: "add" | "set"; amount: number; turns: number; per?: Per };
+  // On allies in the area (hit: "allies" / "both")
+  heal?: Formula;
+  shield?: { mode: "add" | "set"; amount: Formula; turns: number; per?: Per };
   buffs?: readonly Buff[];
   cleanse?: boolean;
 
   // On the user
   ultGain?: number; // default: normal attack 1, skill 2, ultimate 0
-  hpCost?: number;
-  lifeSteal?: "half"; // heals the user for half the damage dealt
-  selfHeal?: number;
+  selfHeal?: Formula;
   selfBuff?: Buff;
 
   freeAction?: boolean; // combat.md "Turn Flow": does not end the Turn
-  zone?: { turns: number }; // leaves a zone on the area's tiles
   special?: string; // hero-specific effect, run by that hero's hooks
 }
 

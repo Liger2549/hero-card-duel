@@ -11,7 +11,8 @@ import {
   type AbilityRef,
   type Formula,
   type FormulaInput,
-  type Offset,
+  type HitForm,
+  inRange,
   type Seat,
   type Unit,
 } from "@hcd/engine";
@@ -95,59 +96,36 @@ const fmtPM = (p: number, m: number) => {
   const parts = [p > 0 && `กายภาพ ${p}`, m > 0 && `เวท ${m}`].filter(Boolean);
   return parts.join(" + ") || "0";
 };
-const shapeName = (n: number) => `${n} ช่อง`;
+const rangeText = (r: NonNullable<HitForm["range"]>) =>
+  "manhattan" in r ? `ในระยะ ${r.manhattan}` : "square" in r ? `ในสี่เหลี่ยม ${2 * r.square + 1}x${2 * r.square + 1}` : `บนขอบห่าง ${r.ring} ช่อง`;
 
+// board.md "Skill Areas": header like the docs' ("Rotating (8 directions) | Hit: All | No lock").
 function areaText(ab: AbilityDef): string {
-  const t = ab.targeting;
-  switch (t.type) {
-    case "adjacent":
-      return "ระยะ 1 รอบตัว 8 ทิศ โดนเป้าเดียว";
-    case "enemy":
-      return t.blink ? `วาร์ปไปข้างศัตรู 1 ตัวในระยะ ${t.range}` : `ศัตรู 1 ตัวในระยะ ${t.range}`;
-    case "shape":
-      return `${t.shape.length} ช่องด้านหน้า หันได้ 4 ทิศ โดนทุกตัวในพื้นที่`;
-    case "around":
-      return `รอบตัว ${shapeName(t.shape.length)}`;
-    case "line":
-      return `เส้นตรง ${t.length} ช่อง หันได้ 4 ทิศ ${t.pierce ? "ทะลุโดนทุกตัว" : "โดนตัวแรกที่ขวาง"}`;
-    case "tile":
-      return `เลือกจุดในระยะ ${t.range} ระเบิดเป็น ${shapeName(t.shape.length)}`;
-    case "tiles":
-      return `เลือก ${t.count} ช่องในระยะ ${t.range} (เลือกช่องเดิมซ้ำได้)`;
-    case "ally":
-      return `พวก 1 ตัวในระยะ ${t.range} (รวมตัวเอง)`;
-    case "team":
-      return "พวกทุกตัวบนกระดาน";
-    case "summon":
-      return "ลงในช่องว่างติดตัว 8 ทิศ";
-    case "dash":
-      return `พุ่งตรงสูงสุด ${t.length} ช่อง หันได้ 4 ทิศ`;
-    case "board":
-      return "ยูนิตทุกตัวบนกระดาน";
-  }
+  const f = ab.form;
+  const turn = f.rotate === 0 ? "ไม่หมุน" : `หมุนได้ ${f.rotate} ทิศ`;
+  const hit = { all: "โดนทุกตัวในพื้นที่", first: "โดนตัวแรกที่ขวาง", allies: "พวกในพื้นที่", both: "ทุกตัวในพื้นที่" }[f.hit];
+  const pick = f.range ? `เลือก${(f.picks ?? 1) > 1 ? ` ${f.picks} ช่อง (ซ้ำได้)` : "ช่อง"} ${rangeText(f.range)}${f.blocked ? " ยิงข้ามไม่ได้" : ""} · Lock-on` : "No lock";
+  return `${turn} · ${hit} · ${pick}`;
 }
 
 const SPECIAL: Record<string, string> = {
   oath: "Giuramento d'Avorio: คุ้มกันพวกรอบตัวและสวนกลับ",
   vendetta: "ได้ Vendetta della Cittadella (สวนกลับแรงขึ้น)",
   collapse: "Collapse: ระเบิด Voidmark ทุกตัวบนกระดาน",
-  rehide: "ถ้าฆ่าได้ จะล่องหนอีกครั้ง",
-  shuffle: "สุ่มย้ายยูนิตทุกตัว",
 };
 
 function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
   const L: string[] = [];
-  const input = (index: number): FormulaInput => ({ atk: stat(content, u, "atk"), def: stat(content, u, "def"), index, target: null });
-  if (ab.trueDamage !== undefined) L.push("ดาเมจทะลุทุกอย่าง 22% ของ HP สูงสุดเป้า");
-  else if (ab.physical !== undefined || ab.magic !== undefined) {
-    const n = ab.targeting.type === "shape" ? ab.targeting.shape.length : 1;
-    const vals = Array.from({ length: n }, (_, i) => fmtPM(Math.max(0, evalF(ab.physical, input(i))), Math.max(0, evalF(ab.magic, input(i)))));
-    const count = ab.targeting.type === "tiles" ? ` ต่อดาบ × ${ab.targeting.count} เล่ม` : "";
-    if (new Set(vals).size === 1) L.push(`ดาเมจ ${vals[0]}${count}`);
-    else vals.forEach((v, i) => L.push(`ช่อง ${i + 1}: ${v}`));
+  const input: FormulaInput = { atk: stat(content, u, "atk"), def: stat(content, u, "def"), index: 0, target: null };
+  if (ab.physical !== undefined || ab.magic !== undefined) L.push(`ดาเมจ ${fmtPM(evalF(ab.physical, input), evalF(ab.magic, input))}${(ab.form.picks ?? 1) > 1 ? ` ต่อช่อง × ${ab.form.picks}` : ""}`);
+  for (const [z, v] of Object.entries(ab.zones ?? {})) {
+    L.push(`โซน ${z}: ${fmtPM(evalF(v.physical ?? ab.physical, input), evalF(v.magic ?? ab.magic, input))}${v.break !== undefined ? ` Break ${evalF(v.break, input)}` : ""}`);
+  }
+  for (const [type, f] of Object.entries(ab.falloff ?? {})) {
+    if (f) L.push(`Falloff ${type === "physical" ? "กายภาพ" : "เวท"} ${"each" in f ? `−${f.each} ต่อช่องถัดไป` : f.steps.map((n) => `−${n}`).join(", ")}`);
   }
   if (ab.penetration) L.push(`Penetration +${ab.penetration} เฉพาะท่านี้`);
-  if (ab.break) L.push(`Break ${ab.break}${ab.breakPerHit ? " ต่อครั้ง" : ""}`);
+  if (ab.break !== undefined) L.push(`Break ${evalF(ab.break, input)}${ab.breakPerHit ? " ต่อครั้ง" : ""}`);
   const hero = heroDef(content, u.defId);
   if (hero) {
     const gauge = hero.ultimate.gaugeName ?? "อัลติ";
@@ -157,92 +135,49 @@ function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
       L.push(g ? `ได้ ${gauge} +${g}` : `ไม่ได้ ${gauge}`);
     }
   }
-  if (ab.hpCost) L.push(`เสีย HP ตัวเอง ${ab.hpCost}`);
   for (const e of ab.onHit ?? []) {
     if (e.type === "cc") L.push(`${CCI[e.cc]} ${CCN[e.cc]} ${e.recovery} (ประมาณ ${Math.floor(e.recovery / 100)} Turns ถ้าเป้า Speed 100)`);
     else {
-      const tick = pctOf(evalF(e.damage, input(0)) + stat(content, u, "dotBoost"), stat(content, u, "dotPower"));
+      const tick = pctOf(evalF(e.damage, input) + stat(content, u, "dotBoost"), stat(content, u, "dotPower"));
       const when = e.kind === "round" ? `${e.duration} รอบ: ทิกตอนจบรอบ` : `${e.duration} เทิร์นของฝั่งเป้า: ทิกตอนจบเทิร์นฝั่งเป้า`;
       const brk = e.breakPerTick ? ` Break ${e.breakPerTick}` : "";
       L.push(`${e.id === "voidmark" ? "🌀 Voidmark" : "🔥 " + e.id} ${when} ${Math.max(tick, 1)}${brk} ไม่สนโล่และเกราะ`);
     }
   }
-  if (ab.heal) L.push(`ฟื้น HP ${ab.heal}`);
-  if (ab.shield) L.push(`โล่แบบ ${ab.shield.mode === "add" ? "Add" : "Set"} ${ab.shield.amount} นาน ${ab.shield.turns} Turns`);
+  if (ab.heal !== undefined) L.push(`ฟื้น HP ${evalF(ab.heal, input)}`);
+  if (ab.shield) L.push(`โล่แบบ ${ab.shield.mode === "add" ? "Add" : "Set"} ${evalF(ab.shield.amount, input)} นาน ${ab.shield.turns} Turns`);
   for (const b of ab.buffs ?? []) L.push(`${STATN[b.stat] ?? b.stat} +${b.amount} นาน ${b.turns} Turns`);
   if (ab.selfBuff) L.push(`ตัวเอง ${STATN[ab.selfBuff.stat] ?? ab.selfBuff.stat} +${ab.selfBuff.amount} นาน ${ab.selfBuff.turns} Turns`);
   if (ab.cleanse) L.push("Cleanse ล้าง CC และ DOT ทั้งหมด");
-  if (ab.selfHeal) L.push(`ฟื้น HP ตัวเอง ${ab.selfHeal}`);
-  if (ab.lifeSteal) L.push("ฟื้น HP ตัวเองครึ่งหนึ่งของดาเมจที่ทำ");
+  if (ab.selfHeal !== undefined) L.push(`ฟื้น HP ตัวเอง ${evalF(ab.selfHeal, input)}`);
   if (ab.knockback) L.push("ผลักเป้าถอย 1 ช่อง");
   if (ab.freeAction) L.push("ไม่เสีย Turn");
-  if (ab.zone) L.push(`☁️ ควัน ${ab.zone.turns} Turns`);
-  if (ab.targeting.type === "summon") {
-    const d = unitDef(content, ab.targeting.unit);
-    L.push(`เรียก ${d.icon} ${d.name} สูงสุด ${ab.targeting.count} ตัว (HP ${d.stats.maxHp} ATK ${d.stats.atk})`);
-  }
   if (ab.special) L.push(`${SPECIAL[ab.special] ?? ab.special} (ยังไม่ทำงานในเวอร์ชันนี้)`);
   return L;
 }
 
-// Mini grid of the area. Offsets are +y forward; the grid draws forward as up.
+// Mini grid of the area, drawn straight from the docs' grid (facing up). A picked tile with no grid shows its range.
 function Pattern({ ab }: { ab: AbilityDef }) {
-  const m = new Map<string, string>();
-  const set = (x: number, y: number, c: string) => m.set(`${x},${-y}`, c);
-  const ring = (r: number, c: string, cheb: boolean) => {
-    for (let y = -r; y <= r; y++)
-      for (let x = -r; x <= r; x++) {
-        const d = cheb ? Math.max(Math.abs(x), Math.abs(y)) : Math.abs(x) + Math.abs(y);
-        if (d >= 1 && d <= r) set(x, y, c);
-      }
-  };
-  const cap = (n: number) => Math.min(n, 3);
-  const shape = (offs: readonly Offset[], dy = 0) => offs.forEach(([x, y]) => Math.abs(x) <= 3 && Math.abs(y + dy) <= 3 && set(x, y + dy, "hit"));
-  const t = ab.targeting;
-  switch (t.type) {
-    case "adjacent":
-      ring(1, "rng", true);
-      set(0, 1, "hit");
-      break;
-    case "enemy":
-    case "tiles":
-      ring(cap(t.range), "rng", false);
-      set(0, cap(Math.min(t.range, 2)), "hit");
-      break;
-    case "shape":
-    case "around":
-      shape(t.shape);
-      break;
-    case "line":
-      for (let i = 1; i <= cap(t.length); i++) set(0, i, t.pierce || i === 1 ? "hit" : "rng");
-      break;
-    case "dash":
-      for (let i = 1; i <= cap(t.length); i++) set(0, i, "mv");
-      break;
-    case "tile":
-      ring(cap(t.range), "rng", false);
-      shape(t.shape, Math.min(t.range, 2));
-      break;
-    case "ally":
-      ring(cap(t.range), "al2", false);
-      break;
-    case "summon":
-      ring(1, "al", true);
-      break;
-    default:
-      return null;
-  }
-  let R = 1;
-  for (const k of m.keys()) {
-    const [x, y] = k.split(",").map(Number);
-    R = Math.max(R, Math.abs(x!), Math.abs(y!));
-  }
-  R = Math.min(3, R);
-  const cells = [];
-  for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) cells.push(<i key={`${x},${y}`} className={x === 0 && y === 0 ? "me" : m.get(`${x},${y}`) ?? ""} />);
+  const f = ab.form;
+  let rows: string[][];
+  if (f.grid) {
+    rows = f.grid.map((r) => (r.trim().includes(" ") ? r.trim().split(/\s+/) : [...r.trim()]));
+  } else if (f.range) {
+    const n = Math.min("manhattan" in f.range ? f.range.manhattan : "square" in f.range ? f.range.square : f.range.ring, 3);
+    rows = Array.from({ length: 2 * n + 1 }, (_, y) =>
+      Array.from({ length: 2 * n + 1 }, (_, x) => {
+        const dx = Math.abs(x - n);
+        const dy = Math.abs(y - n);
+        if (dx === 0 && dy === 0) return "C";
+        return f.range && inRange(f.range, { x: n, y: n }, { x, y }) ? "T" : ".";
+      }),
+    );
+  } else return null;
+  const cls = (m: string) => (m === "C" ? "me" : m === "." ? "" : m === "T" ? "rng" : f.hit === "allies" ? "al" : "hit");
+  const width = Math.max(...rows.map((r) => r.length));
   return (
-    <span className="pg" style={{ gridTemplateColumns: `repeat(${2 * R + 1},9px)` }} aria-hidden="true">
-      {cells}
+    <span className="pg" style={{ gridTemplateColumns: `repeat(${width},9px)` }} aria-hidden="true">
+      {rows.flatMap((r, y) => Array.from({ length: width }, (_, x) => <i key={`${x},${y}`} className={cls(r[x] ?? ".")} />))}
     </span>
   );
 }

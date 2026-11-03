@@ -91,9 +91,9 @@ C
 ```
 Target: 1 tile in the 5x5 square around Zoran | Hit: All and Allies | Lock-on
 
-Lantern placement (T):    Lantern area (L = lantern):
+Lantern placement (T):    Lantern area (P = lantern):
 T T T T T                 X X X
-T T T T T                 X L X
+T T T T T                 X P X
 T T C T T                 X X X
 T T T T T
 T T T T T

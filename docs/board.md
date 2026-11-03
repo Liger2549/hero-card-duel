@@ -98,7 +98,8 @@ Each skill draws its area directly on the skill, as a small grid.
 | Symbol | Meaning |
 |---|---|
 | `C` | Caster |
-| `T` | Target tile (for skills aimed at a tile within range) |
+| `T` | A tile the player may pick (in a drawing of a skill's range) |
+| `P` | The picked tile, in a drawing of the area around it. It is hit too, and a Rotating area turns around it. |
 | `X` | Tile hit (Hit: All) |
 | `1`, `2`, `3` ... | Tile hit, in travel order (Hit: First) |
 | `a`, `b`, `c` ... | Tile hit, in a damage zone (Hit: All). Each zone lists its own damage. |
@@ -106,8 +107,9 @@ Each skill draws its area directly on the skill, as a small grid.
 
 ### Anchor
 
-- A skill's area is centered either on the **caster** (`C`) or on a **target tile** (`T`) chosen by the player within the skill's range.
-- **Lock-on**: a skill anchored on `T` locks onto a target. A skill anchored on `C` (areas and Hit: First lanes) does not (**No lock**).
+- A skill's area is centered either on the **caster** (`C`) or on a **picked tile** (`P`) the player chooses within the skill's range. The range is drawn with `T`; the area around the picked tile is drawn with `P`. A one-tile area needs no area drawing (the picked tile is the area).
+- The caster's own tile is not hit unless the skill says so (e.g. a heal that includes the caster).
+- **Lock-on**: a skill anchored on a picked tile (`T` / `P`) locks onto a target. A skill anchored on `C` (areas and Hit: First lanes) does not (**No lock**).
   - Effects that pick a unit directly, such as counter-attacks, also count as Lock-on.
   - Some statuses stop Lock-on targeting (e.g. Stealth, `statuses.md`): a Lock-on skill cannot pick that unit's tile as `T`, but its area still hits the unit if it stands in it.
 - Every hit form states **Lock-on** or **No lock** in its header, e.g. `Rotating (8 directions) | Hit: First | No lock`.
@@ -167,7 +169,7 @@ Example (Rotating, Hit: First, 3 lanes):
 ### Zones
 
 - A **Hit: All** skill may split its area into zones using lowercase letters (`a`, `b`, ...). Lowercase is used so zones are not confused with `C` (Caster) and `T` (Target).
-- Each zone lists its own Physical, Magic and (optionally) Break values.
+- Each zone lists its own Physical, Magic and (optionally) Break values, and may have its own effects (e.g. a status only that zone applies).
 - Values not listed in a zone use the skill's main values.
 - Ult Points are gained once per skill use, not per zone.
 

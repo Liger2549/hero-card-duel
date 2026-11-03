@@ -4,6 +4,7 @@ import { towerStage, type MatchConfig, type Seat } from "../config.ts";
 import type { AbilityDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { Seats, unitAt, type GameState, type Tower, type Unit } from "../state.ts";
+import { reach } from "./targeting.ts";
 
 // Each team's towers sit on the row just off its own edge: A below row 0, B above the top row.
 export function towerRow(c: MatchConfig, seat: Seat): number {
@@ -50,19 +51,13 @@ export function decayTowers(s: GameState): void {
   }
 }
 
-// How far a normal attack reaches toward a tower.
-function reach(ab: AbilityDef): number | null {
-  if (ab.targeting.type === "adjacent") return 1;
-  if (ab.targeting.type === "enemy") return ab.targeting.range;
-  return null;
-}
+
 
 export function validateTowerAttack(s: GameState, u: Unit, ab: AbilityDef, p: Pos): string | null {
   const t = towerAt(s, p)!;
   if (t.seat === u.owner) return "that is your own tower";
   if (s.towers[t.seat][t.index]!.destroyed) return "that tower is destroyed";
-  const r = reach(ab);
-  if (r === null) return "this attack cannot hit towers";
+  const r = reach(ab.form);
   const at = u.pos!;
   if (towerOfColumn(s.config, at.x) !== t.index) return "stand in the tower's columns to attack it";
   const row = towerRow(s.config, t.seat);

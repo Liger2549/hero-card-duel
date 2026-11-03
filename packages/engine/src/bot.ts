@@ -54,7 +54,7 @@ function combatAction(s: GameState, c: Content, seat: Seat): Action {
     const refs: AbilityRef[] = hero ? ["ultimate", ...hero.skills.map((_, i) => i), "normal"] : ["normal"];
     for (const ability of refs) {
       const ab = abilityOf(c, u.defId, ability)!;
-      for (const aim of candidateAims(s, ab.targeting)) {
+      for (const aim of candidateAims(s, u, ab.form, ability === "normal")) {
         const a: Action = { type: "UseAbility", seat, unitId: u.id, ability, aim };
         const r = apply(s, a, c);
         if (r.ok && r.events.some((e) => (e.type === "Damaged" && e.sourceId === u.id) || e.type.startsWith("Tower"))) return a;

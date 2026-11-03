@@ -36,7 +36,7 @@ describe("normal attack (combat.md Damage Resolution)", () => {
   });
 
   it("needs an enemy on the tile (no swinging at empty air)", () => {
-    expect(rejects(duel(), use("a", "normal", at(3, 4)))).toBe("choose an enemy");
+    expect(rejects(duel(), use("a", "normal", at(3, 4)))).toBe("no enemy in the area");
   });
 
   it("preview: same result, and the state passed in does not change", () => {
@@ -160,10 +160,10 @@ describe("skills and ultimates", () => {
 
   it("heals never go above Max HP", () => {
     const s = play(
-      state([unit("h", "A", 4, 4, { defId: "archer", hp: 14 }), unit("e", "B", 0, 8)]),
-      use("h", 0, at(4, 4)),
+      state([unit("h", "A", 4, 4, { defId: "archer" }), unit("k", "A", 4, 5, { hp: 18 }), unit("e", "B", 0, 8)]),
+      use("h", 0, at(4, 5)),
     );
-    expect(get(s, "h").hp).toBe(16);
+    expect(get(s, "k").hp).toBe(20);
   });
 
   it("a Free Action does not end the Turn", () => {

@@ -74,9 +74,9 @@ Blocking: board.md "Blocked Shots".
 ```
 Target: 1 tile in the 5x5 square around Ribu (can be placed over units) | Hit: All | Lock-on
 
-Explosion, corner NE picked (K = Core):
-1x1:  K        2x2:  X X
-                     K X
+Explosion, corner NE picked (P = the Core's tile):
+1x1:  P        2x2:  X X
+                     P X
 ```
 
 ## Ultimate: Paradox Shift (สลับปฏิทรรศน์)
@@ -175,14 +175,14 @@ X X X
 ```
 Target: center tile within 2 tiles | Hit: All | Lock-on
 
-Range (T):      Area:
+Range (T):      Area (P = picked tile):
 . . T . .       b b b
-. T T T .       b a b
+. T T T .       b P b
 T T C T T       b b b
 . T T T .
 . . T . .
 
-- a: Physical 180% ATK
+- P: Physical 180% ATK
 - b: Physical 120% ATK
 ```
 

@@ -205,7 +205,7 @@ function canUseAnyAbility(c: Content, s: GameState, u: Unit): boolean {
   const refs: AbilityRef[] = hero ? ["normal", ...hero.skills.map((_, i) => i), "ultimate"] : ["normal"];
   return refs.some((ability) => {
     const ab = abilityOf(c, u.defId, ability)!;
-    return candidateAims(s, ab.targeting).some(
+    return candidateAims(s, u, ab.form, ability === "normal").some(
       (aim) => validateUseAbility(c, s, { type: "UseAbility", seat: u.owner, unitId: u.id, ability, aim }) === null,
     );
   });

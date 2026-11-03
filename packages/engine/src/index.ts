@@ -6,7 +6,7 @@ export * from "./content.ts";
 export * from "./defs.ts";
 export * from "./events.ts";
 export { manaCost } from "./rules/abilities.ts";
-export { candidateAims, resolveArea, Dirs, type Aim, type Area, type Dir } from "./rules/targeting.ts";
+export { allowedDirs, candidateAims, inRange, parseGrid, reach, resolveArea, Dirs, Dirs8, type Aim, type Area, type Cell, type Dir } from "./rules/targeting.ts";
 export { newMatch } from "./rules/draft.ts";
 export { towerAt, towerRow } from "./rules/towers.ts";
 export { newMatchWithUnits } from "./rules/turn.ts";
