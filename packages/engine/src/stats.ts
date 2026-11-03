@@ -43,7 +43,7 @@ export function stat(c: Content, u: Unit, name: StatName): number {
   const total = roundH(hv);
 
   if (name === "tenacity") return total;
-  if (name === "speed") return Math.max(total, 1);
+  if (name === "speed" || name === "maxHp") return Math.max(total, 1); // statuses.md "Wither": Max HP at least 1
   return Math.max(total, 0);
 }
 

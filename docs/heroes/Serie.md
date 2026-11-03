@@ -23,7 +23,7 @@ DOT Boost : 2
 
 ## Passive: The Abyss Hungers
 - Effect: Serie does not gain Ult Points. Instead she fills the **Singularity** gauge (max 8).
-- Each time a **Voidmark** tick deals damage to an enemy, Serie gains +1 Singularity. Each enemy counts separately (2 enemies ticking at the same Round end = +2).
+- Each time a **Voidmark** tick deals damage to an enemy, Serie gains +1 Singularity. Each enemy counts separately (2 enemies ticking at the end of the same Turn = +2).
 
 ## Normal Attack: Hollow Edge
 - Mana: 2
@@ -45,7 +45,7 @@ C
 - Break: 2
 - Singularity gained: 0
 - Tags: DOT
-- Effect: Applies **Voidmark** to every enemy hit for 2 Rounds.
+- Effect: Applies **Voidmark** to every enemy hit for 2 Turns (Turn DOT: the target team's Turns).
 - Hit form:
 ```
 Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
@@ -67,7 +67,7 @@ X X X
     Collapse Damage = (Voidmark tick damage × remaining ticks) + ATK
     ```
     Collapse Damage follows the DOT rules (ignores shields, DEF, Armor and Magic Armor; reduced only by Fortitude). It is not a Voidmark tick, so it does not give Singularity.
-  - After the collapse, that enemy's Voidmark is removed and a new Voidmark is applied for 1 Round.
+  - After the collapse, that enemy's Voidmark is removed and a new Voidmark is applied for 1 Turn.
 - Hit form:
 ```
 Rotating (4 directions <N, E, S, W>) | Hit: All | No lock
@@ -77,6 +77,6 @@ X X X
 ```
 
 ## Voidmark
-A Round DOT, defined in `statuses.md` (damage per tick, Erosion).
+A Turn DOT, defined in `statuses.md` (damage per tick, Erosion).
 
 - Each tick that deals damage gives Serie +1 Singularity (see Passive).

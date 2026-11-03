@@ -14,6 +14,7 @@ const buff = (s: StatName, amount: number, kind: ModifierKind = "flat"): ActiveB
   amount,
   kind,
   turnsLeft: -1,
+  count: { per: "turn" },
   appliedTurn: 0,
 });
 const withBuffs = (u: Unit, ...buffs: ActiveBuff[]): Unit => ({ ...u, buffs });

@@ -9,11 +9,18 @@ export function otherSeat(seat: Seat): Seat {
   return seat === "A" ? "B" : "A";
 }
 
+// combat.md "Durations": which Turns count down a timed effect.
+// turn: every Turn. team: only that team's Turns. own: only Turns in which that unit used its Own Turn.
+export type Countdown = { per: "turn" } | { per: "team"; seat: Seat } | { per: "own"; unitId: string };
+
+export const EveryTurn: Countdown = { per: "turn" };
+
 // combat.md "Shields". appliedTurn: the Turn it was given in, which is not counted (combat.md "Durations").
 export interface Shield {
   mode: "add" | "set";
   amount: number;
   turnsLeft: number; // -1 = permanent
+  count: Countdown;
   appliedTurn: number;
   seq: number; // order given; added shields are used oldest first
 }
@@ -22,17 +29,20 @@ export interface ActiveBuff {
   stat: BuffStat;
   amount: number;
   kind: ModifierKind; // combat.md "Stat Modifiers"
-  turnsLeft: number;
+  name?: string; // a named status from statuses.md (e.g. "wither"), for the UI
+  turnsLeft: number; // -1 = permanent
+  count: Countdown;
   appliedTurn: number;
 }
 
-// combat.md "Damage over Time": damage per tick is worked out when applied.
+// combat.md "Damage over Time". Stacks per applier: one copy per (id, sourceId).
 export interface Dot {
   id: string;
-  physical: number;
-  magic: number;
-  boost: number;
-  roundsLeft: number;
+  kind: "round" | "turn"; // Round DOT ticks at the end of every Round; Turn DOT at the end of each Turn of the target's team
+  damageH: number; // DOT Damage in hundredths, stored when applied: (Damage per tick + DOT Boost) × DOT Power%
+  breakPerTick: number; // only some DOTs (e.g. Nocturnal Flame); never lowers the Break Bar below 1
+  ticksLeft: number;
+  appliedTurn: number;
   sourceId: string;
 }
 
@@ -66,6 +76,9 @@ export interface Unit {
   // rules.md "Cards": summoned units' cheap first attack
   summonedRound: number | null;
   attacksThisRound: number;
+
+  // combat.md "Turn Flow": did a normal attack, skill or ultimate this Turn (a Free Action does not count).
+  usedOwnTurn: boolean;
 }
 
 // One step that can still be undone (board.md "Undo").
@@ -155,6 +168,7 @@ export function createUnit(c: Content, defId: string, owner: Seat, id: string, s
     prepMoved: false,
     summonedRound,
     attacksThisRound: 0,
+    usedOwnTurn: false,
   };
 }
 

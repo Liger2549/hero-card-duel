@@ -1,7 +1,7 @@
 // Normal attacks, skills and ultimates (heroes/README.md, combat.md "Turn Flow" and "Damage Resolution").
 import type { ActionOf } from "../actions.ts";
 import { abilityOf, heroDef, unitDef, type AbilityRef, type Content } from "../content.ts";
-import type { AbilityDef, Buff, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
+import type { AbilityDef, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { findUnit, unitAt, type GameState, type Unit } from "../state.ts";
 import { divRound } from "../num.ts";
@@ -17,6 +17,7 @@ import {
   shieldTotal,
   useShields,
 } from "./damage.ts";
+import { addBuff, applyDot, countdown } from "./status.ts";
 import { resolveArea, type Area } from "./targeting.ts";
 import { hitTower, towerAt, validateTowerAttack } from "./towers.ts";
 
@@ -68,6 +69,7 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   s.players[a.seat].mana -= mana;
   s.undoSteps = []; // board.md "Undo": steps cannot be undone after an action
   if (a.ability === "normal") u.attacksThisRound += 1;
+  if (!ab.freeAction) u.usedOwnTurn = true; // combat.md "Turn Flow": a Free Action does not use the Own Turn
   if (ab.hpCost) u.hp -= ab.hpCost;
   gainOrSpendUlt(c, u, a.ability, ab);
   events.push({ type: "AbilityUsed", unitId: u.id, ability: a.ability, name: ab.name, tiles: area.tiles, mana });
@@ -125,17 +127,17 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   for (const ally of area.allies) {
     if (ab.heal) healFrom(c, u, ally, ab.heal, events);
     if (ab.shield) {
-      giveShield(s, ally, ab.shield.mode, ab.shield.amount, ab.shield.turns);
+      giveShield(s, ally, ab.shield.mode, ab.shield.amount, ab.shield.turns, countdown(ab.shield.per, u, ally));
       events.push({ type: "ShieldGained", unitId: ally.id, amount: ab.shield.amount, mode: ab.shield.mode });
     }
-    for (const b of ab.buffs ?? []) addBuff(s, ally, b, events);
+    for (const b of ab.buffs ?? []) addBuff(s, u, ally, b, events);
     if (ab.cleanse) cleanse(c, ally, events);
   }
 
   // On the user
   if (ab.lifeSteal === "half") healFrom(c, u, u, divRound(dealt, 2), events);
   if (ab.selfHeal) healFrom(c, u, u, ab.selfHeal, events);
-  if (ab.selfBuff) addBuff(s, u, ab.selfBuff, events);
+  if (ab.selfBuff) addBuff(s, u, u, ab.selfBuff, events);
 }
 
 // heroes/README.md "Ult Points". Summons have no Ult Points.
@@ -155,22 +157,7 @@ function applyOnHit(c: Content, s: GameState, user: Unit, t: Unit, e: OnHit, inp
     applyCc(c, t, e.cc, e.recovery, events);
     return;
   }
-  // combat.md "Damage over Time": damage is stored when applied; the same DOT replaces the old one.
-  t.dots = t.dots.filter((d) => d.id !== e.id);
-  t.dots.push({
-    id: e.id,
-    physical: evalF(e.physical, input),
-    magic: evalF(e.magic, input),
-    boost: stat(c, user, "dotBoost"),
-    roundsLeft: e.rounds,
-    sourceId: user.id,
-  });
-  events.push({ type: "StatusApplied", unitId: t.id, status: e.id });
-}
-
-function addBuff(s: GameState, u: Unit, b: Buff, events: GameEvent[]): void {
-  u.buffs.push({ stat: b.stat, amount: b.amount, kind: b.kind ?? "flat", turnsLeft: b.turns, appliedTurn: s.turn });
-  events.push({ type: "StatusApplied", unitId: u.id, status: `${b.stat} +${b.amount}` });
+  applyDot(c, s, user, t, e, evalF(e.damage, input), events);
 }
 
 // Removes CC and DOT. Ending a Break Stun refills the Break Bar (combat.md "Break").

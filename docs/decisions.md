@@ -2,6 +2,10 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — Voidmark is a Turn DOT
+
+- Serie's **Voidmark** is now a Turn DOT: 2 Turns from Voidrend Crescent, 1 Turn after a Collapse (the numbers kept, the unit changed from Rounds to the target team's Turns). Round DOTs stay in the rules for later DOTs.
+
 ## 2026-11-03 — Three prototype heroes back
 
 - To reach the 12 heroes a Normal draft needs, three prototype heroes come back as is: **Rocco** (rubber boxer, `rubber`), **Konrad** (iron flag bearer, `flag`, with his Footman unit) and **Eira** (frost hunter, `frost`). The owner wants them complete and playable, not redesigned; names were picked by Claude.

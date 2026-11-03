@@ -566,7 +566,7 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
   const st = (n: Parameters<typeof stat>[2]) => stat(content, u, n);
   const tags: string[] = [];
   for (const sh of u.shields) tags.push(`🛡 โล่ ${sh.amount}${sh.turnsLeft > 0 ? ` (${sh.turnsLeft} Turns)` : ""}`);
-  for (const x of u.dots) tags.push(`${x.id === "voidmark" ? "🌀 Voidmark" : "🔥 " + x.id} เหลือ ${x.roundsLeft} รอบ`);
+  for (const x of u.dots) tags.push(`${x.id === "voidmark" ? "🌀 Voidmark" : "🔥 " + x.id} เหลือ ${x.ticksLeft} ${x.kind === "round" ? "รอบ" : "เทิร์น"}`);
   for (const [k, v] of Object.entries(u.cc)) tags.push(`${CCI[k]} ${k} ${v} (≈${Math.max(1, Math.floor(v / st("speed")))} Turns)`);
   if (u.broken) tags.push("💥 Break");
   for (const b of u.buffs) tags.push(`${b.stat} +${b.amount} (${b.turnsLeft} Turns)`);

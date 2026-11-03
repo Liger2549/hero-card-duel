@@ -37,7 +37,7 @@ export const serie = defineHero({
       break: 2,
       ultGain: 0,
       // Voidmark tick: 40% ATK (statuses.md). Erosion and Singularity come with Serie's hooks.
-      onHit: [{ type: "dot", id: "voidmark", magic: (f) => pctOf(f.atk, 40), rounds: 2 }],
+      onHit: [{ type: "dot", id: "voidmark", kind: "turn", damage: (f) => pctOf(f.atk, 40), duration: 2 }],
     },
   ],
   ultimate: {

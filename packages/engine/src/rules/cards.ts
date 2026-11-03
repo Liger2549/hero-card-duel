@@ -7,6 +7,7 @@ import type { CardDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { createUnit, destroyedTowers, findUnit, unitAt, type GameState } from "../state.ts";
 import { healFrom } from "./damage.ts";
+import { addBuff } from "./status.ts";
 
 function cardDef(c: Content, id: string): CardDef {
   const d = c.cards.find((x) => x.id === id);
@@ -81,10 +82,7 @@ export function applyPlayCard(c: Content, s: GameState, a: ActionOf<"PlayCard">,
   const target = p ? unitAt(s, p) : undefined;
   if (!target) return;
   if (card.heal) healFrom(c, null, target, card.heal, events);
-  for (const b of card.buffs ?? []) {
-    findUnit(s, target.id)!.buffs.push({ stat: b.stat, amount: b.amount, kind: b.kind ?? "flat", turnsLeft: b.turns, appliedTurn: s.turn });
-    events.push({ type: "StatusApplied", unitId: target.id, status: `${b.stat} +${b.amount}` });
-  }
+  for (const b of card.buffs ?? []) addBuff(s, null, target, b, events);
 }
 
 // Can this seat play any card right now? (For "can do nothing", combat.md "Turn Flow".)

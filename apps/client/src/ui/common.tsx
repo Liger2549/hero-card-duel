@@ -5,6 +5,7 @@ import {
   heroDef,
   type HeroDef,
   stat,
+  pctOf,
   unitDef,
   type AbilityDef,
   type AbilityRef,
@@ -160,11 +161,10 @@ function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
   for (const e of ab.onHit ?? []) {
     if (e.type === "cc") L.push(`${CCI[e.cc]} ${CCN[e.cc]} ${e.recovery} (ประมาณ ${Math.floor(e.recovery / 100)} Turns ถ้าเป้า Speed 100)`);
     else {
-      const boost = stat(content, u, "dotBoost");
-      const p = evalF(e.physical, input(0));
-      const m = evalF(e.magic, input(0));
-      const tick = (p > 0 ? p + boost : 0) + (m > 0 ? m + boost : 0);
-      L.push(`${e.id === "voidmark" ? "🌀 Voidmark" : "🔥 " + e.id} ${e.rounds} รอบ: ทิกตอนจบรอบ ${Math.max(tick, 1)} ไม่สนโล่และเกราะ`);
+      const tick = pctOf(evalF(e.damage, input(0)) + stat(content, u, "dotBoost"), stat(content, u, "dotPower"));
+      const when = e.kind === "round" ? `${e.duration} รอบ: ทิกตอนจบรอบ` : `${e.duration} เทิร์นของฝั่งเป้า: ทิกตอนจบเทิร์นฝั่งเป้า`;
+      const brk = e.breakPerTick ? ` Break ${e.breakPerTick}` : "";
+      L.push(`${e.id === "voidmark" ? "🌀 Voidmark" : "🔥 " + e.id} ${when} ${Math.max(tick, 1)}${brk} ไม่สนโล่และเกราะ`);
     }
   }
   if (ab.heal) L.push(`ฟื้น HP ${ab.heal}`);

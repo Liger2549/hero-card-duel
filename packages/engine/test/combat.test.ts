@@ -195,7 +195,7 @@ describe("durations (combat.md Durations)", () => {
 });
 
 describe("DOT (combat.md Damage over Time)", () => {
-  it("ticks at the end of each Round for its duration, reduced by DEF", () => {
+  it("a Round DOT ticks at the end of each Round for its duration", () => {
     const s = play(
       state([unit("h", "A", 4, 4, { defId: "archer" }), unit("k", "B", 4, 6), unit("far", "B", 0, 8)]),
       use("h", 1, at(4, 6)),

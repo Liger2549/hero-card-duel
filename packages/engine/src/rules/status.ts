@@ -1,15 +1,100 @@
 // Things that count down: CC (combat.md "Crowd Control"), buffs and shields ("Durations"),
-// DOT ("Damage over Time"), and the win check (rules.md "Win Conditions").
+// DOT ("Damage over Time"), shared statuses (statuses.md), and the win check (rules.md "Win Conditions").
 import type { Seat } from "../config.ts";
 import { unitDef, type Content } from "../content.ts";
-import type { CcKind } from "../defs.ts";
+import type { Buff, CcKind, OnHit, Per } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
-import { findUnit, Seats, type GameState } from "../state.ts";
+import { h, mulPct, roundH } from "../num.ts";
+import { findUnit, Seats, type Countdown, type GameState, type Unit } from "../state.ts";
 import { stat } from "../stats.ts";
 import { loseHp } from "./damage.ts";
 
+// combat.md "Durations": team = the caster's team; own = the holder's Own Turns.
+export function countdown(per: Per | undefined, caster: Unit | null, holder: Unit): Countdown {
+  if (per === "team") return { per: "team", seat: (caster ?? holder).owner };
+  if (per === "own") return { per: "own", unitId: holder.id };
+  return { per: "turn" };
+}
+
+export function addBuff(s: GameState, caster: Unit | null, holder: Unit, b: Buff, events: GameEvent[]): void {
+  holder.buffs.push({
+    stat: b.stat,
+    amount: b.amount,
+    kind: b.kind ?? "flat",
+    turnsLeft: b.turns,
+    count: countdown(b.per, caster, holder),
+    appliedTurn: s.turn,
+  });
+  events.push({ type: "StatusApplied", unitId: holder.id, status: `${b.stat} +${b.amount}` });
+}
+
+// statuses.md "Wither N": Max HP − N, stacks, each stack counts on its own. Max HP never goes below 1 (stats.ts).
+// HP above the lowered max is kept (Keep); when a stack ends Max HP comes back, HP does not.
+export function applyWither(s: GameState, caster: Unit | null, holder: Unit, n: number, turns: number, per: Per, events: GameEvent[]): void {
+  if (holder.dead || n <= 0) return;
+  holder.buffs.push({
+    stat: "maxHp",
+    amount: -n,
+    kind: "flat",
+    name: "wither",
+    turnsLeft: turns,
+    count: countdown(per, caster, holder),
+    appliedTurn: s.turn,
+  });
+  events.push({ type: "StatusApplied", unitId: holder.id, status: "wither" });
+}
+
+// combat.md "Damage over Time": DOT Damage = (Damage per tick + DOT Boost) × DOT Power%, stored when applied.
+// Stacks per applier: the same applier replaces its own copy; copies from different appliers stack.
+export function applyDot(c: Content, s: GameState, applier: Unit, t: Unit, e: Extract<OnHit, { type: "dot" }>, damage: number, events: GameEvent[]): void {
+  if (t.dead) return;
+  t.dots = t.dots.filter((d) => !(d.id === e.id && d.sourceId === applier.id));
+  t.dots.push({
+    id: e.id,
+    kind: e.kind,
+    damageH: mulPct(h(damage + stat(c, applier, "dotBoost")), stat(c, applier, "dotPower")),
+    breakPerTick: e.breakPerTick ?? 0,
+    ticksLeft: e.duration,
+    appliedTurn: s.turn,
+    sourceId: applier.id,
+  });
+  events.push({ type: "StatusApplied", unitId: t.id, status: e.id });
+}
+
+// Tick Damage = max(DOT Damage × DOT Taken% − Fortitude, 1). Ignores shields, DEF, Armor and Magic Armor.
+// A DOT with Break per tick lowers the Break Bar, but never below 1 (statuses.md "Nocturnal Flame").
+function tick(c: Content, s: GameState, u: Unit, d: Unit["dots"][number], events: GameEvent[]): void {
+  const damage = Math.max(roundH(mulPct(d.damageH, stat(c, u, "dotTaken")) - h(stat(c, u, "fortitude"))), 1);
+  events.push({ type: "DotTick", unitId: u.id, dot: d.id, damage });
+  loseHp(c, s, u, damage, findUnit(s, d.sourceId) ?? null, events);
+  if (!u.dead && !u.broken && d.breakPerTick > 0 && u.breakBar > 1) u.breakBar = Math.max(u.breakBar - d.breakPerTick, 1);
+  d.ticksLeft -= 1;
+}
+
+function dropEndedDots(u: Unit, events: GameEvent[]): void {
+  for (const d of u.dots.filter((x) => x.ticksLeft <= 0)) events.push({ type: "StatusEnded", unitId: u.id, status: d.id });
+  u.dots = u.dots.filter((d) => d.ticksLeft > 0);
+}
+
+// Does this Turn count down an effect with this countdown? (The Turn it was applied in never does.)
+function counts(s: GameState, count: Countdown, appliedTurn: number): boolean {
+  if (appliedTurn >= s.turn) return false;
+  if (count.per === "team") return s.activeSeat === count.seat;
+  if (count.per === "own") return findUnit(s, count.unitId)?.usedOwnTurn === true;
+  return true;
+}
+
+// Called at the end of every Turn, while s.activeSeat is still the player whose Turn is ending.
 export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
   for (const u of s.units) {
+    if (u.dead) continue;
+
+    // Turn DOT: ticks at the end of each Turn of the target's team, not in the Turn it was applied in.
+    for (const d of u.dots.filter((x) => x.kind === "turn" && x.appliedTurn < s.turn && u.owner === s.activeSeat)) {
+      if (u.dead) break;
+      tick(c, s, u, d, events);
+    }
+    dropEndedDots(u, events);
     if (u.dead) continue;
 
     // Remaining Recovery − Speed; the CC ends when it drops below Speed.
@@ -29,31 +114,27 @@ export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
       }
     }
 
-    // The Turn an effect was applied in is not counted. -1 = permanent.
-    for (const b of u.buffs) if (b.appliedTurn < s.turn) b.turnsLeft -= 1;
+    // -1 = permanent.
+    for (const b of u.buffs) if (b.turnsLeft > 0 && counts(s, b.count, b.appliedTurn)) b.turnsLeft -= 1;
     for (const b of u.buffs.filter((x) => x.turnsLeft === 0)) {
-      events.push({ type: "StatusEnded", unitId: u.id, status: `${b.stat} +${b.amount}` });
+      events.push({ type: "StatusEnded", unitId: u.id, status: b.name ?? `${b.stat} +${b.amount}` });
     }
     u.buffs = u.buffs.filter((b) => b.turnsLeft !== 0);
-    for (const sh of u.shields) if (sh.turnsLeft > 0 && sh.appliedTurn < s.turn) sh.turnsLeft -= 1;
+    for (const sh of u.shields) if (sh.turnsLeft > 0 && counts(s, sh.count, sh.appliedTurn)) sh.turnsLeft -= 1;
     u.shields = u.shields.filter((sh) => sh.turnsLeft !== 0);
   }
+  for (const u of s.units) u.usedOwnTurn = false;
 }
 
-// Tick = max(Physical + Boost + Magic + Boost − DEF − Fortitude, 1). Boost only on types the DOT has.
+// Round DOT: ticks at the end of every Round, the first time at the end of the Round it was applied in.
 export function endOfRoundDots(c: Content, s: GameState, events: GameEvent[]): void {
   for (const u of s.units) {
     if (u.dead) continue;
-    for (const d of [...u.dots]) {
+    for (const d of u.dots.filter((x) => x.kind === "round")) {
       if (u.dead) break;
-      const raw = (d.physical > 0 ? d.physical + d.boost : 0) + (d.magic > 0 ? d.magic + d.boost : 0);
-      const damage = Math.max(raw - stat(c, u, "def") - stat(c, u, "fortitude"), 1);
-      events.push({ type: "DotTick", unitId: u.id, dot: d.id, damage });
-      loseHp(c, s, u, damage, findUnit(s, d.sourceId) ?? null, events);
-      d.roundsLeft -= 1;
+      tick(c, s, u, d, events);
     }
-    for (const d of u.dots.filter((x) => x.roundsLeft <= 0)) events.push({ type: "StatusEnded", unitId: u.id, status: d.id });
-    u.dots = u.dots.filter((d) => d.roundsLeft > 0);
+    dropEndedDots(u, events);
   }
 }
 

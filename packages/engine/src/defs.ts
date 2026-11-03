@@ -20,7 +20,8 @@ export type ModifierStat =
   | "resonanceBoost"
   | "tenacity"
   | "fortitude"
-  | "dotBoost";
+  | "dotBoost"
+  | "physicalAtk"; // statuses.md "Physical ATK +N": added to the Physical damage of each hit that has some
 
 // combat.md "% Multipliers". Whole percents; left out = 100 (normal).
 export type PercentStat =
@@ -85,7 +86,8 @@ export type Targeting =
 // Status put on each unit hit.
 export type OnHit =
   | { type: "cc"; cc: CcKind; recovery: number }
-  | { type: "dot"; id: string; physical?: Formula; magic?: Formula; rounds: number };
+  // combat.md "Damage over Time" / statuses.md. duration = number of ticks.
+  | { type: "dot"; id: string; kind: "round" | "turn"; damage: Formula; duration: number; breakPerTick?: number };
 
 export type BuffStat = StatName;
 
@@ -98,7 +100,11 @@ export interface Buff {
   amount: number;
   turns: number;
   kind?: ModifierKind; // default flat
+  per?: Per; // default turn
 }
+
+// combat.md "Durations": turn = every Turn; team = the caster's team's Turns; own = the holder's Own Turns.
+export type Per = "turn" | "team" | "own";
 
 export interface AbilityDef {
   name: string;
@@ -118,7 +124,7 @@ export interface AbilityDef {
 
   // On allies (ally / team targeting)
   heal?: number;
-  shield?: { mode: "add" | "set"; amount: number; turns: number };
+  shield?: { mode: "add" | "set"; amount: number; turns: number; per?: Per };
   buffs?: readonly Buff[];
   cleanse?: boolean;
 

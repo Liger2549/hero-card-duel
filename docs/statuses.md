@@ -15,7 +15,7 @@ DOT rules (kinds, formula, stacking): `combat.md` "Damage over Time".
 - **Used by**: Karas, Zoran
 
 ### Voidmark
-- **Kind**: Round DOT
+- **Kind**: Turn DOT
 - **Damage per tick**: 40% ATK
 - **Erosion**: while Voidmark is active, the enemy's DEF is reduced by 1 + 20% DOT Boost (DEF cannot go below 0).
 - **Used by**: Serie (each tick that deals damage gives her +1 Singularity, see her Passive).

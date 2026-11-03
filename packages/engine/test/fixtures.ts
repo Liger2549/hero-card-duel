@@ -37,7 +37,7 @@ const archer: HeroDef = {
   normalAttack: { name: "Shoot", mana: 2, text: "", targeting: { type: "enemy", range: 2 }, magic: (f) => f.atk, break: 1 },
   skills: [
     { name: "Mend", mana: 3, text: "", targeting: { type: "ally", range: 2 }, heal: 5 },
-    { name: "Burn", mana: 3, text: "", targeting: { type: "enemy", range: 3 }, onHit: [{ type: "dot", id: "burn", magic: 2, rounds: 2 }] },
+    { name: "Burn", mana: 3, text: "", targeting: { type: "enemy", range: 3 }, onHit: [{ type: "dot", id: "burn", kind: "round", damage: 2, duration: 2 }] },
     { name: "Ward", mana: 1, text: "", targeting: { type: "ally", range: 2 }, buffs: [{ stat: "armor", amount: 2, turns: 2 }], freeAction: true },
   ],
   ultimate: { name: "Aegis", mana: 4, ultCost: 3, ultMax: 3, text: "", targeting: { type: "team" }, shield: { mode: "add", amount: 3, turns: 2 } },

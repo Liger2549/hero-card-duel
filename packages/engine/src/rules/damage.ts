@@ -4,7 +4,7 @@ import { itemValue, unitDef, type Content } from "../content.ts";
 import type { CcKind, HeroDef, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { divH, divRound, h, mulPct, roundH } from "../num.ts";
-import type { GameState, Shield, Unit } from "../state.ts";
+import { EveryTurn, type Countdown, type GameState, type Shield, type Unit } from "../state.ts";
 import { maxBreakBar, stat } from "../stats.ts";
 
 export interface HitResult {
@@ -20,7 +20,8 @@ export interface HitResult {
 //   Magic part      = max(Magic − Effective Magic Armor, 0) × Magic Taken%
 //   Damage          = max((Physical part + Magic part − DEF) × Damage Taken%, 0)
 export function hitDamage(c: Content, attacker: Unit, target: Unit, physical: number, magic: number, extraPen: number): HitResult {
-  let p = Math.max(physical, 0);
+  // statuses.md "Physical ATK +N": only a hit that has Physical damage gets it.
+  let p = physical > 0 ? physical + stat(c, attacker, "physicalAtk") : 0;
   let m = Math.max(magic, 0);
   const shield = shieldTotal(target);
   let absorbed = 0;
@@ -65,9 +66,9 @@ export function useShields(u: Unit, amount: number): void {
 }
 
 // Add stacks; Set replaces only the previous set shield.
-export function giveShield(s: GameState, u: Unit, mode: Shield["mode"], amount: number, turns: number): void {
+export function giveShield(s: GameState, u: Unit, mode: Shield["mode"], amount: number, turns: number, count: Countdown = EveryTurn): void {
   if (mode === "set") u.shields = u.shields.filter((sh) => sh.mode !== "set");
-  u.shields.push({ mode, amount, turnsLeft: turns, appliedTurn: s.turn, seq: s.shieldSeq++ });
+  u.shields.push({ mode, amount, turnsLeft: turns, count, appliedTurn: s.turn, seq: s.shieldSeq++ });
 }
 
 // Lowers HP; a unit at 0 dies and its killer's player gets the bounty.
