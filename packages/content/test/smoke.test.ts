@@ -13,6 +13,10 @@ import {
 import { describe, expect, it } from "vitest";
 import { content, starterDeck } from "../src/index.ts";
 
+// Only 3 heroes are in the game while the engine moves to the docs' notation, too few for a Normal draft
+// (ideas.md "Normal draft needs 12 heroes"). These runs use a small draft: no bans, 1 hero each.
+const smokeConfig = { ...normalConfig, skipBans: true, heroesPerPlayer: { A: 1, B: 1 }, pickOrder: ["A", "B"] as ("A" | "B")[] };
+
 // A simple bot: use an ability that deals damage if it can, else play a card, else step forward (up to 3 steps), else end the Round.
 function timeUpBot(s: GameState): Action {
   if (s.phase === "draft") return { type: "DraftTimeUp" };
@@ -57,7 +61,7 @@ function timeUpBot(s: GameState): Action {
 describe("whole matches with the real heroes (smoke test)", () => {
   for (const seed of [1, 2, 3, 4, 5]) {
     it(`seed ${seed}: plays without errors until someone wins`, () => {
-      let s = newMatch(normalConfig, seed, { A: starterDeck, B: starterDeck });
+      let s = newMatch(smokeConfig, seed, { A: starterDeck, B: starterDeck });
       let actions = 0;
       while (s.phase !== "over" && actions < 3000) {
         const a = timeUpBot(s);
@@ -75,7 +79,7 @@ describe("whole matches with the real heroes (smoke test)", () => {
 describe("the AI (engine botAction) with the real heroes", () => {
   for (const seed of [11, 12]) {
     it(`seed ${seed}: plays both sides from the draft to a winner`, () => {
-      let s = newMatch(normalConfig, seed, { A: starterDeck, B: starterDeck });
+      let s = newMatch(smokeConfig, seed, { A: starterDeck, B: starterDeck });
       for (let n = 0; n < 5000 && s.phase !== "over"; n++) {
         const a = botAction(s, content, "A") ?? botAction(s, content, "B");
         if (!a) throw new Error(`no move in phase ${s.phase}`);

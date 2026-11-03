@@ -5,8 +5,44 @@ export type AttackType = "melee" | "ranged" | "mixed";
 export type DamageType = "physical" | "magic" | "mixed";
 export type CcKind = "stun" | "silence" | "root" | "slow";
 
-// combat.md "Core Stats" and "Combat Modifiers". Modifiers left out are 0.
-export interface Stats {
+// combat.md "Combat Modifiers". Left out = 0.
+export type ModifierStat =
+  | "armor"
+  | "magicArmor"
+  | "penetration"
+  | "healingBonus"
+  | "healingReceived"
+  | "lifeSteal"
+  | "lifeStealResistance"
+  | "breakBoost"
+  | "breakDmgBonus"
+  | "breakResistance"
+  | "resonanceBoost"
+  | "tenacity"
+  | "fortitude"
+  | "dotBoost";
+
+// combat.md "% Multipliers". Whole percents; left out = 100 (normal).
+export type PercentStat =
+  | "armorShred"
+  | "breakPower"
+  | "breakDmgPower"
+  | "dotPower"
+  | "resonancePower"
+  | "healingPower"
+  | "physicalTaken"
+  | "magicTaken"
+  | "damageTaken"
+  | "breakTaken"
+  | "dotTaken"
+  | "drainTaken"
+  | "healingTaken"
+  | "ccTaken";
+
+export type StatName = "maxHp" | "atk" | "def" | "speed" | ModifierStat | PercentStat;
+
+// combat.md "Core Stats", plus any Combat Modifiers and % Multipliers the sheet lists.
+export interface Stats extends Partial<Record<ModifierStat | PercentStat, number>> {
   maxHp: number;
   atk: number;
   def: number;
@@ -14,10 +50,6 @@ export interface Stats {
   move: number;
   breakBar: number;
   aggroBar: number;
-  armor?: number;
-  magicArmor?: number;
-  penetration?: number;
-  dotBoost?: number;
 }
 
 // What a formula may read: the user's current ATK and DEF (DEF before Bianca's conversion),
@@ -55,12 +87,17 @@ export type OnHit =
   | { type: "cc"; cc: CcKind; recovery: number }
   | { type: "dot"; id: string; physical?: Formula; magic?: Formula; rounds: number };
 
-export type BuffStat = "atk" | "def" | "armor" | "magicArmor" | "penetration" | "breakBoost";
+export type BuffStat = StatName;
+
+// combat.md "Stat Modifiers". flat: + amount (on a % Multiplier this moves it by percentage points).
+// pct: + amount percentage points of the stat (+20 → 120%). mult: × amount% (80 → × 80%).
+export type ModifierKind = "flat" | "pct" | "mult";
 
 export interface Buff {
   stat: BuffStat;
   amount: number;
   turns: number;
+  kind?: ModifierKind; // default flat
 }
 
 export interface AbilityDef {

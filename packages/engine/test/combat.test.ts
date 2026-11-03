@@ -114,7 +114,7 @@ describe("Break (combat.md Break)", () => {
     );
     const b = get(s, "b");
     expect(b.broken).toBe(true);
-    expect(b.hp).toBe(12); // 16 − (4 − DEF 1) − Break DMG 1
+    expect(b.hp).toBe(11); // 16 − (4 − DEF 1) − Break DMG 2 (Max Break Bar 8 / 5 = 1.6 → 2)
     expect(b.cc.stun).toBe(400); // 500, then one end of Turn
   });
 

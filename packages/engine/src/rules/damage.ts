@@ -1,7 +1,9 @@
 // combat.md "Damage Resolution", "Shields", "Break", "Healing", hero death (heroes/README.md "Death").
+// Formulas work in hundredths and round once at the end (num.ts).
 import { itemValue, unitDef, type Content } from "../content.ts";
 import type { CcKind, HeroDef, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
+import { divH, divRound, h, mulPct, roundH } from "../num.ts";
 import type { GameState, Shield, Unit } from "../state.ts";
 import { maxBreakBar, stat } from "../stats.ts";
 
@@ -12,7 +14,11 @@ export interface HitResult {
 }
 
 // One hit of Physical + Magic. Shield by Damage absorbs the lower type first (Magic first on a tie),
-// then what is left is reduced by Armor / Magic Armor (minus Penetration) and DEF.
+// then what is left goes through the Damage Resolution formula:
+//   Effective Armor = max(Armor × Armor Shred% − Penetration, 0)   (same for Magic Armor)
+//   Physical part   = max(Physical − Effective Armor, 0) × Physical Taken%
+//   Magic part      = max(Magic − Effective Magic Armor, 0) × Magic Taken%
+//   Damage          = max((Physical part + Magic part − DEF) × Damage Taken%, 0)
 export function hitDamage(c: Content, attacker: Unit, target: Unit, physical: number, magic: number, extraPen: number): HitResult {
   let p = Math.max(physical, 0);
   let m = Math.max(magic, 0);
@@ -20,7 +26,7 @@ export function hitDamage(c: Content, attacker: Unit, target: Unit, physical: nu
   let absorbed = 0;
   if (shield > 0) {
     absorbed = Math.min(shield, p + m);
-    let rest = absorbed;
+    const rest = absorbed;
     if (p < m) {
       const x = Math.min(rest, p);
       p -= x;
@@ -32,11 +38,14 @@ export function hitDamage(c: Content, attacker: Unit, target: Unit, physical: nu
     }
     if (p + m === 0) return { damage: 0, absorbed, through: false };
   }
-  const pen = stat(c, attacker, "penetration") + extraPen;
-  const armor = Math.max(stat(c, target, "armor") - pen, 0);
-  const magicArmor = Math.max(stat(c, target, "magicArmor") - pen, 0);
-  const damage = Math.max(Math.max(p - armor, 0) + Math.max(m - magicArmor, 0) - stat(c, target, "def"), 0);
-  return { damage, absorbed, through: true };
+  const pen = h(stat(c, attacker, "penetration") + extraPen);
+  const shred = stat(c, attacker, "armorShred");
+  const armor = Math.max(mulPct(h(stat(c, target, "armor")), shred) - pen, 0);
+  const magicArmor = Math.max(mulPct(h(stat(c, target, "magicArmor")), shred) - pen, 0);
+  const physPart = mulPct(Math.max(h(p) - armor, 0), stat(c, target, "physicalTaken"));
+  const magicPart = mulPct(Math.max(h(m) - magicArmor, 0), stat(c, target, "magicTaken"));
+  const total = mulPct(Math.max(physPart + magicPart - h(stat(c, target, "def")), 0), stat(c, target, "damageTaken"));
+  return { damage: Math.max(roundH(total), 0), absorbed, through: true };
 }
 
 export function shieldTotal(u: Unit): number {
@@ -70,7 +79,7 @@ export function loseHp(c: Content, s: GameState, target: Unit, amount: number, s
 
   // heroes/README.md "Death": Bounty = Base Bounty + held item value / 4. Items are cleared, Ult Points reset.
   const def = unitDef(c, target.defId) as HeroDef | SummonDef;
-  const bounty = def.bounty + Math.floor(target.items.reduce((sum, id) => sum + itemValue(c, id), 0) / 4);
+  const bounty = def.bounty + divRound(target.items.reduce((sum, id) => sum + itemValue(c, id), 0), 4);
   target.dead = true;
   target.pos = null;
   target.ult = 0;
@@ -83,6 +92,7 @@ export function loseHp(c: Content, s: GameState, target: Unit, amount: number, s
   events.push({ type: "UnitDied", unitId: target.id, killerSeat: killer, bounty: killer ? bounty : 0 });
 }
 
+// Raises HP by exactly `amount`, never above Max HP. Used for restores (e.g. a Max HP item) and Life Steal.
 export function heal(c: Content, target: Unit, amount: number, events: GameEvent[]): void {
   if (target.dead) return;
   const healed = Math.min(amount, stat(c, target, "maxHp") - target.hp);
@@ -91,10 +101,20 @@ export function heal(c: Content, target: Unit, amount: number, events: GameEvent
   events.push({ type: "Healed", unitId: target.id, amount: healed, hp: target.hp });
 }
 
-// combat.md "Crowd Control": Remaining Recovery = Recovery − Tenacity; the higher one is kept.
+// combat.md "Healing": a heal from a skill, card or item.
+//   Heal = ((Base heal + Healing Bonus) × Healing Power% + Healing Received) × Healing Taken%
+// healer = null for a card or item (no Healing Bonus, Power 100%).
+export function healFrom(c: Content, healer: Unit | null, target: Unit, base: number, events: GameEvent[]): void {
+  const bonus = healer ? stat(c, healer, "healingBonus") : 0;
+  const power = healer ? stat(c, healer, "healingPower") : 100;
+  const given = mulPct(h(base + bonus), power) + h(stat(c, target, "healingReceived"));
+  heal(c, target, Math.max(roundH(mulPct(given, stat(c, target, "healingTaken"))), 0), events);
+}
+
+// combat.md "Crowd Control": Remaining Recovery = max(Recovery × CC Taken% − Tenacity, 0); the higher one is kept.
 export function applyCc(c: Content, target: Unit, kind: CcKind, recovery: number, events: GameEvent[]): void {
   if (target.dead) return;
-  const remaining = Math.max(recovery - stat(c, target, "tenacity"), 0);
+  const remaining = Math.max(roundH(mulPct(h(recovery), stat(c, target, "ccTaken")) - h(stat(c, target, "tenacity"))), 0);
   if (remaining <= 0) return;
   if ((target.cc[kind] ?? -1) >= remaining) return;
   target.cc[kind] = remaining;
@@ -102,21 +122,28 @@ export function applyCc(c: Content, target: Unit, kind: CcKind, recovery: number
 }
 
 // combat.md "Break": once per action (or per hit with breakPerHit).
+//   Reduction = max((Break + Break Boost) × Break Power% × Break Taken% − Break Resistance, 1)
+//   Break DMG = (max(Max Break Bar / 5, 1) + Break DMG Bonus) × Break DMG Power%
 export function reduceBreakBar(c: Content, s: GameState, attacker: Unit, target: Unit, brk: number, events: GameEvent[]): void {
   if (target.dead || target.broken) return;
-  target.breakBar -= Math.max(brk + stat(c, attacker, "breakBoost"), 1);
+  const raw = mulPct(mulPct(h(brk + stat(c, attacker, "breakBoost")), stat(c, attacker, "breakPower")), stat(c, target, "breakTaken"));
+  target.breakBar -= Math.max(roundH(raw - h(stat(c, target, "breakResistance"))), 1);
   if (target.breakBar > 0) return;
   target.breakBar = 0;
   target.broken = true;
-  const dmg = Math.max(Math.floor(maxBreakBar(c, target) / 5), 1) + stat(c, attacker, "breakDmgBonus");
+  const base = Math.max(divH(h(maxBreakBar(c, target)), 5), h(1)) + h(stat(c, attacker, "breakDmgBonus"));
+  const dmg = roundH(mulPct(base, stat(c, attacker, "breakDmgPower")));
   events.push({ type: "Broken", unitId: target.id, damage: dmg });
   loseHp(c, s, target, dmg, attacker, events);
   applyCc(c, target, "stun", 500, events);
 }
 
-// combat.md "Healing": each damaging hit heals the attacker by its Life Steal.
-export function lifeStealOnHit(c: Content, attacker: Unit, damage: number, events: GameEvent[]): void {
+// combat.md "Healing": a hit that lowers the target's HP heals the attacker by
+//   min(max(Life Steal × Drain Taken% − Life Steal Resistance, 0), HP damage of the hit)
+// Life Steal does not go through the Heal formula.
+export function lifeStealOnHit(c: Content, attacker: Unit, target: Unit, damage: number, events: GameEvent[]): void {
   if (damage <= 0) return;
-  const ls = stat(c, attacker, "lifeSteal");
-  if (ls > 0) heal(c, attacker, ls, events);
+  const ls = roundH(mulPct(h(stat(c, attacker, "lifeSteal")), stat(c, target, "drainTaken")) - h(stat(c, target, "lifeStealResistance")));
+  const amount = Math.min(Math.max(ls, 0), damage);
+  if (amount > 0) heal(c, attacker, amount, events);
 }

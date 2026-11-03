@@ -2,6 +2,7 @@
 import type { ActionOf } from "../actions.ts";
 import { itemDef, itemValue, type Content } from "../content.ts";
 import type { GameEvent } from "../events.ts";
+import { divRound } from "../num.ts";
 import { findUnit, type GameState } from "../state.ts";
 import { stat } from "../stats.ts";
 import { heal } from "./damage.ts";
@@ -51,7 +52,7 @@ export function validateSellItem(s: GameState, a: ActionOf<"SellItem">): string 
 export function applySellItem(c: Content, s: GameState, a: ActionOf<"SellItem">, events: GameEvent[]): void {
   const u = findUnit(s, a.unitId)!;
   u.items.splice(u.items.indexOf(a.itemId), 1);
-  const gold = Math.floor(itemValue(c, a.itemId) / 2);
+  const gold = divRound(itemValue(c, a.itemId), 2);
   s.players[a.seat].gold += gold;
   u.hp = Math.min(u.hp, stat(c, u, "maxHp"));
   events.push({ type: "ItemSold", unitId: u.id, itemId: a.itemId, gold });

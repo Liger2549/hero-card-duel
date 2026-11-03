@@ -1,3 +1,4 @@
+import { pctOf } from "@hcd/engine";
 import { ATK, defineHero } from "../define.ts";
 
 // docs/heroes/Serie.md
@@ -35,8 +36,8 @@ export const serie = defineHero({
       magic: ATK,
       break: 2,
       ultGain: 0,
-      // Voidmark tick: Magic +1 per 2 ATK (Erosion and Singularity come with Serie's hooks).
-      onHit: [{ type: "dot", id: "voidmark", magic: (f) => Math.floor(f.atk / 2), rounds: 2 }],
+      // Voidmark tick: 40% ATK (statuses.md). Erosion and Singularity come with Serie's hooks.
+      onHit: [{ type: "dot", id: "voidmark", magic: (f) => pctOf(f.atk, 40), rounds: 2 }],
     },
   ],
   ultimate: {

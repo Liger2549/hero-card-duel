@@ -1,7 +1,7 @@
 import type { Pos } from "./board.ts";
 import type { MatchConfig, Seat } from "./config.ts";
 import { heroDef, unitDef, type Content } from "./content.ts";
-import type { BuffStat, CcKind } from "./defs.ts";
+import type { BuffStat, CcKind, ModifierKind } from "./defs.ts";
 
 export const Seats = ["A", "B"] as const;
 
@@ -21,6 +21,7 @@ export interface Shield {
 export interface ActiveBuff {
   stat: BuffStat;
   amount: number;
+  kind: ModifierKind; // combat.md "Stat Modifiers"
   turnsLeft: number;
   appliedTurn: number;
 }

@@ -5,6 +5,7 @@
 - All values are integers.
 - **Rounding**: any result that is not a whole number (division, %, stat modifiers) is **rounded to the nearest whole number**, looking only at the first 2 decimal places (.50 and above rounds up). This applies unless a rule states otherwise.
   - Stats are rounded when they are worked out (Stat Modifiers). Inside a formula, round **once, at the end** of that formula, not after each step.
+  - A value on a skill (e.g. "Break: 2 + 150% ATK") is also rounded when it is worked out, before it goes into the Damage, Break or Heal formula. Example: Falka (ATK 5) Shatter Round Break = 2 + 7.5 = 9.5 → 10.
   - Example: 120% of ATK 4 = 4.80 → 5. 25% of ATK 3 = 0.75 → 1. 30% of ATK 4 = 1.20 → 1. 7 / 2 = 3.50 → 4. 2.495 is read as 2.49 → 2.
 - Scaling effects may be written as a percentage of a stat (e.g. "75% ATK") or as steps (e.g. "+1 per 3 ATK"). Steps count only whole steps (ATK 5 gives 1 step of 3).
 

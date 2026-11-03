@@ -2,6 +2,15 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-03 — Three prototype heroes back
+
+- To reach the 12 heroes a Normal draft needs, three prototype heroes come back as is: **Rocco** (rubber boxer, `rubber`), **Konrad** (iron flag bearer, `flag`, with his Footman unit) and **Eira** (frost hunter, `frost`). The owner wants them complete and playable, not redesigned; names were picked by Claude.
+
+## 2026-11-03 — Prototype heroes out
+
+- The prototype's 14 extra heroes are out of the game. They are archived as ideas in `heroes/archive/prototype-heroes.md`. Only heroes with a sheet in `docs/heroes` go into the engine.
+- This replaces "port the prototype's 17 heroes for now" (2026-11-02).
+
 ## 2026-11-03 — Leilani
 
 - **Leilani** is finished (`heroes/Leilani.md`). Healing Bonus % +25% became Healing Power 125%. Her emergency heal "2 + 1 per 4 Max Hp" became 2 + 25% Max HP (her own Max HP).
@@ -29,7 +38,7 @@ Answers the owner gave to rule questions, newest first. The rule docs already in
 - Each stat can also be multiplied as a Stat Modifier (e.g. Armor 150%).
 - **% Multipliers** (`combat.md` "% Multipliers"): new % stats that multiply a formula's result. Dealer: Armor Shred%, Break Power%, Break DMG Power%, DOT Power%, Resonance Power%, Healing Power%. Receiver: Physical / Magic / Damage Taken%, Break Taken%, DOT Taken%, Drain Taken%, Healing Taken%, CC Taken%. All formulas in `combat.md` were rewritten with them.
 - New **Heal** formula: `((Base heal + Healing Bonus) × Healing Power% + Healing Received) × Healing Taken%`. Life Steal does not use it.
-- Formulas round once, at the end (stats are rounded when worked out).
+- Formulas round once, at the end (stats are rounded when worked out). A skill's value (e.g. 2 + 150% ATK) is rounded when worked out too, before it enters a formula, so shields, Break Bars and the stats shown on screen are whole numbers the player can use as is (confirmed 2026-11-03).
 - Falka: Break Boost % 110% became **Break Power 110%**. Pley's weak healing became **Healing Taken 25%**.
 - **Nocturnal Flame** damage is now 50% of the applier's ATK (Karas 2, Zoran 1), locked when applied.
 - **DOT stacking is per applier**: the same applier refreshes its own copy; copies from different appliers stack and each ticks on its own (`combat.md` "Damage over Time"). Serie's Collapse only affects her own Voidmark.

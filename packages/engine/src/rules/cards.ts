@@ -6,7 +6,7 @@ import type { Content } from "../content.ts";
 import type { CardDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { createUnit, destroyedTowers, findUnit, unitAt, type GameState } from "../state.ts";
-import { heal } from "./damage.ts";
+import { healFrom } from "./damage.ts";
 
 function cardDef(c: Content, id: string): CardDef {
   const d = c.cards.find((x) => x.id === id);
@@ -80,9 +80,9 @@ export function applyPlayCard(c: Content, s: GameState, a: ActionOf<"PlayCard">,
   }
   const target = p ? unitAt(s, p) : undefined;
   if (!target) return;
-  if (card.heal) heal(c, target, card.heal, events);
+  if (card.heal) healFrom(c, null, target, card.heal, events);
   for (const b of card.buffs ?? []) {
-    findUnit(s, target.id)!.buffs.push({ stat: b.stat, amount: b.amount, turnsLeft: b.turns, appliedTurn: s.turn });
+    findUnit(s, target.id)!.buffs.push({ stat: b.stat, amount: b.amount, kind: b.kind ?? "flat", turnsLeft: b.turns, appliedTurn: s.turn });
     events.push({ type: "StatusApplied", unitId: target.id, status: `${b.stat} +${b.amount}` });
   }
 }

@@ -10,5 +10,6 @@ export { candidateAims, resolveArea, Dirs, type Aim, type Area, type Dir } from 
 export { newMatch } from "./rules/draft.ts";
 export { towerAt, towerRow } from "./rules/towers.ts";
 export { newMatchWithUnits } from "./rules/turn.ts";
+export * from "./num.ts";
 export * from "./state.ts";
 export { stat, type StatName } from "./stats.ts";

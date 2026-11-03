@@ -1,14 +1,15 @@
 // Normal attacks, skills and ultimates (heroes/README.md, combat.md "Turn Flow" and "Damage Resolution").
 import type { ActionOf } from "../actions.ts";
 import { abilityOf, heroDef, unitDef, type AbilityRef, type Content } from "../content.ts";
-import type { AbilityDef, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
+import type { AbilityDef, Buff, Formula, FormulaInput, OnHit, SummonDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { findUnit, unitAt, type GameState, type Unit } from "../state.ts";
+import { divRound } from "../num.ts";
 import { stat } from "../stats.ts";
 import {
   applyCc,
   giveShield,
-  heal,
+  healFrom,
   hitDamage,
   lifeStealOnHit,
   loseHp,
@@ -104,7 +105,7 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
       wentThrough = r.through || !hadShield;
     }
     loseHp(c, s, t, damage, u, events);
-    lifeStealOnHit(c, u, damage, events);
+    lifeStealOnHit(c, u, t, damage, events);
     dealt += damage;
     through.set(t.id, (through.get(t.id) ?? false) || wentThrough);
 
@@ -122,19 +123,19 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
 
   // Support on allies
   for (const ally of area.allies) {
-    if (ab.heal) heal(c, ally, ab.heal, events);
+    if (ab.heal) healFrom(c, u, ally, ab.heal, events);
     if (ab.shield) {
       giveShield(s, ally, ab.shield.mode, ab.shield.amount, ab.shield.turns);
       events.push({ type: "ShieldGained", unitId: ally.id, amount: ab.shield.amount, mode: ab.shield.mode });
     }
-    for (const b of ab.buffs ?? []) addBuff(s, ally, b.stat, b.amount, b.turns, events);
+    for (const b of ab.buffs ?? []) addBuff(s, ally, b, events);
     if (ab.cleanse) cleanse(c, ally, events);
   }
 
   // On the user
-  if (ab.lifeSteal === "half") heal(c, u, Math.floor(dealt / 2), events);
-  if (ab.selfHeal) heal(c, u, ab.selfHeal, events);
-  if (ab.selfBuff) addBuff(s, u, ab.selfBuff.stat, ab.selfBuff.amount, ab.selfBuff.turns, events);
+  if (ab.lifeSteal === "half") healFrom(c, u, u, divRound(dealt, 2), events);
+  if (ab.selfHeal) healFrom(c, u, u, ab.selfHeal, events);
+  if (ab.selfBuff) addBuff(s, u, ab.selfBuff, events);
 }
 
 // heroes/README.md "Ult Points". Summons have no Ult Points.
@@ -167,9 +168,9 @@ function applyOnHit(c: Content, s: GameState, user: Unit, t: Unit, e: OnHit, inp
   events.push({ type: "StatusApplied", unitId: t.id, status: e.id });
 }
 
-function addBuff(s: GameState, u: Unit, statName: Unit["buffs"][number]["stat"], amount: number, turns: number, events: GameEvent[]): void {
-  u.buffs.push({ stat: statName, amount, turnsLeft: turns, appliedTurn: s.turn });
-  events.push({ type: "StatusApplied", unitId: u.id, status: `${statName} +${amount}` });
+function addBuff(s: GameState, u: Unit, b: Buff, events: GameEvent[]): void {
+  u.buffs.push({ stat: b.stat, amount: b.amount, kind: b.kind ?? "flat", turnsLeft: b.turns, appliedTurn: s.turn });
+  events.push({ type: "StatusApplied", unitId: u.id, status: `${b.stat} +${b.amount}` });
 }
 
 // Removes CC and DOT. Ending a Break Stun refills the Break Bar (combat.md "Break").
