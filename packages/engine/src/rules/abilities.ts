@@ -50,6 +50,10 @@ export function validateUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbi
   if (tower) return a.ability === "normal" ? validateTowerAttack(s, u, ab, tower) : "only normal attacks can hit towers";
   const area = resolveArea(s, u, ab.form, a.aim);
   if (typeof area === "string") return area;
+  if (ab.special) {
+    const why = unitDef(c, u.defId).hooks?.checks?.[ab.special]?.(hookApi(c, s, [], u), { area, aim: a.aim });
+    if (why) return why;
+  }
   // An attack must hit someone (as in the prototype: no swinging at empty air).
   // A manual interject is locked to tiles, so units may still walk in before it resolves.
   const damages = ab.physical !== undefined || ab.magic !== undefined || (ab.onHit?.length ?? 0) > 0;
@@ -70,11 +74,38 @@ function towerTile(s: GameState, a: ActionOf<"UseAbility">) {
   return p && towerAt(s, p) ? p : null;
 }
 
+// One hit of Physical + Magic from `u` on `t` (combat.md "Hits"): shields, damage, the attacker's hit hooks
+// (interject.ts "UnitHooks": hitValues before mitigation, bonusDamage after), Life Steal, and a Hit event.
+// Returns false if a shield took the whole hit. Counter-attacks and other hook hits use this too.
+export function strike(c: Content, s: GameState, u: Unit, t: Unit, physical: number, magic: number, extraPen: number, events: GameEvent[]): boolean {
+  const hooks = unitDef(c, u.defId).hooks;
+  const api = hookApi(c, s, events, u);
+  const v = hooks?.hitValues ? hooks.hitValues(api, t, { physical, magic }) : { physical, magic };
+  let damage = 0;
+  let through = true;
+  if (v.physical > 0 || v.magic > 0) {
+    const hadShield = shieldTotal(t) > 0;
+    const r = hitDamage(c, u, t, v.physical, v.magic, extraPen);
+    if (r.absorbed > 0) {
+      useShields(t, r.absorbed);
+      events.push({ type: "ShieldAbsorbed", unitId: t.id, amount: r.absorbed });
+    }
+    damage = r.damage;
+    through = r.through || !hadShield;
+    if (through && hooks?.bonusDamage) damage += Math.max(hooks.bonusDamage(api, t, extraPen), 0);
+  }
+  loseHp(c, s, t, damage, u, events);
+  lifeStealOnHit(c, u, t, damage, events);
+  events.push({ type: "Hit", unitId: t.id, sourceId: u.id, damage });
+  return through;
+}
+
 // What a formula reads (defs.ts "FormulaInput"). DEF is the value before hero hooks (Bianca's conversion).
 function formulaInput(c: Content, u: Unit, index: number, target: Unit | null): FormulaInput {
   return {
     atk: stat(c, u, "atk"),
     def: statBeforeHooks(c, u, "def"),
+    stat: (name) => stat(c, u, name),
     index,
     target: target ? { hp: target.hp, maxHp: stat(c, target, "maxHp") } : null,
   };
@@ -125,20 +156,7 @@ export function resolveAbility(c: Content, s: GameState, u: Unit, ab: AbilityDef
     const physical = falloff(evalF(zone?.physical ?? ab.physical, inp), ab.falloff?.physical, step);
     const magic = falloff(evalF(zone?.magic ?? ab.magic, inp), ab.falloff?.magic, step);
     const brk = evalF(zone?.break ?? ab.break, inp);
-    let damage = 0;
-    let wentThrough = true;
-    if (physical > 0 || magic > 0) {
-      const hadShield = shieldTotal(t) > 0;
-      const r = hitDamage(c, u, t, physical, magic, ab.penetration ?? 0);
-      if (r.absorbed > 0) {
-        useShields(t, r.absorbed);
-        events.push({ type: "ShieldAbsorbed", unitId: t.id, amount: r.absorbed });
-      }
-      damage = r.damage;
-      wentThrough = r.through || !hadShield;
-    }
-    loseHp(c, s, t, damage, u, events);
-    lifeStealOnHit(c, u, t, damage, events);
+    const wentThrough = strike(c, s, u, t, physical, magic, ab.penetration ?? 0, events);
     through.set(t.id, (through.get(t.id) ?? false) || wentThrough);
     if (!breakOf.has(t.id)) breakOf.set(t.id, brk);
 
@@ -172,7 +190,7 @@ export function resolveAbility(c: Content, s: GameState, u: Unit, ab: AbilityDef
   if (ab.selfBuff) addBuff(s, u, u, ab.selfBuff, events);
 
   // The hero's own mechanic, if the ability has one (interject.ts "UnitHooks").
-  if (ab.special) unitDef(c, u.defId).hooks?.specials?.[ab.special]?.(hookApi(c, s, events, u), area);
+  if (ab.special) unitDef(c, u.defId).hooks?.specials?.[ab.special]?.(hookApi(c, s, events, u), { area, aim });
   return true;
 }
 
@@ -193,7 +211,8 @@ function applyOnHit(c: Content, s: GameState, user: Unit, t: Unit, e: OnHit, inp
     applyCc(c, t, e.cc, e.recovery, events);
     return;
   }
-  applyDot(c, s, user, t, e, evalF(e.damage, input), events);
+  const mods = (e.mods ?? []).map((m) => ({ stat: m.stat, amount: evalF(m.amount, input) }));
+  applyDot(c, s, user, t, e, evalF(e.damage, input), events, mods);
 }
 
 // Removes CC and DOT. Ending a Break Stun refills the Break Bar (combat.md "Break").

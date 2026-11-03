@@ -23,6 +23,7 @@ export interface Target {
 }
 
 export interface Area {
+  dir?: Dir; // the direction the area was turned to, if it turns
   tiles: Pos[];
   enemies: Target[]; // hit by damage and on-hit effects
   allies: Unit[]; // get heals, shields, buffs
@@ -178,6 +179,7 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim): 
   }
 
   if (form.self && (form.hit === "allies" || form.hit === "both") && !area.allies.includes(user)) area.allies.push(user);
+  if (dir) area.dir = dir;
   return area;
 }
 

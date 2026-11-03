@@ -24,7 +24,7 @@ describe("Valen (docs/heroes/Valen.md)", () => {
     ]);
     const r = apply(s, { type: "UseAbility", seat: "A", unitId: "valen0", ability: 0, aim: { dir: "N" } }, content);
     if (!r.ok) throw new Error(r.error);
-    // Guards: 10 HP, DEF 1. (Valen's passive bonus is not in yet.)
-    expect(r.state.units.slice(1, 4).map((u) => u.hp)).toEqual([5, 8, 9]);
+    // Guards: 10 HP, DEF 1, no Armor. Passive bonus +1 per hit: (Penetration 2 − 0) / 2.
+    expect(r.state.units.slice(1, 4).map((u) => u.hp)).toEqual([4, 7, 8]);
   });
 });

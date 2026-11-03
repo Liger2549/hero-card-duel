@@ -60,6 +60,7 @@ export interface Stats extends Partial<Record<ModifierStat | PercentStat, number
 export interface FormulaInput {
   atk: number;
   def: number;
+  stat: (name: StatName) => number; // any other stat of the user
   index: number;
   target: { hp: number; maxHp: number } | null;
 }
@@ -103,7 +104,15 @@ export interface ZoneDef {
 export type OnHit =
   | { type: "cc"; cc: CcKind; recovery: number }
   // combat.md "Damage over Time" / statuses.md. duration = number of ticks.
-  | { type: "dot"; id: string; kind: "round" | "turn"; damage: Formula; duration: number; breakPerTick?: number };
+  | {
+      type: "dot";
+      id: string;
+      kind: "round" | "turn";
+      damage: Formula;
+      duration: number;
+      breakPerTick?: number;
+      mods?: readonly { stat: StatName; amount: Formula }[]; // flat stat changes on the target while it lasts
+    };
 
 export type BuffStat = StatName;
 
@@ -117,6 +126,7 @@ export interface Buff {
   turns: number;
   kind?: ModifierKind; // default flat
   per?: Per; // default turn
+  name?: string; // a named status (e.g. "daylight"), so a hook can find or remove it
 }
 
 // combat.md "Durations": turn = every Turn; team = the caster's team's Turns; own = the holder's Own Turns.

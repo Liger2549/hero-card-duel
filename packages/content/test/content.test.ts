@@ -15,6 +15,13 @@ describe("content", () => {
     expect(heroes.length).toBeGreaterThanOrEqual(needed);
   });
 
+  it("every special has its hero's hook (rules/interject.ts UnitHooks)", () => {
+    for (const d of [...heroes, ...units]) {
+      const abilities = "skills" in d ? [d.normalAttack, ...d.skills, d.ultimate] : [d.normalAttack];
+      for (const a of abilities) if (a.special) expect(d.hooks?.specials?.[a.special], `${d.id}: ${a.name}`).toBeTypeOf("function");
+    }
+  });
+
   it("every hit form grid has a C or a P (board.md Skill Areas)", () => {
     for (const d of [...heroes, ...units]) {
       const abilities = "skills" in d ? [d.normalAttack, ...d.skills, d.ultimate] : [d.normalAttack];

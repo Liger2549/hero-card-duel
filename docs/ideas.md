@@ -7,6 +7,8 @@ Things to design or decide later. Not rules yet; move them into the rule docs wh
 1. **Repeated skill use** (owner is designing it): a cooldown, or more mana for each repeat. Still to decide: which one, how much, and whether the count is per Turn or per Round.
 2. **Normal draft needs 12 heroes** (answered: 12 sheets now; remove this once all 12 are in the engine and the skipped test is back on): Normal mode bans 2 each and picks 4 each (12 heroes), but the docs have 9. Fewer bans, fewer heroes per player, or wait for more heroes? Until then the smoke tests use a small draft and the "enough heroes" test is skipped.
    - Owner (2026-11-03): adapt heroes from the prototype archive to reach 12, starting with the rubber boxer (`rubber`).
+3. **Manual interjects are not designed yet** (2026-11-04): `combat.md` "Manual Interject" comes from the C++ docs; the owner has not thought it through and no hero uses it. For now it fires at its locked tile even if the target walked away. Revisit when a hero needs it.
+4. **Prototype heroes were not designed by the owner**: Rocco, Konrad and Eira were taken as is from the prototype to fill the draft. Their details (and the Footman) may change when the owner looks at them.
 
 ## Board
 

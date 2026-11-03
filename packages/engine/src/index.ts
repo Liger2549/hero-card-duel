@@ -13,4 +13,12 @@ export { newMatchWithUnits } from "./rules/turn.ts";
 export * from "./num.ts";
 export * from "./state.ts";
 export { stat, statBeforeHooks, type StatName } from "./stats.ts";
-export { hookApi, type HookApi, type InterjectOptions, type UnitHooks } from "./rules/interject.ts";
+export { hookApi, type HookApi, type InterjectOptions, type SpecialContext, type UnitHooks } from "./rules/interject.ts";
+
+// For hero hooks in the content package (rules/interject.ts "UnitHooks").
+export { strike } from "./rules/abilities.ts";
+export { placeSummon } from "./rules/cards.ts";
+export { applyCc, giveShield, heal, healFrom, hitDamage, loseHp, reduceBreakBar, shieldTotal } from "./rules/damage.ts";
+export { moveUnit } from "./rules/movement.ts";
+export { addBuff, applyDot, applyWither, dotDamage } from "./rules/status.ts";
+export { randInt } from "./rng.ts";

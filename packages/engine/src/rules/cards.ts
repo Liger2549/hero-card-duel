@@ -5,9 +5,18 @@ import type { Seat } from "../config.ts";
 import type { Content } from "../content.ts";
 import type { CardDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
-import { createUnit, destroyedTowers, findUnit, unitAt, type GameState } from "../state.ts";
+import { createUnit, destroyedTowers, findUnit, unitAt, type GameState, type Unit } from "../state.ts";
 import { healFrom } from "./damage.ts";
 import { addBuff } from "./status.ts";
+
+// Puts a new summoned unit on a free tile (from a card or a hero skill).
+export function placeSummon(c: Content, s: GameState, defId: string, owner: Seat, p: Pos, events: GameEvent[]): Unit {
+  const u = createUnit(c, defId, owner, `S${s.nextUnitId++}`, s.round);
+  u.pos = p;
+  s.units.push(u);
+  events.push({ type: "UnitSummoned", unitId: u.id, defId: u.defId, owner: u.owner, to: p });
+  return u;
+}
 
 function cardDef(c: Content, id: string): CardDef {
   const d = c.cards.find((x) => x.id === id);
@@ -69,10 +78,7 @@ export function applyPlayCard(c: Content, s: GameState, a: ActionOf<"PlayCard">,
 
   const p = a.aim.tiles?.[0];
   if (card.summon) {
-    const u = createUnit(c, card.summon, a.seat, `S${s.nextUnitId++}`, s.round);
-    u.pos = p!;
-    s.units.push(u);
-    events.push({ type: "UnitSummoned", unitId: u.id, defId: u.defId, owner: u.owner, to: p! });
+    placeSummon(c, s, card.summon, a.seat, p!, events);
     return;
   }
   if (card.manaGain) {

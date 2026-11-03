@@ -2,7 +2,7 @@ import type { Pos } from "./board.ts";
 import type { MatchConfig, Seat } from "./config.ts";
 import { heroDef, unitDef, type AbilityRef, type Content } from "./content.ts";
 import type { Aim } from "./rules/targeting.ts";
-import type { BuffStat, CcKind, ModifierKind } from "./defs.ts";
+import type { BuffStat, CcKind, ModifierKind, StatName } from "./defs.ts";
 
 export const Seats = ["A", "B"] as const;
 
@@ -42,6 +42,7 @@ export interface Dot {
   kind: "round" | "turn"; // Round DOT ticks at the end of every Round; Turn DOT at the end of each Turn of the target's team
   damageH: number; // DOT Damage in hundredths, stored when applied: (Damage per tick + DOT Boost) × DOT Power%
   breakPerTick: number; // only some DOTs (e.g. Nocturnal Flame); never lowers the Break Bar below 1
+  mods: { stat: StatName; amount: number }[]; // flat stat changes while it lasts (e.g. Voidmark's Erosion)
   ticksLeft: number;
   appliedTurn: number;
   sourceId: string;
@@ -82,6 +83,8 @@ export interface Unit {
   usedOwnTurn: boolean;
   // combat.md "Action Order": Actions (normal or interject) this Turn.
   actionCount: number;
+  // Numbers a hero's hooks keep (gauges, counters left, …), by name.
+  vars: Record<string, number>;
 }
 
 // combat.md "Interject": an Action waiting to resolve.
@@ -190,6 +193,7 @@ export function createUnit(c: Content, defId: string, owner: Seat, id: string, s
     attacksThisRound: 0,
     usedOwnTurn: false,
     actionCount: 0,
+    vars: {},
   };
 }
 

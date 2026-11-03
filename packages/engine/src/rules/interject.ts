@@ -20,6 +20,11 @@ export interface HookApi {
   interject(name: string, key: string, opts?: InterjectOptions): void;
 }
 
+export interface SpecialContext {
+  area: Area;
+  aim: Aim;
+}
+
 export interface InterjectOptions {
   turns?: number; // resolve after this many Turns (counted like Durations); default 0 = right away
   count?: Countdown;
@@ -31,8 +36,13 @@ export interface UnitHooks {
   stat?(u: Unit, name: StatName, value: number, raw: (name: StatName) => number): number;
   // Sees every event of the match, on any player's Turn (e.g. to trigger an automatic interject).
   onEvent?(api: HookApi, e: GameEvent): void;
-  // An ability's `special`, run after its normal effects.
-  specials?: Readonly<Record<string, (api: HookApi, area: Area) => void>>;
+  // Changes one of this unit's hits on `target` before mitigation (e.g. Eira: +2 on a Slowed enemy).
+  hitValues?(api: HookApi, target: Unit, v: { physical: number; magic: number }): { physical: number; magic: number };
+  // Extra HP damage once per hit that gets past shields (e.g. Valen's passive). extraPen = the ability's own Penetration.
+  bonusDamage?(api: HookApi, target: Unit, extraPen: number): number;
+  // An ability's `special`, run after its normal effects; `checks` can refuse the aim first.
+  specials?: Readonly<Record<string, (api: HookApi, ctx: SpecialContext) => void>>;
+  checks?: Readonly<Record<string, (api: HookApi, ctx: SpecialContext) => string | null>>;
   // Resolves an interject this unit queued.
   interjects?: Readonly<Record<string, (api: HookApi, p: Pending) => void>>;
 }

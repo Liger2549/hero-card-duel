@@ -1,4 +1,22 @@
+import { addBuff, divRound, stat, TimesOfDay, type HookApi, type Unit } from "@hcd/engine";
 import { ATK, defineHero, FRONT1 } from "../define.ts";
+
+// Passive: once per hit, bonus = max((Penetration − (Armor + Magic Armor) / 2) / 2, 0), each division rounded.
+function piercingLight(api: HookApi, target: Unit, extraPen: number): number {
+  const pen = stat(api.c, api.self, "penetration") + extraPen;
+  const avg = divRound(stat(api.c, target, "armor") + stat(api.c, target, "magicArmor"), 2);
+  return Math.max(divRound(pen - avg, 2), 0);
+}
+
+// Daylight: Penetration +2 while the time of day is Morning, Day or Evening (set when each Combat Phase starts).
+const daylight = new Set<string>(["Morning", "Day", "Evening"]);
+function updateDaylight(api: HookApi): void {
+  const u = api.self;
+  u.buffs = u.buffs.filter((b) => b.name !== "daylight");
+  if (daylight.has(TimesOfDay[api.s.timeOfDay]!)) {
+    addBuff(api.s, u, u, { stat: "penetration", amount: 2, turns: -1, name: "daylight" }, api.events);
+  }
+}
 
 // docs/heroes/Valen.md
 export const valen = defineHero({
@@ -14,7 +32,13 @@ export const valen = defineHero({
   stats: { maxHp: 20, atk: 4, def: 0, speed: 115, move: 1, breakBar: 12, aggroBar: 5, penetration: 2 },
   passive: {
     name: "Let the light pierce the eternal darkness",
-    text: "ทุกครั้งที่ตีโดน ได้ดาเมจโบนัส (Penetration − (Armor + Magic Armor) ÷ 2) ÷ 2",
+    text: "ทุกครั้งที่ตีโดน ได้ดาเมจโบนัส (Penetration − (Armor + Magic Armor) ÷ 2) ÷ 2 · ช่วง Morning, Day, Evening ได้ Penetration +2",
+  },
+  hooks: {
+    bonusDamage: piercingLight,
+    onEvent: (api, e) => {
+      if (e.type === "CombatStarted") updateDaylight(api);
+    },
   },
   normalAttack: {
     name: "The Sword's Radiant Waltz",

@@ -30,7 +30,10 @@ export type GameEvent =
   | { type: "BreakRestored"; unitId: string }
   | { type: "StatusApplied"; unitId: string; status: string }
   | { type: "StatusEnded"; unitId: string; status: string }
-  | { type: "DotTick"; unitId: string; dot: string; damage: number }
+  | { type: "DotTick"; unitId: string; dot: string; damage: number; sourceId: string }
+  // One hit of an attack landed on a unit (damage may be 0, e.g. all of it on a shield). Hooks react to it.
+  | { type: "Hit"; unitId: string; sourceId: string; damage: number }
+  | { type: "UnitMoved"; unitId: string; from: Pos; to: Pos } // moved by a skill, not a step
   | { type: "UnitDied"; unitId: string; killerSeat: Seat | null; bounty: number }
   // combat.md "Interject": queued (with its Action Value), resolved, or fizzled
   | { type: "InterjectQueued"; id: number; unitId: string; name: string; actionValue: number; turnsLeft: number }

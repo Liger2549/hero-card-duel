@@ -50,4 +50,17 @@ export const shade = defineSummon({
   normalAttack: { name: "ฟัน", mana: 2, text: "1 ช่องรอบตัว กายภาพ ATK", form: FRONT1, physical: ATK, break: 1, ultGain: 0 },
 });
 
-export const units = [guard, bow, soldier, shade];
+// docs/heroes/Konrad.md "Footman", summoned by Call to Arms.
+export const footman = defineSummon({
+  id: "footman",
+  name: "Footman (พลทหาร)",
+  icon: "💂",
+  attackType: "melee",
+  damageType: "physical",
+  stats: { maxHp: 8, atk: 2, def: 1, speed: 70, move: 1, breakBar: 5, aggroBar: 5 },
+  bounty: 100,
+  firstAttackMana: { summonRound: 0, laterRounds: 1 },
+  normalAttack: { name: "Thrust (แทง)", mana: 2, text: "1 ช่องรอบตัว กายภาพ ATK", form: FRONT1, physical: ATK, break: 1, ultGain: 0 },
+});
+
+export const units = [guard, bow, soldier, shade, footman];

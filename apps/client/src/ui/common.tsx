@@ -117,7 +117,7 @@ const SPECIAL: Record<string, string> = {
 
 function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
   const L: string[] = [];
-  const input: FormulaInput = { atk: stat(content, u, "atk"), def: stat(content, u, "def"), index: 0, target: null };
+  const input: FormulaInput = { atk: stat(content, u, "atk"), def: stat(content, u, "def"), stat: (n) => stat(content, u, n), index: 0, target: null };
   if (ab.physical !== undefined || ab.magic !== undefined) L.push(`ดาเมจ ${fmtPM(evalF(ab.physical, input), evalF(ab.magic, input))}${(ab.form.picks ?? 1) > 1 ? ` ต่อช่อง × ${ab.form.picks}` : ""}`);
   for (const [z, v] of Object.entries(ab.zones ?? {})) {
     L.push(`โซน ${z}: ${fmtPM(evalF(v.physical ?? ab.physical, input), evalF(v.magic ?? ab.magic, input))}${v.break !== undefined ? ` Break ${evalF(v.break, input)}` : ""}`);

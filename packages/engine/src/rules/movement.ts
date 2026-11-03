@@ -3,7 +3,7 @@ import type { ActionOf } from "../actions.ts";
 import { chebyshev, inBounds, inZone, samePos, type Pos } from "../board.ts";
 import type { Seat } from "../config.ts";
 import type { GameEvent } from "../events.ts";
-import { destroyedTowers, findUnit, stepCostOf, unitAt, type GameState } from "../state.ts";
+import { destroyedTowers, findUnit, stepCostOf, unitAt, type GameState, type Unit } from "../state.ts";
 
 const Directions8: readonly Pos[] = [
   { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 1, y: 0 }, { x: 1, y: -1 },
@@ -133,4 +133,11 @@ export function applyPrepMove(s: GameState, a: ActionOf<"PrepMove">, events: Gam
   u.pos = a.to;
   u.prepMoved = true;
   events.push({ type: "UnitPrepMoved", unitId: u.id, from, to: a.to });
+}
+
+// A unit moved by a skill, not a step: no mana, no Remaining Move, no undo.
+export function moveUnit(u: Unit, to: Pos, events: GameEvent[]): void {
+  const from = u.pos!;
+  u.pos = to;
+  events.push({ type: "UnitMoved", unitId: u.id, from, to });
 }

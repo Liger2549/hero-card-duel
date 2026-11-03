@@ -49,6 +49,7 @@ export function statBeforeHooks(c: Content, u: Unit, name: StatName): number {
     else flat += b.amount;
   }
   for (const id of u.items) flat += itemDef(c, id).mods[name as ItemStat] ?? 0;
+  for (const d of u.dots) for (const m of d.mods) if (m.stat === name) flat += m.amount; // e.g. Voidmark's Erosion
 
   let hv = mulPct(h(flat), 100 + pctPoints);
   for (const m of mults) hv = mulPct(hv, m);

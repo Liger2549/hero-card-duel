@@ -5,7 +5,7 @@ import { unitDef, type Content } from "../content.ts";
 import type { Buff, CcKind, OnHit, Per } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { h, mulPct, roundH } from "../num.ts";
-import { findUnit, Seats, type Countdown, type GameState, type Unit } from "../state.ts";
+import { findUnit, Seats, type Countdown, type Dot, type GameState, type Unit } from "../state.ts";
 import { stat } from "../stats.ts";
 import { loseHp } from "./damage.ts";
 
@@ -25,7 +25,8 @@ export function addBuff(s: GameState, caster: Unit | null, holder: Unit, b: Buff
     count: countdown(b.per, caster, holder),
     appliedTurn: s.turn,
   });
-  events.push({ type: "StatusApplied", unitId: holder.id, status: `${b.stat} +${b.amount}` });
+  if (b.name) holder.buffs[holder.buffs.length - 1]!.name = b.name;
+  events.push({ type: "StatusApplied", unitId: holder.id, status: b.name ?? `${b.stat} +${b.amount}` });
 }
 
 // statuses.md "Wither N": Max HP − N, stacks, each stack counts on its own. Max HP never goes below 1 (stats.ts).
@@ -46,7 +47,16 @@ export function applyWither(s: GameState, caster: Unit | null, holder: Unit, n: 
 
 // combat.md "Damage over Time": DOT Damage = (Damage per tick + DOT Boost) × DOT Power%, stored when applied.
 // Stacks per applier: the same applier replaces its own copy; copies from different appliers stack.
-export function applyDot(c: Content, s: GameState, applier: Unit, t: Unit, e: Extract<OnHit, { type: "dot" }>, damage: number, events: GameEvent[]): void {
+export function applyDot(
+  c: Content,
+  s: GameState,
+  applier: Unit,
+  t: Unit,
+  e: Extract<OnHit, { type: "dot" }>,
+  damage: number,
+  events: GameEvent[],
+  mods: Dot["mods"] = [],
+): void {
   if (t.dead) return;
   t.dots = t.dots.filter((d) => !(d.id === e.id && d.sourceId === applier.id));
   t.dots.push({
@@ -54,6 +64,7 @@ export function applyDot(c: Content, s: GameState, applier: Unit, t: Unit, e: Ex
     kind: e.kind,
     damageH: mulPct(h(damage + stat(c, applier, "dotBoost")), stat(c, applier, "dotPower")),
     breakPerTick: e.breakPerTick ?? 0,
+    mods,
     ticksLeft: e.duration,
     appliedTurn: s.turn,
     sourceId: applier.id,
@@ -63,9 +74,15 @@ export function applyDot(c: Content, s: GameState, applier: Unit, t: Unit, e: Ex
 
 // Tick Damage = max(DOT Damage × DOT Taken% − Fortitude, 1). Ignores shields, DEF, Armor and Magic Armor.
 // A DOT with Break per tick lowers the Break Bar, but never below 1 (statuses.md "Nocturnal Flame").
-function tick(c: Content, s: GameState, u: Unit, d: Unit["dots"][number], events: GameEvent[]): void {
-  const damage = Math.max(roundH(mulPct(d.damageH, stat(c, u, "dotTaken")) - h(stat(c, u, "fortitude"))), 1);
-  events.push({ type: "DotTick", unitId: u.id, dot: d.id, damage });
+// combat.md "Damage over Time": max(raw × DOT Taken% − Fortitude, 1); ignores shields, DEF, Armor and Magic Armor.
+// Also for damage that "follows the DOT rules" but is not a tick (e.g. Serie's Collapse).
+export function dotDamage(c: Content, u: Unit, rawH: number): number {
+  return Math.max(roundH(mulPct(rawH, stat(c, u, "dotTaken")) - h(stat(c, u, "fortitude"))), 1);
+}
+
+function tick(c: Content, s: GameState, u: Unit, d: Dot, events: GameEvent[]): void {
+  const damage = dotDamage(c, u, d.damageH);
+  events.push({ type: "DotTick", unitId: u.id, dot: d.id, damage, sourceId: d.sourceId });
   loseHp(c, s, u, damage, findUnit(s, d.sourceId) ?? null, events);
   if (!u.dead && !u.broken && d.breakPerTick > 0 && u.breakBar > 1) u.breakBar = Math.max(u.breakBar - d.breakPerTick, 1);
   d.ticksLeft -= 1;

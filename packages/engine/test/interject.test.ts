@@ -51,7 +51,7 @@ const content: Content = {
         { name: "Mark", mana: 0, text: "", form: { rotate: 0, hit: "all", range: { manhattan: 3 } }, magic: 1, special: "mark" },
         { name: "Broken", mana: 0, text: "", form: { rotate: 0, hit: "all", range: { manhattan: 3 } }, magic: 1, special: "missing" },
       ],
-      hooks: { specials: { mark: (api, area) => area.enemies.forEach((t) => api.events.push({ type: "StatusApplied", unitId: t.unit.id, status: "marked" })) } },
+      hooks: { specials: { mark: (api, { area }) => area.enemies.forEach((t) => api.events.push({ type: "StatusApplied", unitId: t.unit.id, status: "marked" })) } },
     },
     // Bianca-like passive: DEF is always 0 and becomes Armor; formulas still read DEF before the conversion.
     {
@@ -115,7 +115,7 @@ describe("automatic interjects (combat.md Interject, Resolution Order)", () => {
 
   it("at the end of a Turn interjects resolve first and Turn DOTs tick last", () => {
     const s = state([at("g", "slowGuard", "B", 3, 5), at("ally", "knight", "B", 4, 5), at("a", "quick", "A", 4, 4)]);
-    get(s, "a").dots.push({ id: "flame", kind: "turn", damageH: 200, breakPerTick: 0, ticksLeft: 2, appliedTurn: 0, sourceId: "g" });
+    get(s, "a").dots.push({ id: "flame", kind: "turn", damageH: 200, breakPerTick: 0, mods: [], ticksLeft: 2, appliedTurn: 0, sourceId: "g" });
     let r = run(s, use("a", 0, { tiles: [{ x: 4, y: 5 }] }));
     r = run(r.state, { type: "EndRound", seat: "A" });
     const kinds = r.events.map((e) => e.type);
