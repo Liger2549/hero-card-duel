@@ -64,7 +64,7 @@ Blocking: board.md "Blocked Shots".
 - Paradox Points gained: 0 (+1 when a Volatile Core finishes)
 - Tags: Free Action
 - Effect: Ribu places a **Volatile Core (แกนปริลักษณ์)** on any tile in the 5x5 square around him. When placing it, he picks which corner it will grow toward (NE, SE, SW or NW).
-  - Once per Turn. More than one Core can be out, even on the same tile.
+  - No limit: he can place as many Cores as his mana allows, in the same Turn too, even on the same tile.
   - A Core cannot be destroyed. It does not block movement.
   - **Next enemy Turn**: the Core interjects and explodes on its own tile (1x1) for **Physical 50% ATK**. Then it grows to 2x2: its tile plus the 3 tiles toward the chosen corner.
   - **The enemy Turn after that**: it interjects and explodes on the 2x2 area for **Physical ATK**, then disappears. Ribu gains +1 Paradox.

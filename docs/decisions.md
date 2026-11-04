@@ -12,6 +12,9 @@ Answers the owner gave to rule questions, newest first. The rule docs already in
   - Support skills that pick an ally may pick the caster too.
 - **Draft page**: heroes are square icons; each has its own details button. No "owner's idea / new" labels on hero cards.
 - **No clock** (owner): a Custom room can turn the clocks off (every timer 0). Normal mode keeps them.
+- **Ribu's Core Drop** (owner): no once-per-Turn limit; he can place as many Cores as he likes, each with its own corner to grow toward. The client asks for the corner (and Leilani's whale direction) with direction buttons after the tile is picked.
+- **Action order bar and playback** (owner): the bar shows this Turn's interjects in resolution order. For now each step of a Turn's end plays 2 seconds apart, so players see what happened (like the turn order in Honkai: Star Rail). `ui.md` "Animations".
+- **Hidden preparation** (owner): during the Preparation Phase the other team is shown as it was when the phase started; its changes show when the Combat Phase starts (`rules.md`). The match log sits in a left column on wide screens.
 
 ## 2026-11-04 — Stash, off-field cards, Preparation swap in the engine
 

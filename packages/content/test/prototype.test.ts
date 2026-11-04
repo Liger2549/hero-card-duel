@@ -1,4 +1,4 @@
-import { apply, createUnit, hookApi, newMatchWithUnits, normalConfig, stat, type Action, type Aim, type GameState, type Unit } from "@hcd/engine";
+import { apply, createUnit, hiddenFrom, hookApi, newMatchWithUnits, normalConfig, stat, type Action, type Aim, type GameState, type Unit } from "@hcd/engine";
 import { describe, expect, it } from "vitest";
 import { jade, misty } from "../src/heroes/prototype.ts";
 import { content } from "../src/index.ts";
@@ -93,5 +93,16 @@ describe("support heroes", () => {
     get(s, "eira2").hp = 10;
     jade.hooks!.onEvent!(hookApi(content, s, [], get(s, "jade0")), { type: "RoundStarted", round: 2 });
     expect([get(s, "valen1").hp, get(s, "eira2").hp]).toEqual([12, 10]);
+  });
+});
+
+describe("Kage's Stealth from the start of combat", () => {
+  it("is hidden from the enemy whose Turn comes first (the view is fixed after the hooks run)", () => {
+    let s = combat([{ defId: "kage", owner: "A", x: 4, y: 1 }, { defId: "valen", owner: "B", x: 4, y: 7 }]);
+    s = { ...s, phase: "prep", turn: 0, nextStarter: "B" };
+    s = run(s, { type: "Ready", seat: "A" }).state;
+    s = run(s, { type: "Ready", seat: "B" }).state;
+    expect([s.phase, s.activeSeat]).toEqual(["combat", "B"]);
+    expect(hiddenFrom(s, get(s, "kage0"), "B")).toBe(true);
   });
 });

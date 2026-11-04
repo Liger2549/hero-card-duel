@@ -7,6 +7,8 @@ Things to design or decide later. Not rules yet; move them into the rule docs wh
 1. **Repeated skill use** (owner is designing it): a cooldown, or more mana for each repeat. Still to decide: which one, how much, and whether the count is per Turn or per Round.
 2. **Manual interjects are not designed yet** (2026-11-04): `combat.md` "Manual Interject" comes from the C++ docs; the owner has not thought it through and no hero uses it. For now it fires at its locked tile even if the target walked away. Revisit when a hero needs it.
 3. **Prototype heroes were not designed by the owner**: Rocco, Konrad and Eira, and the 11 heroes of `heroes/prototype-set.md`, were taken as is from the prototype to fill the draft. Their details (and the Footman and Shade) may change or be removed when the owner looks at them.
+4. **Aggro / Taunt is not built** (owner, 2026-11-04: not yet): `combat.md` "Aggro" says what Taunt does but not how the Aggro Bar fills, and no hero uses it.
+5. **Resonance is not built** (owner, 2026-11-04: wait until a hero uses it): `combat.md` "Resonance" is fully written; build it with the first skill that has the Resonance tag.
 
 ## Board
 

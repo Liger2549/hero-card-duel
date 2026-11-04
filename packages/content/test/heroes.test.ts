@@ -319,7 +319,8 @@ describe("Pley", () => {
   it("Core Drop: explodes 1x1 when the enemy's next Turn ends, then grows to 2x2", () => {
     let s = combat([{ defId: "pley", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 6 }, { defId: "valen", owner: "B", x: 0, y: 8 }]);
     s = run(s, use("A", "pley0", 0, { tiles: [{ x: 4, y: 6 }], dir: "NE" })).state;
-    expect(apply(s, use("A", "pley0", 0, { tiles: [{ x: 3, y: 6 }], dir: "NE" }), content)).toMatchObject({ ok: false, error: "once per Turn" });
+    // No limit: another Core in the same Turn works too (not kept here).
+    expect(apply(s, use("A", "pley0", 0, { tiles: [{ x: 3, y: 6 }], dir: "SW" }), content)).toMatchObject({ ok: true });
     s = run(s, { type: "EndRound", seat: "A" }).state;
     s = run(s, { type: "EndRound", seat: "B" }).state; // B's Turn ends: the Core explodes
     expect(get(s, "eira1").hp).toBe(22 - 2); // 50% of 3 = 2, × 130% (within 5x5 of Ribu) = 2.6 → 3, − DEF 1

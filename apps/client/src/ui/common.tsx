@@ -109,12 +109,6 @@ function areaText(ab: AbilityDef): string {
   return `${turn} · ${hit} · ${pick}`;
 }
 
-const SPECIAL: Record<string, string> = {
-  oath: "Giuramento d'Avorio: คุ้มกันพวกรอบตัวและสวนกลับ",
-  vendetta: "ได้ Vendetta della Cittadella (สวนกลับแรงขึ้น)",
-  collapse: "Collapse: ระเบิด Voidmark ทุกตัวบนกระดาน",
-};
-
 function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
   const L: string[] = [];
   const input: FormulaInput = { atk: stat(content, u, "atk"), def: stat(content, u, "def"), stat: (n) => stat(content, u, n), index: 0, target: null };
@@ -153,7 +147,6 @@ function details(u: Unit, ab: AbilityDef, ref: AbilityRef): string[] {
   if (ab.selfHeal !== undefined) L.push(`ฟื้น HP ตัวเอง ${evalF(ab.selfHeal, input)}`);
   if (ab.knockback) L.push("ผลักเป้าถอย 1 ช่อง");
   if (ab.freeAction) L.push("ไม่เสีย Turn");
-  if (ab.special) L.push(`${SPECIAL[ab.special] ?? ab.special} (ยังไม่ทำงานในเวอร์ชันนี้)`);
   return L;
 }
 
@@ -216,6 +209,7 @@ export function AbilityCard(props: {
           <span className="an">{ab.name}</span>
         </span>
         <span className="ara">{areaText(ab)}</span>
+        {ab.text && <span className="abx">{ab.text}</span>}
         <span className="abl">
           {details(u, ab, ref_).map((l, i) => (
             <span key={i}>{l}</span>

@@ -26,19 +26,22 @@ Layout of the client. The owner designs the look; this file records what goes wh
   - **Stash**: 12 slots for items not on a hero (`rules.md` "Shop and Items").
   - **Log**: what happened, with damage numbers.
 - **Right column**:
-  - **Selected unit**: stats of the clicked unit, ally or enemy, with statuses and time left (Turns / Own Turns / Rounds), shields, Break Bar.
+  - **Selected unit**: stats of the clicked unit, ally or enemy, with statuses and time left (Turns / Own Turns / Rounds), shields, Break Bar. Its Combat Modifiers (`combat.md`) are in a section that folds open and shut (closed by default); zero values are dimmed.
   - **Skills**: one button per skill with its mana cost. Hovering a skill shows its hit form on the board. Undo and End Turn buttons. End Turn takes the player out of the Round, so it asks for confirmation.
   - **Several targets** (e.g. Valen's Sword of Justice): each chosen tile shows how many times it was picked (×2, ×3); clicking a tile again adds another.
   - **Damage preview**: while a skill is aimed at a target, the stats panel shows how much HP each affected unit would lose or gain (and Break, shields), before the player confirms. The engine works it out by running the action on a copy of the state, so the preview always matches what will happen, counter-attacks included.
 - An "out of the Round" marker next to a player who has pressed End Turn.
 - **Hand** (max 5 cards): hidden at the bottom edge; hovering the bottom edge pops it up.
   - While hidden, a thin strip shows the card count (e.g. 3/5), so players know the hand is there.
+  - On touch screens, tapping the strip opens or closes it. Choosing a card drops the hand again so the board's bottom rows can be tapped; the strip then names the chosen card.
   - It drops back down while a card is dragged onto the board, so it never covers the player's zone.
   - On touch screens, tap the strip to open it.
 
 ## Animations
 
 Every action animates instead of resolving at once: the client plays the engine's events (`packages/engine/src/events.ts`) one by one. Generic animations first (move, hit, damage number, status, death); per-hero animations later.
+
+- **Step-by-step playback** (for now): an action that sets off interjects or DOT ticks plays in steps 2 seconds apart: the action itself, then each interject as it resolves (lit in the action order bar), then the DOT ticks. The log and the board follow the steps; a Skip button jumps to the end. Nobody can act during the playback, and the AI waits for it.
 
 ## Other pages
 

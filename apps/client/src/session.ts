@@ -16,6 +16,8 @@ import {
 } from "@hcd/engine";
 import { Peer, type DataConnection } from "peerjs";
 import { loadDeck, loadName } from "./storage.ts";
+import { splitSteps, STEP_MS } from "./playback.ts";
+import type { PrepBase } from "./view.ts";
 
 export type Mode = "local" | "ai" | "host" | "guest";
 
@@ -31,6 +33,8 @@ export interface Snapshot {
   state: GameState | null;
   events: GameEvent[]; // from the last action, for animations
   history: GameEvent[]; // recent events, newest last, for the log
+  logTotal: number; // events ever added to the log (history holds the last ones)
+  prepBase: PrepBase | null; // the state when this Preparation Phase started (view.ts)
   seq: number; // bumps on every change, restarts animations
   deadline: number | null; // when the current draft step or Preparation Phase times out (ms)
   status: string; // connection news or the last error
@@ -71,6 +75,8 @@ const empty: Snapshot = {
   state: null,
   events: [],
   history: [],
+  logTotal: 0,
+  prepBase: null,
   seq: 0,
   deadline: null,
   status: "",
@@ -111,7 +117,11 @@ class Session {
   get = () => this.snap;
 
   private set(p: Partial<Snapshot>) {
-    this.snap = { ...this.snap, ...p };
+    const next = { ...this.snap, ...p };
+    const s = next.state;
+    if (!s || s.phase !== "prep") next.prepBase = null;
+    else if (next.prepBase?.round !== s.round) next.prepBase = { round: s.round, state: s, logAt: next.logTotal };
+    this.snap = next;
     for (const fn of this.listeners) fn();
   }
 
@@ -242,7 +252,7 @@ class Session {
       this.set({
         state: m.state,
         events: m.events,
-        history: [...this.snap.history, ...m.events].slice(-80),
+        ...this.log(m.events),
         seq: m.seq,
         names: m.names,
         deadline: m.remainingMs === null ? null : Date.now() + m.remainingMs,
@@ -280,7 +290,7 @@ class Session {
     this.set({
       state: r.state,
       events: r.events,
-      history: [...this.snap.history, ...r.events].slice(-80),
+      ...this.log(r.events),
       seq: this.snap.seq + 1,
       status: "",
     });
@@ -290,7 +300,12 @@ class Session {
     return null;
   }
 
-  // AI mode: whenever it is the AI's move, play it after a short pause.
+  private log(events: GameEvent[]) {
+    return { history: [...this.snap.history, ...events].slice(-80), logTotal: this.snap.logTotal + events.length };
+  }
+
+  // AI mode: whenever it is the AI's move, play it after a short pause. In combat it waits for the last action's
+  // step-by-step playback (playback.ts) and then STEP_MS more, so each move can be followed.
   private scheduleAI() {
     if (this.snap.mode !== "ai" || this.aiTimer) return;
     this.aiTimer = setTimeout(() => {
@@ -299,7 +314,7 @@ class Session {
       if (this.snap.mode !== "ai" || !s) return;
       const a = botAction(s, content, "B");
       if (a) this.run(a);
-    }, AI_DELAY_MS);
+    }, this.snap.state?.phase === "combat" ? STEP_MS * splitSteps(this.snap.events).length : AI_DELAY_MS);
   }
 
   private broadcast() {

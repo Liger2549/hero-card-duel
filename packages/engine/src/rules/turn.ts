@@ -200,8 +200,10 @@ function giveTurn(c: Content, s: GameState, order: Seat[], events: GameEvent[]):
     s.activeSeat = seat;
     if (canDoAnything(c, s, seat)) {
       s.turn += 1;
-      s.hiddenAtTurnStart = s.units.filter((u) => !u.dead && u.pos && u.owner !== seat && hiddenByPosition(s, u, seat)).map((u) => u.id);
       events.push({ type: "TurnStarted", seat });
+      // Hooks first (e.g. Kage's Stealth when the Combat Phase starts), then fix what this seat can see.
+      notify(c, s, events);
+      s.hiddenAtTurnStart = s.units.filter((u) => !u.dead && u.pos && u.owner !== seat && hiddenByPosition(s, u, seat)).map((u) => u.id);
       return;
     }
     s.outOfRound.push(seat);

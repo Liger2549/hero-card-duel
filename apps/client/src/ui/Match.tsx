@@ -7,6 +7,7 @@ import {
   apply,
   candidateAims,
   allowedDirs,
+  Dirs8,
   heroDef,
   inZone,
   manaCost,
@@ -21,15 +22,19 @@ import {
   type AbilityRef,
   type Action,
   type Aim,
+  type Dir,
+  type ModifierStat,
   type GameEvent,
   type GameState,
   type Pos,
   type Seat,
   type Unit,
 } from "@hcd/engine";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { session, type Snapshot } from "../session.ts";
 import { describe, setLogNames } from "../text.ts";
+import { actionOrder, splitSteps, stateAt, STEP_MS } from "../playback.ts";
+import { hideStealthed, shownLog, shownState } from "../view.ts";
 import { AbilityCard, actingSeat, CCI, Countdown, Dayband, PatternLegend, Pips, sideClass, sideName, TIMES } from "./common.tsx";
 
 type Act =
@@ -44,22 +49,43 @@ const ERR: Record<string, string> = {
   stunned: "ติด Stun ใช้ไม่ได้",
   silenced: "ติด Silence ใช้สกิลไม่ได้",
   "not enough HP": "HP ไม่พอ",
-  "not available yet": "ยังไม่ทำงานในเวอร์ชันนี้ (รอ hook ของฮีโร่)",
+  "not available yet": "สกิลนี้ยังไม่มีโค้ด",
   "not enough Ult Points": "แต้มอัลติยังไม่พอ",
 };
 
 export function Match({ snap }: { snap: Snapshot }) {
-  const s = snap.state!;
   const [localSeat, setLocalSeat] = useState<Seat>("A");
   const [sel, setSel] = useState<string | null>(null);
   const [act, setAct] = useState<Act>(null);
-  const [pv, setPv] = useState<{ action: Action; events: GameEvent[]; area: Pos[] } | null>(null);
+  // dirs: the directions the picked tile can face (a Lock-on area that turns), to switch between.
+  const [pv, setPv] = useState<{ action: Action; events: GameEvent[]; area: Pos[]; dirs: Aim[] } | null>(null);
   const [shopSel, setShopSel] = useState<string | null>(null);
   const [error, setError] = useState("");
   const me = actingSeat(snap, localSeat);
+  // In the Preparation Phase the other team is shown as it was when the phase started (view.ts).
+  const live = shownState(snap.state!, snap.prepBase, me);
+  // The last action plays step by step, STEP_MS apart (playback.ts): its own events, then each interject, then DOTs.
+  const lastState = useRef<GameState | null>(null);
+  const playRef = useRef<{ seq: number; base: GameState | null; steps: GameEvent[][] }>({ seq: -1, base: null, steps: [] });
+  if (playRef.current.seq !== snap.seq) {
+    playRef.current = { seq: snap.seq, base: lastState.current, steps: splitSteps(snap.events) };
+    lastState.current = snap.state;
+  }
+  const play = playRef.current;
+  const [step, setStep] = useState({ seq: -1, at: 0 });
+  const at = step.seq === snap.seq ? step.at : 0;
+  const playing = play.base !== null && play.steps.length > 1 && at < play.steps.length;
+  useEffect(() => {
+    if (!playing) return;
+    const t = setTimeout(() => setStep({ seq: snap.seq, at: at + 1 }), STEP_MS);
+    return () => clearTimeout(t);
+  }, [snap.seq, at, playing]);
+  // Enemies in Stealth that this player cannot see are left off the board (view.ts).
+  const { state: s, hidden } = hideStealthed(playing ? stateAt(play.base!, live, play.steps.slice(0, at + 1).flat()) : live, me);
+  const unplayed = playing ? play.steps.slice(at + 1).flat().length : 0;
   setLogNames(snap.names);
   const view: Seat = snap.mySeat ?? "A"; // whose side is at the bottom
-  const myTurn = s.phase === "combat" && s.activeSeat === me && (!snap.mySeat || snap.mySeat === me);
+  const myTurn = !playing && s.phase === "combat" && s.activeSeat === me && (!snap.mySeat || snap.mySeat === me);
   const ok = (a: Action) => validate(s, a, content) === null;
 
   // The sky colour follows the time of day (prototype --skyc).
@@ -75,7 +101,7 @@ export function Match({ snap }: { snap: Snapshot }) {
     if (!snap.mySeat && s.phase === "prep" && s.ready[localSeat] && !s.ready[localSeat === "A" ? "B" : "A"]) setLocalSeat(localSeat === "A" ? "B" : "A");
   }, [s.ready.A, s.ready.B]); // eslint-disable-line
 
-  const selUnit = sel ? s.units.find((u) => u.id === sel && !u.dead) ?? null : null;
+  const selUnit = sel ? s.units.find((u) => u.id === sel && !u.dead && !hidden.has(u.id)) ?? null : null;
   const actUnit = act && act.type !== "card" ? s.units.find((u) => u.id === act.unitId)! : null;
 
   const abilityAction = (aim: Aim): Action | null =>
@@ -83,12 +109,12 @@ export function Match({ snap }: { snap: Snapshot }) {
   const form = act?.type === "ability" && actUnit ? abilityOf(content, actUnit.defId, act.ref)!.form : null;
   const cardDef = act?.type === "card" ? content.cards.find((c) => c.id === s.players[me].hand[act.index]) : undefined;
 
-  const preview = (action: Action | null) => {
+  const preview = (action: Action | null, dirs: Aim[] = []) => {
     if (!action) return;
     const r = apply(s, action, content);
     if (!r.ok) return setError(ERR[r.error] ?? r.error);
     const used = r.events.find((e) => e.type === "AbilityUsed");
-    setPv({ action, events: r.events, area: used && used.type === "AbilityUsed" ? used.tiles : [] });
+    setPv({ action, events: r.events, area: used && used.type === "AbilityUsed" ? used.tiles : [], dirs });
   };
 
   // Fixed areas around the caster and no-target cards need no aim: preview at once.
@@ -155,6 +181,11 @@ export function Match({ snap }: { snap: Snapshot }) {
     if (targets.has(k)) {
       if (act?.type === "move" && actUnit) return session.dispatch({ type: "Step", seat: me, unitId: actUnit.id, to: p });
       if (act?.type === "ability" && form) {
+        if (form.range && form.rotate && actUnit) {
+          // A picked tile, then a direction: every direction that works there (e.g. Ribu's corner, Leilani's whale).
+          const dirs = candidateAims(s, actUnit, form, act.ref === "normal").filter((a) => a.tiles?.[0] && key(a.tiles[0]) === k && ok(abilityAction(a)!));
+          if (dirs.length) return preview(abilityAction(dirs[0]!), dirs);
+        }
         if (dirOf.has(k)) return preview(abilityAction(dirOf.get(k)!));
         const n = form.picks ?? 1;
         if (n === 1) return preview(abilityAction({ tiles: [p] }));
@@ -180,7 +211,18 @@ export function Match({ snap }: { snap: Snapshot }) {
 
   const cancel = () => (setAct(null), setPv(null), setError(""));
   const enemy: Seat = view === "A" ? "B" : "A";
-  const flashes = useMemo(() => flashMap(s, pv ? pv.events : snap.events), [s, pv, snap.events]);
+  // After a step-by-step playback the board stays still (each step already flashed).
+  const shownEvents = pv ? pv.events : playing ? play.steps[at]! : play.steps.length > 1 && play.base ? [] : snap.events;
+  const flashes = useMemo(() => flashMap(s, shownEvents), [s, shownEvents]);
+  // The action order bar: while playing, the interjects still to resolve (the first one is resolving now).
+  const order = playing
+    ? play.steps
+        .slice(at)
+        .map((st, i) => ({ e: st[0]!, now: i === 0 }))
+        .filter(({ e }) => e.type === "InterjectResolved" || e.type === "InterjectFizzled")
+        .map(({ e, now }) => ({ ...(e as { id: number; unitId: string; name: string }), now, turnsLeft: 0 }))
+        .concat(actionOrder(live.pending).map((p) => ({ ...p, now: false })))
+    : actionOrder(live.pending).map((p) => ({ ...p, now: false }));
 
   return (
     <>
@@ -197,13 +239,31 @@ export function Match({ snap }: { snap: Snapshot }) {
         </div>
         <Dayband now={s.timeOfDay} />
       </header>
-      <div className="layout">
+      <div className="layout match">
+        <ol className="log" aria-live="polite">
+          {shownLog(snap.state!, snap.prepBase, me, snap.history.slice(0, Math.max(snap.history.length - unplayed, 0)), snap.logTotal - snap.history.length, hidden)
+            .map((e) => [e, describe(s, e)] as const)
+            .filter(([, t]) => t)
+            .slice(-60)
+            .reverse()
+            .map(([e, t], i) => (
+              <li key={i} className={logClass(s, e)}>
+                {t}
+              </li>
+            ))}
+        </ol>
         <section className="field">
+          <ActionOrder s={s} items={order} />
           <SideBar s={s} seat={enemy} snap={snap} />
-          <Towers s={s} seat={enemy} view={view} targets={targets} picks={act?.type === "ability" ? act.picks : []} onClick={onTile} flashes={flashes} />
-          <Board s={s} view={view} sel={sel} targets={targets} area={pv?.area ?? []} picks={act?.type === "ability" ? act.picks : []} flashes={flashes} seq={snap.seq} onClick={onTile} />
-          <Towers s={s} seat={view} view={view} targets={targets} picks={[]} onClick={onTile} flashes={flashes} />
+          <Towers s={s} seat={enemy} view={view} targets={targets} picks={act?.type === "ability" ? act.picks : []} onClick={onTile} flashes={flashes} hold={!!pv} />
+          <Board s={s} view={view} sel={sel} targets={targets} area={pv?.area ?? []} aimAt={pv?.action.type === "UseAbility" ? pv.action.aim.tiles?.[0] : undefined} picks={act?.type === "ability" ? act.picks : []} flashes={flashes} seq={snap.seq * 100 + at} hold={!!pv} onClick={onTile} />
+          <Towers s={s} seat={view} view={view} targets={targets} picks={[]} onClick={onTile} flashes={flashes} hold={!!pv} />
           <SideBar s={s} seat={view} snap={snap} />
+          {s.objects.some((o) => o.kind === "core") && (
+            <p className="muted corelegend">
+              <span className="cell cnext" /> แกนระเบิดเทิร์นศัตรูถัดไป · <span className="cell clater" /> ช่องที่แกนจะขยายไปทีหลัง (💣↗ = ทิศที่ขยาย)
+            </p>
+          )}
         </section>
         <section className="side">
           <div className="panel">
@@ -222,6 +282,20 @@ export function Match({ snap }: { snap: Snapshot }) {
               </div>
             )}
             {s.phase === "prep" && <Prep s={s} me={me} snap={snap} sel={sel} onSel={setSel} shopSel={shopSel} onShopSel={setShopSel} />}
+            {pv && pv.dirs.length > 1 && (
+              <div className="row dirs">
+                หันทิศ:
+                {pv.dirs.map((aim) => (
+                  <button
+                    key={aim.dir}
+                    className={`btn${pv.action.type === "UseAbility" && pv.action.aim.dir === aim.dir ? " on" : ""}`}
+                    onClick={() => preview(abilityAction(aim), pv.dirs)}
+                  >
+                    {arrow(aim.dir!, view)} {aim.dir}
+                  </button>
+                ))}
+              </div>
+            )}
             {pv && <Preview s={s} events={pv.events} />}
             {error && <p className="warn">{error}</p>}
             {selUnit ? (
@@ -255,6 +329,11 @@ export function Match({ snap }: { snap: Snapshot }) {
                 </button>
               </>
             )}
+            {playing && (
+              <button className="btn" onClick={() => setStep({ seq: snap.seq, at: play.steps.length })}>
+                ข้าม ⏭
+              </button>
+            )}
             {(act || pv) && (
               <button className="btn" onClick={cancel}>
                 ยกเลิก
@@ -267,18 +346,6 @@ export function Match({ snap }: { snap: Snapshot }) {
             )}
           </div>
           <Hand s={s} snap={snap} me={me} act={act} onCard={(index) => (setAct({ type: "card", index }), setPv(null), setSel(null))} />
-          <ol className="log" aria-live="polite">
-            {snap.history
-              .map((e) => [e, describe(s, e)] as const)
-              .filter(([, t]) => t)
-              .slice(-30)
-              .reverse()
-              .map(([e, t], i) => (
-                <li key={i} className={logClass(s, e)}>
-                  {t}
-                </li>
-              ))}
-          </ol>
         </section>
       </div>
       {s.phase === "over" && (
@@ -297,10 +364,72 @@ export function Match({ snap }: { snap: Snapshot }) {
   );
 }
 
+// Ribu's Core keeps the corner it grows toward as an index (pley.ts "corners").
+const coreCorner = (i: number | undefined): Dir => (["NE", "SE", "SW", "NW"] as const)[i ?? 0]!;
+const CORNER_STEP: Partial<Record<Dir, [number, number]>> = { NE: [1, 1], SE: [1, -1], SW: [-1, -1], NW: [-1, 1] };
+
+// The tiles of every Core on the board: "cnext" explodes in the next enemy Turn (its own tile first, then
+// the whole 2x2 once it has grown), "clater" is the rest of the 2x2 it will grow into.
+function coreTiles(s: GameState): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const o of s.objects) {
+    if (o.kind !== "core") continue;
+    const [dx, dy] = CORNER_STEP[coreCorner(o.vars.corner)]!;
+    const { x, y } = o.pos;
+    for (const p of [o.pos, { x: x + dx, y }, { x, y: y + dy }, { x: x + dx, y: y + dy }]) {
+      const next = o.vars.stage === 1 || (p.x === x && p.y === y);
+      if (next || !m.has(key(p))) m.set(key(p), next ? "cnext" : "clater");
+    }
+  }
+  return m;
+}
+
+// On-screen arrow for a board direction (N is +y, at the top for A; B sees the board turned around).
+const ARROWS = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
+function arrow(dir: Dir, view: Seat): string {
+  const i = Dirs8.indexOf(dir);
+  return ARROWS[view === "A" ? i : (i + 4) % 8]!;
+}
+
+// combat.md "Action Order": interjects in the order they resolve; the one resolving now is lit.
+function ActionOrder({ s, items }: { s: GameState; items: { id: number; unitId: string; name: string; now: boolean; turnsLeft: number }[] }) {
+  if (s.phase !== "combat") return null;
+  return (
+    <div className="aorder">
+      <span className="aol">ลำดับการแทรก</span>
+      {items.length === 0 && <span className="muted">ไม่มี</span>}
+      {items.map((p) => {
+        const u = s.units.find((x) => x.id === p.unitId);
+        return (
+          <span key={p.id} className={`aoc${u ? " " + sideClass(u.owner) : ""}${p.now ? " now" : ""}`} title={u ? unitDef(content, u.defId).name : ""}>
+            {u ? unitDef(content, u.defId).icon : ""} {p.name}
+            {p.turnsLeft > 0 && <small> · อีก {p.turnsLeft} เทิร์น</small>}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function logClass(s: GameState, e: GameEvent): string {
   if (e.type === "UnitDied" || e.type === "TowerDestroyed" || e.type === "Broken" || e.type === "GameOver") return "kill";
   const seat = "seat" in e ? e.seat : "unitId" in e ? s.units.find((u) => u.id === e.unitId)?.owner : undefined;
   return seat ? sideClass(seat).replace("s", "c") : "sys";
+}
+
+// The numbers on a tile: they float up and fade after an action, and stay put on a preview until it is confirmed.
+function Floats({ fx, hold }: { fx: { kind: string; texts: string[] } | undefined; hold: boolean }) {
+  if (!fx) return null;
+  if (hold) return <span className={`float hold ${fx.kind}`}>{fx.texts.join(" ")}</span>;
+  return (
+    <>
+      {fx.texts.map((t, i) => (
+        <span key={i} className={`float ${fx.kind}`} style={{ animationDelay: `${i * 0.15}s` }}>
+          {t}
+        </span>
+      ))}
+    </>
+  );
 }
 
 // Tiles to flash (prototype fx-bad / fx-good) and the numbers that float up from them.
@@ -346,8 +475,8 @@ function SideBar({ s, seat, snap }: { s: GameState; seat: Seat; snap: Snapshot }
   );
 }
 
-function Towers(props: { s: GameState; seat: Seat; view: Seat; targets: Set<string>; picks: Pos[]; flashes: Map<string, { kind: string; texts: string[] }>; onClick: (p: Pos) => void }) {
-  const { s, seat, view, targets, picks, flashes, onClick } = props;
+function Towers(props: { s: GameState; seat: Seat; view: Seat; targets: Set<string>; picks: Pos[]; flashes: Map<string, { kind: string; texts: string[] }>; hold?: boolean; onClick: (p: Pos) => void }) {
+  const { s, seat, view, targets, picks, flashes, hold = false, onClick } = props;
   const cols = s.config.boardWidth / s.config.towersPerTeam;
   const row = towerRow(s.config, seat);
   const order = Array.from({ length: s.config.towersPerTeam }, (_, i) => i);
@@ -368,11 +497,7 @@ function Towers(props: { s: GameState; seat: Seat; view: Seat; targets: Set<stri
             <span>{t.destroyed ? "พัง" : `${t.hp}/${t.maxHp}`}</span>
             {!t.destroyed && t.shieldByHits > 0 && <span>🛡{t.shieldByHits}</span>}
             {picked > 0 && <span className="badge">×{picked}</span>}
-            {fx?.texts.map((x, i) => (
-              <span key={i} className={`float ${fx.kind}`} style={{ animationDelay: `${i * 0.15}s` }}>
-                {x}
-              </span>
-            ))}
+            <Floats fx={fx} hold={hold} />
           </button>
         );
       })}
@@ -386,15 +511,18 @@ function Board(props: {
   sel: string | null;
   targets: Set<string>;
   area: Pos[];
+  aimAt?: Pos | undefined; // the picked tile of a preview (P), drawn darker than the rest of the area
   picks: Pos[];
   flashes: Map<string, { kind: string; texts: string[] }>;
   seq: number;
+  hold?: boolean;
   onClick: (p: Pos) => void;
 }) {
-  const { s, view, sel, targets, area, picks, flashes, seq, onClick } = props;
+  const { s, view, sel, targets, area, aimAt, picks, flashes, seq, hold = false, onClick } = props;
   const W = s.config.boardWidth;
   const H = s.config.boardHeight;
   const areaSet = new Set(area.map(key));
+  const cores = coreTiles(s);
   const cells = [];
   for (let yy = 0; yy < H; yy++) {
     for (let xx = 0; xx < W; xx++) {
@@ -411,22 +539,23 @@ function Board(props: {
       if (zone) c.push(zone === "A" ? "z0" : "z1");
       if (targets.has(k)) c.push("t");
       if (areaSet.has(k)) c.push("a");
+      if (areaSet.has(k) && aimAt && key(aimAt) === k) c.push("ap");
+      const core = cores.get(k);
+      if (core && !areaSet.has(k)) c.push(core); // a preview's area draws over it
       if (u && u.id === sel) c.push("sel");
       if (fx) c.push(`fx-${fx.kind}`);
+      if (fx && hold) c.push("hold");
       cells.push(
         <button key={`${k}-${fx ? seq : 0}`} className={c.join(" ")} onClick={() => onClick(p)} aria-label={`ช่อง ${x + 1} แถว ${y + 1}`}>
           {s.objects.filter((o) => o.pos.x === x && o.pos.y === y).map((o) => (
-            <span key={o.id} className="obj" title={o.kind}>
+            <span key={o.id} className="obj" title={o.kind === "core" ? `Volatile Core: ขยาย 2x2 ไปทาง ${coreCorner(o.vars.corner)}` : o.kind}>
               {OBJECT_ICONS[o.kind] ?? "◆"}
+              {o.kind === "core" && arrow(coreCorner(o.vars.corner), view)}
             </span>
           ))}
           {u && <Token s={s} u={u} />}
           {picked > 0 && <span className="badge">×{picked}</span>}
-          {fx?.texts.map((t, i) => (
-            <span key={i} className={`float ${fx.kind}`} style={{ animationDelay: `${i * 0.15}s` }}>
-              {t}
-            </span>
-          ))}
+          <Floats fx={fx} hold={hold} />
         </button>,
       );
     }
@@ -590,7 +719,27 @@ function Prep(props: { s: GameState; me: Seat; snap: Snapshot; sel: string | nul
 }
 
 // prototype unitInfo: header, stats, status tags, items, passive, gauge, and the actions.
+// combat.md "Combat Modifiers" (engine ModifierStat), in the docs' order.
+const MODIFIERS: [ModifierStat, string][] = [
+  ["armor", "Armor"],
+  ["magicArmor", "Magic Armor"],
+  ["penetration", "Penetration"],
+  ["healingBonus", "Healing Bonus"],
+  ["healingReceived", "Healing Received"],
+  ["lifeSteal", "Life Steal"],
+  ["lifeStealResistance", "Life Steal Resistance"],
+  ["breakBoost", "Break Boost"],
+  ["breakDmgBonus", "Break DMG Bonus"],
+  ["breakResistance", "Break Resistance"],
+  ["resonanceBoost", "Resonance Boost"],
+  ["tenacity", "Tenacity"],
+  ["fortitude", "Fortitude"],
+  ["dotBoost", "DOT Boost"],
+  ["physicalAtk", "Physical ATK +"],
+];
+
 function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boolean; act: Act; onAct: (a: Act) => void }) {
+  const [modsOpen, setModsOpen] = useState(false); // kept while other units are picked
   const d = unitDef(content, u.defId);
   const hero = heroDef(content, u.defId);
   const st = (n: Parameters<typeof stat>[2]) => stat(content, u, n);
@@ -647,17 +796,17 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
         <span>
           Break <b>{u.breakBar}/{d.stats.breakBar}</b>
         </span>
-        {st("penetration") > 0 && (
-          <span>
-            Penetration <b>{st("penetration")}</b>
-          </span>
-        )}
-        {st("dotBoost") > 0 && (
-          <span>
-            DOT Boost <b>{st("dotBoost")}</b>
-          </span>
-        )}
       </div>
+      <details className="mods" open={modsOpen} onToggle={(e) => setModsOpen(e.currentTarget.open)}>
+        <summary>Combat Modifiers</summary>
+        <div className="stats">
+          {MODIFIERS.map(([n, label]) => (
+            <span key={n} className={st(n) ? "" : "zero"}>
+              {label} <b>{st(n)}</b>
+            </span>
+          ))}
+        </div>
+      </details>
       {tags.length > 0 && (
         <div className="tags">
           {tags.map((t, i) => (
@@ -689,7 +838,7 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
         <>
           <p className="pas">
             พาสซีฟ: {hero.passive.name ? `${hero.passive.name}: ` : ""}
-            {hero.passive.text} <span className="muted">(ยังไม่ทำงานในเวอร์ชันนี้)</span>
+            {hero.passive.text}
           </p>
           <div className="ultm">
             {hero.ultimate.gaugeName ?? "อัลติ"} {u.ult}/{hero.ultimate.ultMax} (ใช้ {hero.ultimate.ultCost})
@@ -754,7 +903,10 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
 }
 
 // prototype handHTML: the cards of whoever may play now.
+// The hand sits at the bottom of the screen showing only its top strip; it rises while the mouse is over it or
+// after tapping the strip (touch screens). Choosing a card drops it again so the board's bottom rows can be tapped.
 function Hand({ s, snap, me, act, onCard }: { s: GameState; snap: Snapshot; me: Seat; act: Act; onCard: (i: number) => void }) {
+  const [open, setOpen] = useState(false);
   if (snap.mySeat && snap.mySeat !== me) return null;
   const p = s.players[me];
   const playable = (card: number) => {
@@ -763,10 +915,12 @@ function Hand({ s, snap, me, act, onCard }: { s: GameState; snap: Snapshot; me: 
     return tries.some((aim) => validate(s, { type: "PlayCard", seat: me, card, aim }, content) === null);
   };
   return (
-    <>
-      <p className="handlbl">
-        การ์ดในมือของ{sideName(me, snap)} (กองเหลือ {p.deck.length})
-      </p>
+    <div className={`handdock${open ? " up" : ""}`}>
+      <button className="handlbl" onClick={() => setOpen(!open)}>
+        {act?.type === "card" && p.hand[act.index]
+          ? `เลือกการ์ด ${content.cards.find((x) => x.id === p.hand[act.index])?.name ?? ""} แล้ว: แตะช่องบนกระดาน`
+          : `🂠 การ์ดในมือของ${sideName(me, snap)} ${p.hand.length} ใบ (กองเหลือ ${p.deck.length}) ${open ? "▼" : "▲"}`}
+      </button>
       {p.hand.length === 0 ? (
         <p className="muted">ไม่มีการ์ดในมือ</p>
       ) : (
@@ -774,7 +928,7 @@ function Hand({ s, snap, me, act, onCard }: { s: GameState; snap: Snapshot; me: 
           {p.hand.map((id, i) => {
             const c = content.cards.find((x) => x.id === id)!;
             return (
-              <button key={i} className={`card${act?.type === "card" && act.index === i ? " on" : ""}`} disabled={!playable(i)} onClick={() => onCard(i)}>
+              <button key={i} className={`card${act?.type === "card" && act.index === i ? " on" : ""}`} disabled={!playable(i)} onClick={() => (setOpen(false), onCard(i))}>
                 <span className="ch">
                   <span className="ci">{c.icon}</span>
                   <span className="cost">{c.mana}</span>
@@ -786,6 +940,6 @@ function Hand({ s, snap, me, act, onCard }: { s: GameState; snap: Snapshot; me: 
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }

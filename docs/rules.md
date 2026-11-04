@@ -135,6 +135,8 @@ From round 2, each hero/unit may move once within its team's zone during the Pre
 
 In the Preparation Phase both players act at the same time; there are no Turns.
 
+**Hidden preparation**: during the Preparation Phase each player sees the other team as it was when the phase started. Hero placement, Preparation moves, units summoned from cards, items bought and the other player's mana, gold and hand all stay hidden, and their log lines too. Everything shows when the Combat Phase starts.
+
 The Preparation Phase has 2 variants: the Major Phase and the Minor Phase. For now **every round is a Major Phase** (as in the prototype); Minor Phases come with the dungeon design.
 
 Major Phase:

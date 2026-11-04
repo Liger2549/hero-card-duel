@@ -45,3 +45,54 @@
 .dmodal { position: fixed; inset: 0; background: rgb(0 0 0 / 45%); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
 .dbox { background: var(--surface); border-radius: 14px; padding: 14px; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; }
 .dclose { float: right; }
+
+/* Match log: below on small screens, a left column on wide ones. */
+.layout.match > .log { order: 3; margin: 0; max-height: 260px; }
+@media (min-width: 1240px) {
+  #app:has(.layout.match) { max-width: 1320px; }
+  .layout.match { grid-template-columns: minmax(0, 230px) minmax(0, 470px) minmax(0, 1fr); }
+  .layout.match > .log { order: 0; max-height: calc(100vh - 120px); position: sticky; top: 12px; }
+}
+
+/* Direction buttons for a Lock-on area that turns (Ribu's corner, Leilani's whale). */
+.row.dirs { align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.row.dirs .btn.on { outline: 2px solid var(--p1); outline-offset: 1px; }
+
+/* The skill's own description on its card (AbilityDef.text). */
+.abx { font-size: 12.5px; line-height: 1.45; }
+
+/* Action order bar (combat.md "Action Order"): this Turn's interjects in resolution order. */
+.aorder { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; margin-bottom: 6px; border-radius: 10px; background: var(--surface2); font-size: 13px; }
+.aorder .aol { font-weight: 600; margin-right: 4px; }
+.aoc { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); white-space: nowrap; }
+.aoc.s0 { border-color: var(--p1); }
+.aoc.s1 { border-color: var(--p2); }
+.aoc.now { font-weight: 700; transform: scale(1.08); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 25%, transparent); }
+
+/* A preview's numbers and tint stay until it is confirmed or cancelled. */
+.float.hold { animation: none; white-space: nowrap; font-size: 13px; padding: 0 4px; border-radius: 6px; background: var(--surface); box-shadow: 0 1px 3px rgb(0 0 0 / 0.25); }
+.cell.hold.fx-bad::after, .cell.hold.fx-good::after { animation: none; opacity: 0.3; }
+
+/* A preview's picked tile (P) is darker than the rest of its area (e.g. a Core's tile vs the 2x2 it grows into). */
+.cell.a.ap { background: color-mix(in srgb, var(--hl) 85%, var(--ink)); }
+/* Ribu's Cores on the board: orange = explodes in the next enemy Turn, dashed = the rest of the 2x2 it grows into. */
+.cell.cnext { background: color-mix(in srgb, #f08a24 45%, var(--tile)); }
+.cell.clater { outline: 2px dashed #f08a24; outline-offset: -3px; }
+.corelegend { font-size: 12.5px; margin: 6px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.corelegend .cell { display: inline-block; width: 16px; min-width: 16px; aspect-ratio: 1; }
+
+/* Unit panel: Combat Modifiers fold open and shut; zero values are dimmed. */
+.mods { margin-top: 6px; font-size: 13px; }
+.mods summary { cursor: pointer; color: var(--muted); }
+.mods .stats { margin-top: 4px; }
+.mods .zero { opacity: 0.45; }
+
+/* The hand docks at the bottom of the screen: only its strip shows until hovered, a card is chosen, or tapped open. */
+.handdock { position: fixed; left: 50%; bottom: 0; width: min(1060px, 100%); z-index: 20; padding: 0 12px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.18); transform: translate(-50%, calc(100% - 38px)); transition: transform 0.2s ease-out; }
+.handdock:hover, .handdock:has(:focus-visible), .handdock.up { transform: translate(-50%, 0); }
+.handdock .handlbl { display: block; width: 100%; height: 38px; margin: 0; border: 0; background: none; text-align: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+.handdock .hand { margin-top: 0; }
+.layout.match { padding-bottom: 48px; } /* room for the hand's strip */
+@media (prefers-reduced-motion: reduce) { .handdock { transition: none; } }

@@ -114,7 +114,6 @@ const ribuHooks: UnitHooks = {
   },
   specials: {
     core(api, { aim, area }) {
-      api.self.vars.coreTurn = api.s.turn;
       const o = placeObject(api.s, api.self, "core", aim.tiles![0]!, null, -1, { per: "turn" }, api.events);
       o.vars = { stage: 0, corner: cornerNames.indexOf(area.dir!), actions: 0 };
     },
@@ -122,7 +121,7 @@ const ribuHooks: UnitHooks = {
     shift: (api) => becomePley(api, api.self.pos!, api.self.ult + 7, (atk) => atk, true),
   },
   checks: {
-    core: (api, { area }) => (api.self.vars.coreTurn === api.s.turn ? "once per Turn" : area.dir && area.dir in corners ? null : "pick a corner (NE, SE, SW, NW)"),
+    core: (_api, { area }) => (area.dir && area.dir in corners ? null : "pick a corner (NE, SE, SW, NW)"),
   },
 };
 
@@ -156,8 +155,9 @@ export const pley = defineHero({
     {
       name: "Core Drop (ทิ้งแกน)",
       mana: 2,
-      text: "วางแกนในสี่เหลี่ยม 5x5 เลือกมุมขยาย (เทิร์นละครั้ง) · เทิร์นศัตรูถัดไประเบิด 1x1 กายภาพ 50% ATK · เทิร์นศัตรูถัดจากนั้นระเบิด 2x2 กายภาพ ATK แล้ว Paradox +1",
-      form: { rotate: 8, hit: "allies", range: { square: 2 }, grid: ["P"] },
+      text: "วางแกนในสี่เหลี่ยม 5x5 เลือกมุมขยาย (วางกี่อันก็ได้) · เทิร์นศัตรูถัดไประเบิด 1x1 กายภาพ 50% ATK · เทิร์นศัตรูถัดจากนั้นระเบิด 2x2 กายภาพ ATK แล้ว Paradox +1",
+      // The diagonal grid is the 2x2 the Core grows into (drawn facing NW), so the preview shows it. It hits no one.
+      form: { rotate: 8, hit: "allies", range: { square: 2 }, grid: ["P"], diagonal: ["X X", "X P"] },
       ultGain: 0,
       freeAction: true,
       special: "core",
