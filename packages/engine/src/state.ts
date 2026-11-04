@@ -24,6 +24,7 @@ export interface Shield {
   count: Countdown;
   appliedTurn: number;
   seq: number; // order given; added shields are used oldest first
+  name?: string; // given by a hero's hook (e.g. "lantern"), so the hook can find it again
 }
 
 export interface ActiveBuff {

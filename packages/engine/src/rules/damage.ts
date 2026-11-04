@@ -66,9 +66,11 @@ export function useShields(u: Unit, amount: number): void {
 }
 
 // Add stacks; Set replaces only the previous set shield.
-export function giveShield(s: GameState, u: Unit, mode: Shield["mode"], amount: number, turns: number, count: Countdown = EveryTurn): void {
+export function giveShield(s: GameState, u: Unit, mode: Shield["mode"], amount: number, turns: number, count: Countdown = EveryTurn, name?: string): void {
   if (mode === "set") u.shields = u.shields.filter((sh) => sh.mode !== "set");
-  u.shields.push({ mode, amount, turnsLeft: turns, count, appliedTurn: s.turn, seq: s.shieldSeq++ });
+  const sh: Shield = { mode, amount, turnsLeft: turns, count, appliedTurn: s.turn, seq: s.shieldSeq++ };
+  if (name) sh.name = name;
+  u.shields.push(sh);
 }
 
 // Lowers HP; a unit at 0 dies and its killer's player gets the bounty.
@@ -90,7 +92,7 @@ export function loseHp(c: Content, s: GameState, target: Unit, amount: number, s
   target.cc = {};
   const killer = source && source.owner !== target.owner ? source.owner : null;
   if (killer) s.players[killer].gold += bounty;
-  events.push({ type: "UnitDied", unitId: target.id, killerSeat: killer, bounty: killer ? bounty : 0 });
+  events.push({ type: "UnitDied", unitId: target.id, killerSeat: killer, killerId: source?.id ?? null, bounty: killer ? bounty : 0 });
 }
 
 // Raises HP by exactly `amount`, never above Max HP. Used for restores (e.g. a Max HP item) and Life Steal.

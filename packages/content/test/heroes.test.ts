@@ -1,6 +1,7 @@
 import { apply, createUnit, hookApi, manhattan, newMatchWithUnits, normalConfig, stat, type Action, type Aim, type GameEvent, type GameState, type Unit } from "@hcd/engine";
 import { describe, expect, it } from "vitest";
 import { bianca } from "../src/heroes/bianca.ts";
+import { linnet } from "../src/heroes/linnet.ts";
 import { serie } from "../src/heroes/serie.ts";
 import { valen } from "../src/heroes/valen.ts";
 import { content } from "../src/index.ts";
@@ -149,5 +150,95 @@ describe("Eira", () => {
     get(s, "guard1").cc = { slow: 300 };
     const after = run(s, use("A", "eira0", "normal", { dir: "N" })).state;
     expect(get(after, "guard1").hp).toBe(5); // 4 + 2 − DEF 1
+  });
+});
+
+describe("Karas", () => {
+  it("Raven's Intercession: an ally near him hits an enemy near him → a raven explodes when the Turn ends", () => {
+    const s = combat([
+      { defId: "karas", owner: "A", x: 3, y: 5 },
+      { defId: "valen", owner: "A", x: 4, y: 5 },
+      { defId: "eira", owner: "B", x: 4, y: 6 },
+    ]);
+    get(s, "karas0").vars.ravens = 1;
+    const r = run(s, use("A", "valen1", "normal", { dir: "N" }));
+    const eira = get(r.state, "eira2");
+    expect(eira.hp).toBe(14); // Valen 4 − DEF 1 + bonus 1 = 4; raven Magic 120% of 4 = 5 − DEF 1 = 4
+    expect(eira.dots).toMatchObject([{ id: "nocturnalFlame", sourceId: "karas0", ticksLeft: 1, breakPerTick: 1 }]);
+    expect(get(r.state, "karas0").vars.ravens).toBe(0);
+  });
+
+  it("Wraithfire gives 2 ravens and Nocturnal Flame for 2 Turns", () => {
+    const s = combat([{ defId: "karas", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 5 }]);
+    const after = run(s, use("A", "karas0", 0, { dir: "N" })).state;
+    expect(get(after, "karas0").vars.ravens).toBe(2);
+    expect(get(after, "eira1").dots[0]).toMatchObject({ id: "nocturnalFlame", ticksLeft: 2, damageH: 300 }); // 50% of 4 + DOT Boost 1
+  });
+});
+
+describe("Linnet", () => {
+  it("Tidal Chorus: an attack that hits gives allies in the 8 tiles around her Physical ATK +1% Speed", () => {
+    const s = combat([{ defId: "linnet", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 3, y: 3 }, { defId: "eira", owner: "B", x: 4, y: 6 }]);
+    const after = run(s, use("A", "linnet0", "normal", { tiles: [{ x: 4, y: 6 }] })).state;
+    expect(stat(content, get(after, "valen1"), "physicalAtk")).toBe(1); // 1% of 110
+  });
+
+  it("Rising Chorus: echoes add up (above 50% to dead = +3) and Crescendo is queued at 3", () => {
+    const s = combat([{ defId: "linnet", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 4, y: 5 }, { defId: "eira", owner: "B", x: 4, y: 6 }]);
+    const after = run(s, use("A", "linnet0", 0, {})).state; // Wings over the Waves: enters Rising Chorus
+    expect(get(after, "linnet0").vars).toMatchObject({ chorus: 1, echoes: 0 });
+    const api = hookApi(content, after, [], get(after, "linnet0"));
+    linnet.hooks!.onEvent!(api, { type: "Damaged", unitId: "eira2", amount: 22, hp: 0, sourceId: "valen1" });
+    linnet.hooks!.onEvent!(api, { type: "UnitDied", unitId: "eira2", killerSeat: "A", killerId: "valen1", bounty: 400 });
+    expect(get(after, "linnet0").vars.echoes).toBe(3);
+    expect(after.pending.map((p) => p.key)).toEqual(["crescendo"]);
+  });
+});
+
+describe("Zoran", () => {
+  it("Guiding Light: an ally near him drops to 20% or lower → shield 2 + 25% Max HP when the Turn ends", () => {
+    const s = combat([{ defId: "zoran", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 4, y: 5, }, { defId: "eira", owner: "B", x: 4, y: 6 }]);
+    s.activeSeat = "B";
+    get(s, "valen1").hp = 5;
+    const after = run(s, use("B", "eira2", "normal", { dir: "S" })).state;
+    expect(get(after, "valen1").hp).toBe(1);
+    expect(get(after, "valen1").shields).toMatchObject([{ mode: "add", amount: 7 }]); // 2 + 25% of 20
+    expect(get(after, "zoran0").vars.wicks).toBe(0);
+  });
+
+  it("Vigil Lantern: allies in its 3x3 get a kept shield and a heal, enemies Nocturnal Flame; 3 pulses left", () => {
+    const s = combat([{ defId: "zoran", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 5, y: 6 }, { defId: "eira", owner: "B", x: 4, y: 7 }]);
+    get(s, "zoran0").ult = 4;
+    get(s, "valen1").hp = 10;
+    const after = run(s, use("A", "zoran0", "ultimate", { tiles: [{ x: 4, y: 6 }] })).state;
+    expect(get(after, "valen1").shields).toMatchObject([{ amount: 3, turnsLeft: -1, name: "lantern:zoran0" }]); // 15% of 20
+    expect(get(after, "valen1").hp).toBe(12); // 10% of 20
+    expect(get(after, "eira2").dots[0]).toMatchObject({ id: "nocturnalFlame", sourceId: "zoran0" });
+    expect(get(after, "zoran0").vars.lanternPulses).toBe(3);
+  });
+});
+
+describe("Leilani", () => {
+  it("Lifebuoy: an ally near her drops below 25% → heal 2 + 25% Max HP (+ Healing Bonus, × 125%) and +1 Ult Point", () => {
+    const s = combat([{ defId: "leilani", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 4, y: 5 }, { defId: "eira", owner: "B", x: 4, y: 6 }]);
+    s.activeSeat = "B";
+    get(s, "valen1").hp = 6;
+    const after = run(s, use("B", "eira2", "normal", { dir: "S" })).state;
+    expect(get(after, "valen1").hp).toBe(12); // 2 HP left, then (2 + 4 + 2) × 125% = 10
+    expect(get(after, "leilani0").ult).toBe(1);
+  });
+
+  it("Rolling Tide: the first pulse heals allies within 2 and hits enemies within 3 when the Turn ends", () => {
+    const s = combat([
+      { defId: "leilani", owner: "A", x: 4, y: 4 },
+      { defId: "valen", owner: "A", x: 4, y: 5 },
+      { defId: "guard", owner: "B", x: 4, y: 7 },
+      { defId: "eira", owner: "B", x: 0, y: 8 }, // so B still has a hero
+    ]);
+    get(s, "valen1").hp = 10;
+    const after = run(s, use("A", "leilani0", 0, {})).state;
+    expect(get(after, "valen1").hp).toBe(19); // 150% of 3 = 4.5 → 5 (a skill value is rounded first); (5 + 2) × 125% = 8.75 → 9
+    expect(get(after, "guard2").hp).toBe(9); // Magic 1 + 35% of 3 = 2 − DEF 1
+    expect(get(after, "leilani0").vars.tide).toBe(3);
   });
 });

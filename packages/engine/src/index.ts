@@ -16,7 +16,7 @@ export { stat, statBeforeHooks, type StatName } from "./stats.ts";
 export { hookApi, type HookApi, type InterjectOptions, type SpecialContext, type UnitHooks } from "./rules/interject.ts";
 
 // For hero hooks in the content package (rules/interject.ts "UnitHooks").
-export { strike } from "./rules/abilities.ts";
+export { resolveAbility, strike } from "./rules/abilities.ts";
 export { placeSummon } from "./rules/cards.ts";
 export { applyCc, giveShield, heal, healFrom, hitDamage, loseHp, reduceBreakBar, shieldTotal } from "./rules/damage.ts";
 export { moveUnit } from "./rules/movement.ts";

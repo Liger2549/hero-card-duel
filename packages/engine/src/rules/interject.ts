@@ -26,6 +26,7 @@ export interface SpecialContext {
 }
 
 export interface InterjectOptions {
+  actionValue?: number; // for something with its own Speed and Action Count (e.g. Zoran's lantern); default: this unit's
   turns?: number; // resolve after this many Turns (counted like Durations); default 0 = right away
   count?: Countdown;
   data?: Record<string, number | string>;
@@ -75,7 +76,7 @@ export function queueInterject(
     id: s.nextPendingId++,
     unitId: u.id,
     name,
-    actionValue: takeAction(c, u),
+    actionValue: opts.actionValue ?? takeAction(c, u),
     key,
     turnsLeft: opts.turns ?? 0,
     count: opts.count ?? EveryTurn,
