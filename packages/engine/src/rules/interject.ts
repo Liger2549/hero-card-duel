@@ -7,6 +7,7 @@ import type { GameEvent } from "../events.ts";
 import { EveryTurn, findUnit, type Countdown, type GameState, type Pending, type Unit } from "../state.ts";
 import { stat } from "../stats.ts";
 import { resolveAbility } from "./abilities.ts";
+import type { Pos } from "../board.ts";
 import type { Aim, Area } from "./targeting.ts";
 
 // What a hook may use. `self` is the unit whose hooks run.
@@ -41,6 +42,15 @@ export interface UnitHooks {
   hitValues?(api: HookApi, target: Unit, v: { physical: number; magic: number }): { physical: number; magic: number };
   // Extra HP damage once per hit that gets past shields (e.g. Valen's passive). extraPen = the ability's own Penetration.
   bonusDamage?(api: HookApi, target: Unit, extraPen: number): number;
+  // Changes the Break of this unit's hit on `target` (e.g. Falka's marked shots).
+  hitBreak?(api: HookApi, target: Unit, brk: number): number;
+  // When this unit is hit: the HP damage it really takes (e.g. Pley's speed dodge). `api.self` is the unit hit.
+  hitTaken?(api: HookApi, attacker: Unit, damage: number): number;
+  // Tiles a Hit: First lane goes on through after its last tile (e.g. Falka's Scan Field). step = the lane's direction.
+  extendLane?(api: HookApi, end: Pos, step: Pos): Pos[];
+  // Things the player can do with this unit outside the normal attack / skills (e.g. Falka ending her Stealth).
+  // Free, does not end the Turn (actions.ts "UnitCommand").
+  commands?: Readonly<Record<string, { check?(api: HookApi): string | null; run(api: HookApi): void }>>;
   // An ability's `special`, run after its normal effects; `checks` can refuse the aim first.
   specials?: Readonly<Record<string, (api: HookApi, ctx: SpecialContext) => void>>;
   checks?: Readonly<Record<string, (api: HookApi, ctx: SpecialContext) => string | null>>;

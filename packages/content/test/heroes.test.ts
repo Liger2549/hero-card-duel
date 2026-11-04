@@ -1,6 +1,7 @@
 import { apply, createUnit, hookApi, manhattan, newMatchWithUnits, normalConfig, stat, type Action, type Aim, type GameEvent, type GameState, type Unit } from "@hcd/engine";
 import { describe, expect, it } from "vitest";
 import { bianca } from "../src/heroes/bianca.ts";
+import { falka } from "../src/heroes/falka.ts";
 import { linnet } from "../src/heroes/linnet.ts";
 import { serie } from "../src/heroes/serie.ts";
 import { valen } from "../src/heroes/valen.ts";
@@ -66,7 +67,7 @@ describe("Bianca", () => {
   it("a guarded ally that moves more than 1 tile away loses the guard", () => {
     const s = combat([{ defId: "bianca", owner: "A", x: 4, y: 4 }, { defId: "valen", owner: "A", x: 4, y: 5 }]);
     const api = hookApi(content, s, [], get(s, "bianca0"));
-    bianca.hooks!.specials!.oath!(api, { area: { tiles: [], enemies: [], allies: [] }, aim: {} });
+    bianca.hooks!.specials!.oath!(api, { area: { tiles: [], enemies: [], allies: [], objects: [] }, aim: {} });
     get(s, "valen1").pos = { x: 4, y: 7 };
     bianca.hooks!.onEvent!(api, { type: "UnitMoved", unitId: "valen1", from: { x: 4, y: 5 }, to: { x: 4, y: 7 } });
     expect(stat(content, get(s, "valen1"), "armor")).toBe(0);
@@ -92,7 +93,7 @@ describe("Serie", () => {
     s = run(s, use("A", "serie0", 0, { dir: "N" })).state;
     const hp = get(s, "eira1").hp;
     const events: GameEvent[] = [];
-    serie.hooks!.specials!.collapse!(hookApi(content, s, events, get(s, "serie0")), { area: { tiles: [], enemies: [], allies: [] }, aim: {} });
+    serie.hooks!.specials!.collapse!(hookApi(content, s, events, get(s, "serie0")), { area: { tiles: [], enemies: [], allies: [], objects: [] }, aim: {} });
     expect(get(s, "eira1").hp).toBe(hp - 9); // 3 × 2 + ATK 3
     expect(get(s, "eira1").dots[0]).toMatchObject({ id: "voidmark", ticksLeft: 1 });
     expect(get(s, "serie0").ult).toBe(0); // a Collapse is not a tick
@@ -189,7 +190,7 @@ describe("Linnet", () => {
     expect(get(after, "linnet0").vars).toMatchObject({ chorus: 1, echoes: 0 });
     const api = hookApi(content, after, [], get(after, "linnet0"));
     linnet.hooks!.onEvent!(api, { type: "Damaged", unitId: "eira2", amount: 22, hp: 0, sourceId: "valen1" });
-    linnet.hooks!.onEvent!(api, { type: "UnitDied", unitId: "eira2", killerSeat: "A", killerId: "valen1", bounty: 400 });
+    linnet.hooks!.onEvent!(api, { type: "UnitDied", unitId: "eira2", killerSeat: "A", killerId: "valen1", bounty: 400, at: { x: 4, y: 6 }, ult: 0 });
     expect(get(after, "linnet0").vars.echoes).toBe(3);
     expect(after.pending.map((p) => p.key)).toEqual(["crescendo"]);
   });
@@ -240,5 +241,103 @@ describe("Leilani", () => {
     expect(get(after, "valen1").hp).toBe(19); // 150% of 3 = 4.5 → 5 (a skill value is rounded first); (5 + 2) × 125% = 8.75 → 9
     expect(get(after, "guard2").hp).toBe(9); // Magic 1 + 35% of 3 = 2 − DEF 1
     expect(get(after, "leilani0").vars.tide).toBe(3);
+  });
+});
+
+describe("Falka", () => {
+  it("Exfil: HP below 25% → 2 free steps (no mana); not again until the Round after next", () => {
+    const s = combat([{ defId: "falka", owner: "A", x: 4, y: 1 }, { defId: "eira", owner: "B", x: 0, y: 8 }]);
+    const f = get(s, "falka0");
+    const api = hookApi(content, s, [], f);
+    falka.hooks!.onEvent!(api, { type: "Damaged", unitId: "falka0", amount: 12, hp: 3, sourceId: "eira1" });
+    expect(f.freeSteps).toBe(2);
+    const mana = s.players.A.mana;
+    const after = run(s, { type: "Step", seat: "A", unitId: "falka0", to: { x: 4, y: 2 } }).state;
+    expect(after.players.A.mana).toBe(mana);
+    expect(get(after, "falka0").freeSteps).toBe(1);
+    f.freeSteps = 0;
+    f.hp = 15;
+    falka.hooks!.onEvent!(api, { type: "Damaged", unitId: "falka0", amount: 12, hp: 3, sourceId: "eira1" });
+    expect(f.freeSteps).toBe(0); // on cooldown
+  });
+
+  it("Shatter Round: breaking the target adds +250% ATK to the Break DMG", () => {
+    const s = combat([{ defId: "falka", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 6 }]);
+    get(s, "eira1").breakBar = 3;
+    const e = get(run(s, use("A", "falka0", 0, { dir: "N" })).state, "eira1");
+    expect(e.broken).toBe(true);
+    // shot: 50% of 5 = 3 − DEF 1 = 2; Break DMG: 13 / 5 = 2.6 + 250% of 5 = 13 → 15.6 → 16
+    expect(e.hp).toBe(22 - 2 - 16);
+  });
+
+  it("Kestrel's Eye: a lane that reaches the Scan Field goes on through it; Break +30% ATK in the field", () => {
+    let s = combat([{ defId: "falka", owner: "A", x: 4, y: 1 }, { defId: "eira", owner: "B", x: 4, y: 5 }]);
+    s = run(s, use("A", "falka0", 1, { tiles: [{ x: 4, y: 4 }] })).state; // Free Action: the Turn goes on
+    expect(s.objects).toMatchObject([{ kind: "scanner", pos: { x: 4, y: 4 }, hp: 1 }]);
+    const e = get(run(s, use("A", "falka0", "normal", { dir: "N" })).state, "eira1");
+    expect(e.hp).toBe(22 - 4); // Snap Shot reached it: ATK 5 − DEF 1
+    expect(e.breakBar).toBe(13 - 12); // (1 + 5 + 30% of 5 = 2, + Boost 3) × 110% = 12.1 → 12
+  });
+
+  it("Vanishing Point: Lock-on cannot pick her; an enemy that steps onto her hidden tile is pushed back and hurt", () => {
+    let s = combat([{ defId: "falka", owner: "A", x: 4, y: 4 }, { defId: "linnet", owner: "B", x: 4, y: 6 }, { defId: "valen", owner: "B", x: 6, y: 4 }]);
+    get(s, "falka0").ult = 3;
+    s = run(s, use("A", "falka0", "ultimate", {})).state;
+    expect(get(s, "falka0")).toMatchObject({ stealth: true, freeSteps: 2 });
+    s = run(s, { type: "EndRound", seat: "A" }).state; // B's Turn: Falka was hidden when it started
+    expect(apply(s, use("B", "linnet1", "normal", { tiles: [{ x: 4, y: 4 }] }), content)).toMatchObject({ ok: false, error: "cannot target a unit in Stealth" });
+    s = run(s, { type: "Step", seat: "B", unitId: "valen2", to: { x: 5, y: 4 } }).state;
+    const r = run(s, { type: "Step", seat: "B", unitId: "valen2", to: { x: 4, y: 4 } });
+    expect(get(r.state, "valen2").pos).toEqual({ x: 5, y: 4 }); // pushed back
+    expect(get(r.state, "valen2").hp).toBe(20 - 7); // Physical 130% of 5 = 6.5 → 7
+    expect(get(r.state, "falka0").stealth).toBe(false);
+  });
+});
+
+describe("Pley", () => {
+  it("Out of Phase: Speed over 1.5× the attacker's halves a hit, over 2× stops it", () => {
+    const s = combat([{ defId: "pley", owner: "A", x: 4, y: 4 }, { defId: "konrad", owner: "B", x: 4, y: 5 }, { defId: "guard", owner: "B", x: 3, y: 5 }]);
+    s.activeSeat = "B";
+    // Konrad (Speed 85): 140 > 127.5 → half of ATK 3 = 1.5 → 2
+    expect(get(run(s, use("B", "konrad1", "normal", { dir: "S" })).state, "pley0").hp).toBe(6);
+  });
+
+  it("Ribu dies → Pley appears on that tile with Paradox bonuses and strikes with Revenant's Cross", () => {
+    const s = combat([{ defId: "pley", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 5 }, { defId: "valen", owner: "B", x: 0, y: 8 }, { defId: "linnet", owner: "B", x: 8, y: 8 }]);
+    s.activeSeat = "B";
+    Object.assign(get(s, "pley0"), { hp: 1, ult: 4 });
+    const after = run(s, use("B", "eira1", "normal", { dir: "S" })).state;
+    const p = get(after, "pley0");
+    expect(p).toMatchObject({ defId: "pleyDemon", dead: false, pos: { x: 4, y: 4 }, hp: 12 });
+    expect(stat(content, p, "speed")).toBe(145); // 125 + 5 × 4
+    expect(stat(content, p, "lifeSteal")).toBe(9); // 1 + 2 × 4
+    expect(get(after, "eira1").hp).toBe(21); // Revenant's Cross: Physical 2 − DEF 1
+    expect(get(after, "valen2").hp).toBe(20); // not in the plus shape
+    expect(after.phase).toBe("combat");
+  });
+
+  it("Core Drop: explodes 1x1 when the enemy's next Turn ends, then grows to 2x2", () => {
+    let s = combat([{ defId: "pley", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 6 }, { defId: "valen", owner: "B", x: 0, y: 8 }]);
+    s = run(s, use("A", "pley0", 0, { tiles: [{ x: 4, y: 6 }], dir: "NE" })).state;
+    expect(apply(s, use("A", "pley0", 0, { tiles: [{ x: 3, y: 6 }], dir: "NE" }), content)).toMatchObject({ ok: false, error: "once per Turn" });
+    s = run(s, { type: "EndRound", seat: "A" }).state;
+    s = run(s, { type: "EndRound", seat: "B" }).state; // B's Turn ends: the Core explodes
+    expect(get(s, "eira1").hp).toBe(22 - 2); // 50% of 3 = 2, × 130% (within 5x5 of Ribu) = 2.6 → 3, − DEF 1
+    expect(s.objects[0]?.vars.stage).toBe(1);
+  });
+
+  it("Falling Seraph: in the air he takes no damage from hits and cannot act; he dives when the enemy's Turn ends", () => {
+    let s = combat([{ defId: "pleyDemon", owner: "A", x: 4, y: 4 }, { defId: "eira", owner: "B", x: 4, y: 7 }, { defId: "valen", owner: "B", x: 0, y: 8 }]);
+    get(s, "pleyDemon0").ult = 3;
+    s = run(s, use("A", "pleyDemon0", "ultimate", {})).state;
+    expect(get(s, "pleyDemon0").lockedOut).toBe(true);
+    expect(apply(s, use("A", "pleyDemon0", "normal", { dir: "N" }), content)).toMatchObject({ ok: false, error: "cannot act right now" });
+    s = run(s, { type: "EndRound", seat: "A" }).state;
+    s = run(s, { type: "Step", seat: "B", unitId: "eira1", to: { x: 4, y: 6 } }).state;
+    s = run(s, { type: "Step", seat: "B", unitId: "eira1", to: { x: 4, y: 5 } }).state;
+    s = run(s, use("B", "eira1", "normal", { dir: "S" })).state; // hits him in the air: no damage; her attack ends B's Turn
+    expect(get(s, "pleyDemon0").hp).toBe(12);
+    expect(get(s, "pleyDemon0").lockedOut).toBe(false); // he dived when B's Turn ended
+    expect(get(s, "eira1").hp).toBe(22 - 8); // centre on her: Physical 180% of 5 = 9 − DEF 1
   });
 });

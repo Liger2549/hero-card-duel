@@ -59,7 +59,8 @@ const hooks: UnitHooks = {
     // The attacker if it is in the 5x5 square around Bianca, else the nearest enemy there (heroes first).
     counter(api, p) {
       const { c, s, self } = api;
-      const near = s.units.filter((u) => !u.dead && u.pos && u.owner !== self.owner && chebyshev(u.pos, self.pos!) <= 2);
+      // Counter-attacks are Lock-on: they skip units in Stealth.
+      const near = s.units.filter((u) => !u.dead && u.pos && !u.stealth && u.owner !== self.owner && chebyshev(u.pos, self.pos!) <= 2);
       const target =
         near.find((u) => u.id === p.data?.attacker) ??
         near.sort((a, b) => Number(b.kind === "hero") - Number(a.kind === "hero") || chebyshev(a.pos!, self.pos!) - chebyshev(b.pos!, self.pos!))[0];

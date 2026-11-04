@@ -3,7 +3,7 @@ import type { Pos } from "./board.ts";
 import type { Seat, TimeOfDay } from "./config.ts";
 import type { AbilityRef, Content } from "./content.ts";
 import type { GameEvent } from "./events.ts";
-import { abilityOf } from "./content.ts";
+import { abilityOf, unitDef } from "./content.ts";
 import { applyUseAbility, validateUseAbility } from "./rules/abilities.ts";
 import { applyPlayCard, validatePlayCard } from "./rules/cards.ts";
 import {
@@ -17,7 +17,7 @@ import {
 } from "./rules/draft.ts";
 import { applyPrepMove, applyStep, applyUndo, validatePrepMove, validateStep, validateUndo } from "./rules/movement.ts";
 import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "./rules/shop.ts";
-import { notify } from "./rules/interject.ts";
+import { hookApi, notify } from "./rules/interject.ts";
 import { checkWin } from "./rules/status.ts";
 import type { Aim } from "./rules/targeting.ts";
 import {
@@ -55,7 +55,9 @@ export type Action =
   | { type: "UseAbility"; seat: Seat; unitId: string; ability: AbilityRef; aim: Aim }
   | { type: "PlayCard"; seat: Seat; card: number; aim: Aim } // card = index in hand
   | { type: "EndTurn"; seat: Seat }
-  | { type: "EndRound"; seat: Seat };
+  | { type: "EndRound"; seat: Seat }
+  // A hero's own extra command (interject.ts "UnitHooks.commands"), e.g. Falka ending her Stealth. Free; the Turn goes on.
+  | { type: "UnitCommand"; seat: Seat; unitId: string; command: string };
 
 export type ActionOf<T extends Action["type"]> = Extract<Action, { type: T }>;
 
@@ -97,7 +99,18 @@ export function validate(s: GameState, a: Action, c: Content): string | null {
       return validateEndTurn(s, a);
     case "EndRound":
       return validateEndRound(s, a);
+    case "UnitCommand":
+      return validateUnitCommand(s, a, c);
   }
+}
+
+function validateUnitCommand(s: GameState, a: ActionOf<"UnitCommand">, c: Content): string | null {
+  if (s.phase !== "combat" || a.seat !== s.activeSeat) return "not your Turn";
+  const u = findUnit(s, a.unitId);
+  if (!u || u.owner !== a.seat || u.dead || !u.pos) return "not your unit";
+  const cmd = unitDef(c, u.defId).hooks?.commands?.[a.command];
+  if (!cmd) return "no such command";
+  return cmd.check?.(hookApi(c, s, [], u)) ?? null;
 }
 
 // Checks the action, then returns the new state. The old state is never changed,
@@ -140,7 +153,7 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       applyPrepTimeUp(c, s, events);
       break;
     case "Step":
-      applyStep(s, a, events);
+      applyStep(c, s, a, events);
       break;
     case "Undo":
       applyUndo(s, events);
@@ -161,6 +174,9 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       break;
     case "EndRound":
       applyEndRound(c, s, events);
+      break;
+    case "UnitCommand":
+      unitDef(c, findUnit(s, a.unitId)!.defId).hooks!.commands![a.command]!.run(hookApi(c, s, events, findUnit(s, a.unitId)!));
       break;
   }
   if (s.phase === "combat" || s.phase === "prep") notify(c, s, events);

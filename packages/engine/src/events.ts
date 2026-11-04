@@ -34,7 +34,13 @@ export type GameEvent =
   // One hit of an attack landed on a unit (damage may be 0, e.g. all of it on a shield). Hooks react to it.
   | { type: "Hit"; unitId: string; sourceId: string; damage: number }
   | { type: "UnitMoved"; unitId: string; from: Pos; to: Pos } // moved by a skill, not a step
-  | { type: "UnitDied"; unitId: string; killerSeat: Seat | null; killerId: string | null; bounty: number }
+  | { type: "UnitDied"; unitId: string; killerSeat: Seat | null; killerId: string | null; bounty: number; at: Pos | null; ult: number } // where it died, Ult Points it had
+  // Board objects (state.ts "BoardObject")
+  | { type: "ObjectPlaced"; id: string; kind: string; owner: Seat; to: Pos }
+  | { type: "ObjectDamaged"; id: string; amount: number; hp: number }
+  | { type: "ObjectRemoved"; id: string }
+  // statuses.md "Stealth": an enemy stepped onto a hidden unit and was pushed back
+  | { type: "BumpedIntoHidden"; unitId: string; hiddenId: string; at: Pos }
   // combat.md "Interject": queued (with its Action Value), resolved, or fizzled
   | { type: "InterjectQueued"; id: number; unitId: string; name: string; actionValue: number; turnsLeft: number }
   | { type: "InterjectResolved"; id: number; unitId: string; name: string }

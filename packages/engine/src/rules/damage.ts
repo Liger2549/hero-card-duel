@@ -81,6 +81,8 @@ export function loseHp(c: Content, s: GameState, target: Unit, amount: number, s
   if (target.hp > 0) return;
 
   // heroes/README.md "Death": Bounty = Base Bounty + held item value / 4. Items are cleared, Ult Points reset.
+  const at = target.pos;
+  const ult = target.ult;
   const def = unitDef(c, target.defId) as HeroDef | SummonDef;
   const bounty = def.bounty + divRound(target.items.reduce((sum, id) => sum + itemValue(c, id), 0), 4);
   target.dead = true;
@@ -90,9 +92,12 @@ export function loseHp(c: Content, s: GameState, target: Unit, amount: number, s
   target.shields = [];
   target.buffs = [];
   target.cc = {};
+  target.stealth = false;
+  target.lockedOut = false;
+  target.freeSteps = 0;
   const killer = source && source.owner !== target.owner ? source.owner : null;
   if (killer) s.players[killer].gold += bounty;
-  events.push({ type: "UnitDied", unitId: target.id, killerSeat: killer, killerId: source?.id ?? null, bounty: killer ? bounty : 0 });
+  events.push({ type: "UnitDied", unitId: target.id, killerSeat: killer, killerId: source?.id ?? null, bounty: killer ? bounty : 0, at, ult });
 }
 
 // Raises HP by exactly `amount`, never above Max HP. Used for restores (e.g. a Max HP item) and Life Steal.
@@ -127,14 +132,15 @@ export function applyCc(c: Content, target: Unit, kind: CcKind, recovery: number
 // combat.md "Break": once per action (or per hit with breakPerHit).
 //   Reduction = max((Break + Break Boost) × Break Power% × Break Taken% − Break Resistance, 1)
 //   Break DMG = (max(Max Break Bar / 5, 1) + Break DMG Bonus) × Break DMG Power%
-export function reduceBreakBar(c: Content, s: GameState, attacker: Unit, target: Unit, brk: number, events: GameEvent[]): void {
-  if (target.dead || target.broken) return;
+// extraDmg: added to the Break DMG if this breaks the target (e.g. Falka's Shatter Round).
+export function reduceBreakBar(c: Content, s: GameState, attacker: Unit, target: Unit, brk: number, events: GameEvent[], extraDmg = 0): void {
+  if (target.dead || target.broken || maxBreakBar(c, target) < 0) return; // Break Bar -1 = none (e.g. Pley)
   const raw = mulPct(mulPct(h(brk + stat(c, attacker, "breakBoost")), stat(c, attacker, "breakPower")), stat(c, target, "breakTaken"));
   target.breakBar -= Math.max(roundH(raw - h(stat(c, target, "breakResistance"))), 1);
   if (target.breakBar > 0) return;
   target.breakBar = 0;
   target.broken = true;
-  const base = Math.max(divH(h(maxBreakBar(c, target)), 5), h(1)) + h(stat(c, attacker, "breakDmgBonus"));
+  const base = Math.max(divH(h(maxBreakBar(c, target)), 5), h(1)) + h(stat(c, attacker, "breakDmgBonus") + extraDmg);
   const dmg = roundH(mulPct(base, stat(c, attacker, "breakDmgPower")));
   events.push({ type: "Broken", unitId: target.id, damage: dmg });
   loseHp(c, s, target, dmg, attacker, events);

@@ -3,7 +3,7 @@
 import { apply, type Action } from "./actions.ts";
 import { chebyshev, inZone, type Pos } from "./board.ts";
 import { TimesOfDay, type Seat } from "./config.ts";
-import { abilityOf, abilityRefs, type Content } from "./content.ts";
+import { abilityOf, abilityRefs, draftable, type Content } from "./content.ts";
 import { candidateAims } from "./rules/targeting.ts";
 import { towerRow } from "./rules/towers.ts";
 import { destroyedTowers, otherSeat, unitAt, type GameState, type Unit } from "./state.ts";
@@ -25,7 +25,7 @@ function draftAction(s: GameState, c: Content, seat: Seat): Action | null {
   if (due !== seat) return null;
   const taken = new Set([...d.bans.A, ...d.bans.B, ...d.picks.A, ...d.picks.B]);
   // Strongest-looking heroes first: HP + 3 × ATK.
-  const ranked = [...c.heroes].filter((h) => !taken.has(h.id)).sort((a, b) => b.stats.maxHp + 3 * b.stats.atk - (a.stats.maxHp + 3 * a.stats.atk));
+  const ranked = draftable(c).filter((h) => !taken.has(h.id)).sort((a, b) => b.stats.maxHp + 3 * b.stats.atk - (a.stats.maxHp + 3 * a.stats.atk));
   const heroId = ranked[0]!.id;
   return d.stage === "ban" ? { type: "Ban", seat, heroId } : { type: "Pick", seat, heroId };
 }

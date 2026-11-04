@@ -16,9 +16,9 @@ import {
   shieldTotal,
   useShields,
 } from "./damage.ts";
-import { addBuff, applyDot, countdown } from "./status.ts";
+import { addBuff, applyDot, countdown, damageObject, endStealth } from "./status.ts";
 import { hookApi, queueInterject, takeAction } from "./interject.ts";
-import { resolveArea, type Aim, type Area } from "./targeting.ts";
+import { resolveArea, type Aim, type Area, type AreaOptions } from "./targeting.ts";
 import { hitTower, towerAt, validateTowerAttack } from "./towers.ts";
 
 const evalF = evalFormula;
@@ -42,13 +42,14 @@ export function validateUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbi
   // CC effects as in the prototype: Stun stops everything, Silence stops skills and ultimates.
   if (u.cc.stun !== undefined) return "stunned";
   if (a.ability !== "normal" && u.cc.silence !== undefined) return "silenced";
+  if (u.lockedOut) return "cannot act right now";
   // A special needs its hero's hook (interject.ts "UnitHooks").
   if (ab.special && !unitDef(c, u.defId).hooks?.specials?.[ab.special]) return "not available yet";
   if (s.players[a.seat].mana < manaCost(c, s, u, a.ability, ab)) return "not enough mana";
   if (a.ability === "ultimate" && u.ult < heroDef(c, u.defId)!.ultimate.ultCost) return "not enough Ult Points";
   const tower = towerTile(s, a);
   if (tower) return a.ability === "normal" ? validateTowerAttack(s, u, ab, tower) : "only normal attacks can hit towers";
-  const area = resolveArea(s, u, ab.form, a.aim);
+  const area = resolveArea(s, u, ab.form, a.aim, areaOptions(c, s, [], u));
   if (typeof area === "string") return area;
   if (ab.special) {
     const why = unitDef(c, u.defId).hooks?.checks?.[ab.special]?.(hookApi(c, s, [], u), { area, aim: a.aim });
@@ -94,10 +95,21 @@ export function strike(c: Content, s: GameState, u: Unit, t: Unit, physical: num
     through = r.through || !hadShield;
     if (through && hooks?.bonusDamage) damage += Math.max(hooks.bonusDamage(api, t, extraPen), 0);
   }
+  // The target's own hook (e.g. Pley's speed dodge, or no damage while in the air).
+  const taken = unitDef(c, t.defId).hooks?.hitTaken;
+  if (taken) damage = Math.max(taken(hookApi(c, s, events, t), u, damage), 0);
+  // statuses.md "Stealth": being hit ends it.
+  if (t.stealth && t.owner !== u.owner) endStealth(t, events);
   loseHp(c, s, t, damage, u, events);
   lifeStealOnHit(c, u, t, damage, events);
   events.push({ type: "Hit", unitId: t.id, sourceId: u.id, damage });
   return through;
+}
+
+// The unit's own targeting hooks (interject.ts "UnitHooks.extendLane").
+function areaOptions(c: Content, s: GameState, events: GameEvent[], u: Unit): AreaOptions {
+  const extend = unitDef(c, u.defId).hooks?.extendLane;
+  return extend ? { extendLane: (end, step) => extend(hookApi(c, s, events, u), end, step) } : {};
 }
 
 // What a formula reads (defs.ts "FormulaInput"). DEF is the value before hero hooks (Bianca's conversion).
@@ -123,7 +135,7 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
   gainOrSpendUlt(c, u, a.ability, ab);
 
   const tower = towerTile(s, a);
-  const tiles = tower ? [tower] : (resolveArea(s, u, ab.form, a.aim) as Area).tiles;
+  const tiles = tower ? [tower] : (resolveArea(s, u, ab.form, a.aim, areaOptions(c, s, events, u)) as Area).tiles;
   events.push({ type: "AbilityUsed", unitId: u.id, ability: a.ability, name: ab.name, tiles, mana });
 
   // combat.md "Manual Interject": the aim is locked now, the effects come `delay` Turns later.
@@ -142,7 +154,7 @@ export function applyUseAbility(c: Content, s: GameState, a: ActionOf<"UseAbilit
 
 // An ability's effects on its area. False if the aim no longer gives an area (e.g. a manual interject's tiles).
 export function resolveAbility(c: Content, s: GameState, u: Unit, ab: AbilityDef, aim: Aim, events: GameEvent[]): boolean {
-  const area = resolveArea(s, u, ab.form, aim);
+  const area = resolveArea(s, u, ab.form, aim, areaOptions(c, s, events, u));
   if (typeof area === "string") return false;
   const input = (index: number, target: Unit | null) => formulaInput(c, u, index, target);
 
@@ -155,21 +167,31 @@ export function resolveAbility(c: Content, s: GameState, u: Unit, ab: AbilityDef
     const inp = input(index, t);
     const physical = falloff(evalF(zone?.physical ?? ab.physical, inp), ab.falloff?.physical, step);
     const magic = falloff(evalF(zone?.magic ?? ab.magic, inp), ab.falloff?.magic, step);
-    const brk = evalF(zone?.break ?? ab.break, inp);
+    const rawBrk = evalF(zone?.break ?? ab.break, inp);
+    const hitBreak = unitDef(c, u.defId).hooks?.hitBreak;
+    const brk = hitBreak ? hitBreak(hookApi(c, s, events, u), t, rawBrk) : rawBrk;
     const wentThrough = strike(c, s, u, t, physical, magic, ab.penetration ?? 0, events);
     through.set(t.id, (through.get(t.id) ?? false) || wentThrough);
     if (!breakOf.has(t.id)) breakOf.set(t.id, brk);
 
     // combat.md "Break": with a shield that held the whole action, the Break Bar is not reduced.
-    if (brk > 0 && ab.breakPerHit && wentThrough) reduceBreakBar(c, s, u, t, brk, events);
+    if (brk > 0 && ab.breakPerHit && wentThrough) reduceBreakBar(c, s, u, t, brk, events, evalF(ab.breakDmgBonus, inp));
     if (!t.dead) for (const e of [...(ab.onHit ?? []), ...(zone?.onHit ?? [])]) applyOnHit(c, s, u, t, e, inp, events);
     if (!t.dead && ab.knockback) push(s, u, t, events);
   }
   if (!ab.breakPerHit) {
     for (const [id, ok] of through) {
       const brk = breakOf.get(id) ?? 0;
-      if (ok && brk > 0) reduceBreakBar(c, s, u, findUnit(s, id)!, brk, events);
+      if (ok && brk > 0) reduceBreakBar(c, s, u, findUnit(s, id)!, brk, events, evalF(ab.breakDmgBonus, input(0, findUnit(s, id)!)));
     }
+  }
+
+  // Enemy board objects in the area take the tile's raw damage, no mitigation (e.g. Falka's Scanner).
+  for (const { object: o, zone: zoneId, step } of area.objects) {
+    const zone = zoneId ? ab.zones?.[zoneId] : undefined;
+    const inp = input(0, null);
+    const dmg = falloff(evalF(zone?.physical ?? ab.physical, inp), ab.falloff?.physical, step) + falloff(evalF(zone?.magic ?? ab.magic, inp), ab.falloff?.magic, step);
+    if (dmg > 0) damageObject(s, o, dmg, events);
   }
 
   // Support on allies

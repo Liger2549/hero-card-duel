@@ -1,4 +1,4 @@
-import type { Pos } from "./board.ts";
+import { chebyshev, type Pos } from "./board.ts";
 import type { MatchConfig, Seat } from "./config.ts";
 import { heroDef, unitDef, type AbilityRef, type Content } from "./content.ts";
 import type { Aim } from "./rules/targeting.ts";
@@ -86,6 +86,26 @@ export interface Unit {
   actionCount: number;
   // Numbers a hero's hooks keep (gauges, counters left, …), by name.
   vars: Record<string, number>;
+  // Steps that cost no mana, given by skills (e.g. Falka's Exfil). Unused ones are lost when the Round ends.
+  freeSteps: number;
+  // statuses.md "Stealth".
+  stealth: boolean;
+  // Out of play for now (e.g. Pley in the air): no Actions, no steps, cannot be swapped.
+  lockedOut: boolean;
+}
+
+// A thing on a tile that is not a unit (e.g. Falka's Scanner, Ribu's Volatile Core). It never blocks movement.
+export interface BoardObject {
+  id: string;
+  kind: string;
+  ownerId: string; // the unit that made it
+  owner: Seat;
+  pos: Pos;
+  hp: number | null; // null = cannot be hit
+  turnsLeft: number; // -1 = until its hook removes it
+  count: Countdown;
+  appliedTurn: number;
+  vars: Record<string, number>;
 }
 
 // combat.md "Interject": an Action waiting to resolve.
@@ -109,7 +129,8 @@ export interface StepRecord {
   from: Pos;
   cost: number;
   usedFreeStep: boolean;
-  swappedWith?: { unitId: string; cost: number; usedFreeStep: boolean };
+  usedSkillStep?: boolean; // paid with a free step from a skill (Unit.freeSteps)
+  swappedWith?: { unitId: string; cost: number; usedFreeStep: boolean; usedSkillStep?: boolean };
 }
 
 export interface PlayerState {
@@ -152,6 +173,11 @@ export interface GameState {
   nextUnitId: number; // for summoned units
   pending: Pending[]; // combat.md "Interject"
   nextPendingId: number;
+  objects: BoardObject[];
+  nextObjectId: number;
+  // statuses.md "Stealth": units hidden from the active player when their Turn started. While a player moves,
+  // the game shows nothing new, so this stays fixed for the whole Turn.
+  hiddenAtTurnStart: string[];
 
   // Preparation Phase
   ready: Record<Seat, boolean>;
@@ -195,11 +221,31 @@ export function createUnit(c: Content, defId: string, owner: Seat, id: string, s
     usedOwnTurn: false,
     actionCount: 0,
     vars: {},
+    freeSteps: 0,
+    stealth: false,
+    lockedOut: false,
   };
 }
 
 export function destroyedTowers(s: GameState, seat: Seat): boolean[] {
   return s.towers[seat].map((t) => t.destroyed);
+}
+
+// statuses.md "Stealth": hidden from `seat` while no unit of that seat is in the 8 tiles around it.
+// For the player whose Turn it is, what they see is fixed at the start of the Turn (nothing is shown while they move).
+export function hiddenFrom(s: GameState, u: Unit, seat: Seat): boolean {
+  if (!u.stealth || u.dead || !u.pos || u.owner === seat) return false;
+  if (s.phase === "combat" && seat === s.activeSeat) return s.hiddenAtTurnStart.includes(u.id);
+  return hiddenByPosition(s, u, seat);
+}
+
+export function hiddenByPosition(s: GameState, u: Unit, seat: Seat): boolean {
+  return u.stealth && !s.units.some((o) => !o.dead && o.pos && o.owner === seat && chebyshev(o.pos, u.pos!) === 1);
+}
+
+// Does `seat` have an enemy it cannot see? (board.md "Undo": then steps cannot be undone.)
+export function enemyHidden(s: GameState, seat: Seat): boolean {
+  return s.units.some((u) => hiddenFrom(s, u, seat));
 }
 
 export function unitAt(s: GameState, p: Pos): Unit | undefined {
@@ -212,6 +258,7 @@ export function findUnit(s: GameState, id: string): Unit | undefined {
 
 // board.md "Step Cost": what this unit's next step costs. Slow adds 1 (prototype).
 export function stepCostOf(u: Unit): number {
+  if (u.freeSteps > 0 && !(u.getsFreeStep && !u.freeStepUsed)) return 0; // a free step from a skill costs no mana
   const base = u.getsFreeStep && !u.freeStepUsed ? 0 : u.stepCost;
   return base + (u.cc.slow !== undefined ? 1 : 0);
 }

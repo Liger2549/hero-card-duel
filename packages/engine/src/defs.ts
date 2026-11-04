@@ -144,6 +144,7 @@ export interface AbilityDef {
   penetration?: number; // extra, this ability only
   break?: Formula;
   breakPerHit?: boolean; // Break on every hit instead of once per action
+  breakDmgBonus?: Formula; // added to the Break DMG if this ability breaks the target
   falloff?: { physical?: Falloff; magic?: Falloff };
   zones?: Readonly<Record<string, ZoneDef>>;
   onHit?: readonly OnHit[];
@@ -232,6 +233,7 @@ export interface SummonDef extends UnitDef {
 }
 
 export interface HeroDef extends UnitDef {
+  inDraft?: false; // another form of a hero (e.g. Pley's demon form), not picked in the draft
   role: string;
   origin: "own" | "idea" | "new"; // prototype: the owner's sheet, from the owner's idea, or new
   bounty: number;

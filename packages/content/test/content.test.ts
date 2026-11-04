@@ -1,6 +1,6 @@
-import { normalConfig, parseGrid } from "@hcd/engine";
+import { draftable, normalConfig, parseGrid } from "@hcd/engine";
 import { describe, expect, it } from "vitest";
-import { cards, heroes, items, starterDeck, totalValue, units } from "../src/index.ts";
+import { cards, content, heroes, items, starterDeck, totalValue, units } from "../src/index.ts";
 
 // Checks that catch typos the type checker cannot.
 describe("content", () => {
@@ -9,10 +9,9 @@ describe("content", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  // Skipped until the Normal draft question is answered (ideas.md "Normal draft needs 12 heroes").
-  it.skip("has enough heroes for a Normal draft (bans + picks)", () => {
+  it("has enough heroes for a Normal draft (bans + picks)", () => {
     const needed = normalConfig.banOrder.length + normalConfig.pickOrder.length;
-    expect(heroes.length).toBeGreaterThanOrEqual(needed);
+    expect(draftable(content).length).toBeGreaterThanOrEqual(needed);
   });
 
   it("every special has its hero's hook (rules/interject.ts UnitHooks)", () => {

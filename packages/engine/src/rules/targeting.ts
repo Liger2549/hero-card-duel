@@ -1,8 +1,8 @@
 // Which tiles and units an ability reaches: board.md "Skill Areas", "Range" and "Blocked Shots".
 // Hit forms are written in the docs' notation (defs.ts "HitForm") and read here.
-import { chebyshev, inBounds, manhattan, type Pos } from "../board.ts";
+import { chebyshev, inBounds, manhattan, samePos, type Pos } from "../board.ts";
 import type { HitForm, Range } from "../defs.ts";
-import { unitAt, type GameState, type Unit } from "../state.ts";
+import { unitAt, type BoardObject, type GameState, type Unit } from "../state.ts";
 
 export type Dir = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
 export const Dirs: readonly Dir[] = ["N", "E", "S", "W"];
@@ -27,6 +27,11 @@ export interface Area {
   tiles: Pos[];
   enemies: Target[]; // hit by damage and on-hit effects
   allies: Unit[]; // get heals, shields, buffs
+  objects: { object: BoardObject; zone: string | null; step: number }[]; // enemy board objects hit
+}
+
+export interface AreaOptions {
+  extendLane?: (end: Pos, step: Pos) => Pos[]; // interject.ts "UnitHooks.extendLane"
 }
 
 // One marked tile of a grid: offset from the anchor (+y forward), its mark, and its lane for Hit: First.
@@ -150,12 +155,12 @@ export function candidateAims(s: GameState, user: Unit, form: HitForm, towers = 
 }
 
 // The area for this aim, or why the aim is not allowed.
-export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim): Area | string {
+export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim, opts: AreaOptions = {}): Area | string {
   const at = user.pos!;
   const dirs = allowedDirs(form);
   let dir = form.rotate === 0 ? undefined : aim.dir;
   if (dir && !dirs.includes(dir)) return "choose a direction";
-  const area: Area = { tiles: [], enemies: [], allies: [] };
+  const area: Area = { tiles: [], enemies: [], allies: [], objects: [] };
 
   if (form.range) {
     const n = form.picks ?? 1;
@@ -166,8 +171,12 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim): 
       if (!inBounds(s.config, p)) return "choose a tile";
       if (!inRange(form.range, at, p)) return "out of range";
       if (form.blocked && shotBlocked(s, at, p)) return "a unit is in the way";
+      // Lock-on cannot pick an enemy in Stealth (statuses.md), or a tile that only holds an enemy object (e.g. a Scanner).
+      const there = unitAt(s, p);
+      if (there && there.stealth && there.owner !== user.owner) return "cannot target a unit in Stealth";
+      if (!there && s.objects.some((o) => o.hp !== null && o.owner !== user.owner && samePos(o.pos, p))) return "cannot target that";
     }
-    picks.forEach((p, index) => collect(s, user, form, p, cellsFacing(form, dir), index, area));
+    picks.forEach((p, index) => collect(s, user, form, p, cellsFacing(form, dir), index, area, opts));
   } else {
     if (dirs.length && !dir) {
       const p = aim.tiles?.[0];
@@ -175,7 +184,7 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim): 
       dir = dirs.find((d) => cellsFacing(form, d).some((c) => at.x + c.x === p.x && at.y + c.y === p.y));
       if (!dir) return "out of range";
     }
-    collect(s, user, form, at, cellsFacing(form, dir), 0, area);
+    collect(s, user, form, at, cellsFacing(form, dir), 0, area, opts);
   }
 
   if (form.self && (form.hit === "allies" || form.hit === "both") && !area.allies.includes(user)) area.allies.push(user);
@@ -184,7 +193,7 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim): 
 }
 
 // Adds the tiles and units one placed copy of the form reaches.
-function collect(s: GameState, user: Unit, form: HitForm, origin: Pos, cells: (Cell & { step: number })[], index: number, area: Area): void {
+function collect(s: GameState, user: Unit, form: HitForm, origin: Pos, cells: (Cell & { step: number })[], index: number, area: Area, opts: AreaOptions): void {
   const isEnemy = (u: Unit | undefined): u is Unit => !!u && !u.dead && u.owner !== user.owner;
   const isAlly = (u: Unit | undefined): u is Unit => !!u && !u.dead && u.owner === user.owner;
   const zoneOf = (mark: string) => (/^[a-z]$/.test(mark) ? mark : null);
@@ -194,13 +203,19 @@ function collect(s: GameState, user: Unit, form: HitForm, origin: Pos, cells: (C
     const lanes = new Map<number, (Cell & { step: number })[]>();
     for (const c of cells) if (/^\d+$/.test(c.mark)) lanes.set(c.lane, [...(lanes.get(c.lane) ?? []), c]);
     for (const lane of lanes.values()) {
-      for (const c of lane.sort((a, b) => Number(a.mark) - Number(b.mark))) {
-        const p = { x: origin.x + c.x, y: origin.y + c.y };
+      const path = lane.sort((a, b) => Number(a.mark) - Number(b.mark)).map((c) => ({ x: origin.x + c.x, y: origin.y + c.y }));
+      // A hook may carry the lane on past its last tile (e.g. Falka's Scan Field).
+      if (opts.extendLane && path.length) {
+        const end = path[path.length - 1]!;
+        const before = path[path.length - 2] ?? origin;
+        path.push(...opts.extendLane(end, { x: Math.sign(end.x - before.x), y: Math.sign(end.y - before.y) }));
+      }
+      for (const [i, p] of path.entries()) {
         if (!inBounds(s.config, p)) break;
         area.tiles.push(p);
         const u = unitAt(s, p);
         if (isEnemy(u)) {
-          area.enemies.push({ unit: u, index, zone: null, step: Number(c.mark) });
+          area.enemies.push({ unit: u, index, zone: null, step: i + 1 });
           break;
         }
       }
@@ -215,5 +230,9 @@ function collect(s: GameState, user: Unit, form: HitForm, origin: Pos, cells: (C
     const u = unitAt(s, p);
     if ((form.hit === "all" || form.hit === "both") && isEnemy(u)) area.enemies.push({ unit: u, index, zone: zoneOf(c.mark), step: c.step });
     if ((form.hit === "allies" || form.hit === "both") && isAlly(u) && !area.allies.includes(u)) area.allies.push(u);
+    // Enemy board objects that can be hit take the same damage as a unit on that tile (e.g. Falka's Scanner).
+    if (form.hit === "all" || form.hit === "both") {
+      for (const o of s.objects) if (o.hp !== null && o.owner !== user.owner && samePos(o.pos, p)) area.objects.push({ object: o, zone: zoneOf(c.mark), step: c.step });
+    }
   }
 }

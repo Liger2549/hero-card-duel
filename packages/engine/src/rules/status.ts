@@ -5,9 +5,38 @@ import { unitDef, type Content } from "../content.ts";
 import type { Buff, CcKind, OnHit, Per } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
 import { h, mulPct, roundH } from "../num.ts";
-import { findUnit, Seats, type Countdown, type Dot, type GameState, type Unit } from "../state.ts";
+import type { Pos } from "../board.ts";
+import { findUnit, Seats, type BoardObject, type Countdown, type Dot, type GameState, type Unit } from "../state.ts";
 import { stat } from "../stats.ts";
 import { loseHp } from "./damage.ts";
+
+// Board objects (state.ts "BoardObject"): placed by hooks, counted down like Durations, removed at 0 HP.
+export function placeObject(s: GameState, maker: Unit, kind: string, pos: Pos, hp: number | null, turns: number, count: Countdown, events: GameEvent[]): BoardObject {
+  const o: BoardObject = { id: `O${s.nextObjectId++}`, kind, ownerId: maker.id, owner: maker.owner, pos, hp, turnsLeft: turns, count, appliedTurn: s.turn, vars: {} };
+  s.objects.push(o);
+  events.push({ type: "ObjectPlaced", id: o.id, kind, owner: o.owner, to: pos });
+  return o;
+}
+
+export function removeObject(s: GameState, o: BoardObject, events: GameEvent[]): void {
+  if (!s.objects.includes(o)) return;
+  s.objects = s.objects.filter((x) => x !== o);
+  events.push({ type: "ObjectRemoved", id: o.id });
+}
+
+export function damageObject(s: GameState, o: BoardObject, amount: number, events: GameEvent[]): void {
+  if (o.hp === null) return;
+  o.hp = Math.max(o.hp - amount, 0);
+  events.push({ type: "ObjectDamaged", id: o.id, amount, hp: o.hp });
+  if (o.hp === 0) removeObject(s, o, events);
+}
+
+// statuses.md "Stealth".
+export function endStealth(u: Unit, events: GameEvent[]): void {
+  if (!u.stealth) return;
+  u.stealth = false;
+  events.push({ type: "StatusEnded", unitId: u.id, status: "stealth" });
+}
 
 // combat.md "Durations": team = the caster's team; own = the holder's Own Turns.
 export function countdown(per: Per | undefined, caster: Unit | null, holder: Unit): Countdown {
@@ -148,6 +177,11 @@ export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
       tick(c, s, u, d, events);
     }
     dropEndedDots(u, events);
+  }
+
+  for (const o of [...s.objects]) {
+    if (o.turnsLeft > 0 && counts(s, o.count, o.appliedTurn)) o.turnsLeft -= 1;
+    if (o.turnsLeft === 0) removeObject(s, o, events);
   }
 
   for (const u of s.units) {

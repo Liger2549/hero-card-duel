@@ -2,6 +2,15 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-04 — All 12 heroes in the engine (Claude's readings, to confirm)
+
+- **Stealth while moving**: what a player can see is fixed at the start of their Turn ("the game shows nothing while the enemy moves"). Otherwise an enemy next to a stealthed unit always sees it, and the rule about stepping onto a hidden unit could never happen.
+- **Stepping onto a hidden unit**: the step's mana is still paid.
+- **Board objects** (Falka's Scanner) are hit by area skills only; a Hit: First projectile passes over them.
+- **Ribu's free step every Turn**: unused ones are kept until the end of the Round, like Exfil's.
+- **Pley's dive** takes the time-out pick for now (`ideas.md`).
+- Valen's passive bonus counts only for hits that get past shields, and includes the ability's own Penetration (confirmed by the owner).
+
 ## 2026-11-03 — Interjects resolve when the Turn ends
 
 - Every interject resolves when a Turn ends, right after its Action, never in the middle of a Turn. Then CC, buffs and shields count down, and Turn DOTs tick last. This covers counters, Karas's raven, Zoran's lantern, Leilani's wave, Ribu's Core and Pley's dive (`combat.md` "Interject").

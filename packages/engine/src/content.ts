@@ -43,6 +43,9 @@ export function checkDeck(c: Content, deck: readonly string[], size: number): st
   return errors;
 }
 
+// Heroes the draft offers (not other forms such as Pley's demon form).
+export const draftable = (c: Content) => c.heroes.filter((h) => h.inDraft !== false);
+
 // Which ability an action means.
 export type AbilityRef = "normal" | "ultimate" | number; // number = index in skills
 

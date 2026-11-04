@@ -20,5 +20,5 @@ export { resolveAbility, strike } from "./rules/abilities.ts";
 export { placeSummon } from "./rules/cards.ts";
 export { applyCc, giveShield, heal, healFrom, hitDamage, loseHp, reduceBreakBar, shieldTotal } from "./rules/damage.ts";
 export { moveUnit } from "./rules/movement.ts";
-export { addBuff, applyDot, applyWither, dotDamage } from "./rules/status.ts";
+export { addBuff, applyDot, applyWither, damageObject, dotDamage, endStealth, placeObject, removeObject } from "./rules/status.ts";
 export { randInt } from "./rng.ts";

@@ -5,11 +5,11 @@ import { TimesOfDay, type MatchConfig, type Seat } from "../config.ts";
 import { abilityOf, abilityRefs, type Content } from "../content.ts";
 import type { GameEvent } from "../events.ts";
 import { randInt } from "../rng.ts";
-import { destroyedTowers, findUnit, otherSeat, Seats, unitAt, type GameState, type Unit } from "../state.ts";
+import { destroyedTowers, findUnit, otherSeat, Seats, unitAt, type GameState, type Unit, hiddenByPosition } from "../state.ts";
 import { validateUseAbility } from "./abilities.ts";
 import { canPlayAnyCard, draw } from "./cards.ts";
 import { canStepAny } from "./movement.ts";
-import { resolveInterjects } from "./interject.ts";
+import { notify, resolveInterjects } from "./interject.ts";
 import { checkWin, countdownInterjects, endOfRoundDots, endOfTurn } from "./status.ts";
 import { candidateAims } from "./targeting.ts";
 import { decayTowers, newTowers, updateTowersForRound } from "./towers.ts";
@@ -32,6 +32,9 @@ export function baseState(config: MatchConfig, seed: number): GameState {
     shieldSeq: 0,
     pending: [],
     nextPendingId: 1,
+    objects: [],
+    nextObjectId: 1,
+    hiddenAtTurnStart: [],
     nextUnitId: 1,
     ready: { A: false, B: false },
     nextStarter: config.firstRoundStarter,
@@ -80,6 +83,7 @@ function beginRound(s: GameState, events: GameEvent[]): void {
     u.freeStepUsed = false;
     u.prepMoved = false;
     u.attacksThisRound = 0;
+    u.freeSteps = 0; // free steps from skills last until the end of the Round
   }
 }
 
@@ -171,6 +175,7 @@ export function endTurn(c: Content, s: GameState, events: GameEvent[]): void {
   countdownInterjects(s);
   resolveInterjects(c, s, events);
   endOfTurn(c, s, events);
+  notify(c, s, events); // hooks see deaths from DOT before the win check (e.g. Ribu becoming Pley)
   if (checkWin(s, events)) return;
   decayTowers(s);
   giveTurn(c, s, [otherSeat(s.activeSeat), s.activeSeat], events);
@@ -189,6 +194,7 @@ function giveTurn(c: Content, s: GameState, order: Seat[], events: GameEvent[]):
     s.activeSeat = seat;
     if (canDoAnything(c, s, seat)) {
       s.turn += 1;
+      s.hiddenAtTurnStart = s.units.filter((u) => !u.dead && u.pos && u.owner !== seat && hiddenByPosition(s, u, seat)).map((u) => u.id);
       events.push({ type: "TurnStarted", seat });
       return;
     }
@@ -219,6 +225,7 @@ function canUseAnyAbility(c: Content, s: GameState, u: Unit): boolean {
 // rules.md "Who starts": whoever went out first starts the next round.
 function endRound(c: Content, s: GameState, starter: Seat, events: GameEvent[]): void {
   endOfRoundDots(c, s, events); // combat.md "Damage over Time"
+  notify(c, s, events);
   events.push({ type: "RoundEnded", round: s.round, nextStarter: starter });
   if (checkWin(s, events)) return;
   s.round += 1;

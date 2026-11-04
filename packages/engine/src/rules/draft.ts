@@ -1,7 +1,7 @@
 // rules.md "Before the Game Starts": time of day, then bans and picks one at a time.
 import type { ActionOf } from "../actions.ts";
 import { TimesOfDay, type MatchConfig, type Seat } from "../config.ts";
-import type { Content } from "../content.ts";
+import { draftable, type Content } from "../content.ts";
 import type { GameEvent } from "../events.ts";
 import { randInt } from "../rng.ts";
 import { createUnit, Seats, type GameState } from "../state.ts";
@@ -34,7 +34,7 @@ export function applyChooseTimeOfDay(s: GameState, a: ActionOf<"ChooseTimeOfDay"
 export function validateBan(c: Content, s: GameState, a: ActionOf<"Ban">): string | null {
   if (s.draft?.stage !== "ban") return "not the ban phase";
   if (s.config.banOrder[s.draft.banIndex] !== a.seat) return "not your ban";
-  if (!c.heroes.some((h) => h.id === a.heroId)) return "no such hero";
+  if (!draftable(c).some((h) => h.id === a.heroId)) return "no such hero";
   return taken(s, a.heroId) ? "already banned" : null;
 }
 
@@ -52,7 +52,7 @@ function nextBan(s: GameState): void {
 export function validatePick(c: Content, s: GameState, a: ActionOf<"Pick">): string | null {
   if (s.draft?.stage !== "pick") return "not the pick phase";
   if (s.config.pickOrder[s.draft.pickIndex] !== a.seat) return "not your pick";
-  if (!c.heroes.some((h) => h.id === a.heroId)) return "no such hero";
+  if (!draftable(c).some((h) => h.id === a.heroId)) return "no such hero";
   return taken(s, a.heroId) ? "already banned or picked" : null;
 }
 
@@ -72,7 +72,7 @@ export function applyDraftTimeUp(c: Content, s: GameState, events: GameEvent[]):
     events.push({ type: "HeroBanned", seat: s.config.banOrder[d.banIndex]!, heroId: null });
     nextBan(s);
   } else {
-    const free = c.heroes.map((h) => h.id).filter((id) => !taken(s, id));
+    const free = draftable(c).map((h) => h.id).filter((id) => !taken(s, id));
     const seat = s.config.pickOrder[d.pickIndex]!;
     applyPick(c, s, { type: "Pick", seat, heroId: free[randInt(s, free.length)]! }, events, true);
   }
