@@ -14,11 +14,11 @@ export function unit(id: string, owner: Seat, x: number, y: number, extra: Parti
 // Combat Phase of round 2, A's Turn, both players with full mana, no gold and no cards.
 export function state(units: Unit[], extra: Partial<GameState> = {}): GameState {
   const s = baseState(normalConfig, 1);
-  for (const seat of ["A", "B"] as const) s.players[seat] = { mana: normalConfig.manaPerRound, gold: 0, deck: [], hand: [] };
+  for (const seat of ["A", "B"] as const) s.players[seat] = { mana: normalConfig.manaPerRound, gold: 0, deck: [], hand: [], stash: [], offField: [] };
   return { ...s, round: 2, turn: 1, phase: "combat", units, nextStarter: "A", activeSeat: "A", ...extra };
 }
 
-export const player = (mana: number, extra: Partial<PlayerState> = {}): PlayerState => ({ mana, gold: 0, deck: [], hand: [], ...extra });
+export const player = (mana: number, extra: Partial<PlayerState> = {}): PlayerState => ({ mana, gold: 0, deck: [], hand: [], stash: [], offField: [], ...extra });
 
 // Applies actions in order and fails the test if any is rejected.
 export function play(s: GameState, ...actions: Action[]): GameState {

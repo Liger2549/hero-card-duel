@@ -54,6 +54,8 @@ export interface MatchConfig {
   startGold: number;
   goldPerRound: number;
   itemSlots: number;
+  stashSlots: number; // rules.md "Shop and Items": items not on a hero
+  offFieldLimit: number; // rules.md "Cards": off-field cards in play at once, per player
   // rules.md "Cards"
   handLimit: number;
   deckSize: number;
@@ -107,6 +109,8 @@ export const normalConfig: MatchConfig = {
   startGold: 800,
   goldPerRound: 300,
   itemSlots: 2,
+  stashSlots: 12,
+  offFieldLimit: 4,
   handLimit: 5,
   deckSize: 24,
   cardsFirstRound: 5,

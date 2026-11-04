@@ -184,6 +184,14 @@ export function endOfTurn(c: Content, s: GameState, events: GameEvent[]): void {
     if (o.turnsLeft === 0) removeObject(s, o, events);
   }
 
+  // rules.md "Cards": off-field cards leave play when their Turns run out (their team buffs end with them).
+  for (const seat of Seats) {
+    const p = s.players[seat];
+    for (const f of p.offField) if (f.turnsLeft > 0 && counts(s, f.count, f.appliedTurn)) f.turnsLeft -= 1;
+    for (const f of p.offField.filter((x) => x.turnsLeft === 0)) events.push({ type: "OffFieldEnded", seat, id: f.id });
+    p.offField = p.offField.filter((f) => f.turnsLeft !== 0);
+  }
+
   for (const u of s.units) {
     u.usedOwnTurn = false;
     u.actionCount = 0; // combat.md "Action Order": Action Counts reset at the end of each Turn

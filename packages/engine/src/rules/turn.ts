@@ -16,7 +16,7 @@ import { decayTowers, newTowers, updateTowersForRound } from "./towers.ts";
 
 // An empty match before the draft. draft.ts newMatch() starts from this.
 export function baseState(config: MatchConfig, seed: number): GameState {
-  const player = () => ({ mana: 0, gold: config.startGold, deck: [], hand: [] });
+  const player = () => ({ mana: 0, gold: config.startGold, deck: [], hand: [], stash: [], offField: [] });
   return {
     config,
     rng: seed,

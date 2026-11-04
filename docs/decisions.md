@@ -2,6 +2,11 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-04 — Stash, off-field cards, Preparation swap in the engine (Claude's readings, to confirm)
+
+- **Stash**: items can be bought straight into it, moved between it and heroes, and sold from it (Preparation Phase only). An item moved onto a hero heals the Max HP it adds; moved off, HP above the new Max HP is cut.
+- **Off-field cards**: the card's buffs go to the team's heroes and units on the board when it is played, for the card's Turns. A unit summoned later does not get them.
+
 ## 2026-11-04 — All 12 heroes in the engine
 
 - **Stealth while moving**: what a player can see is fixed at the start of their Turn ("the game shows nothing while the enemy moves"). Otherwise an enemy next to a stealthed unit always sees it, and the rule about stepping onto a hidden unit could never happen. Confirmed; no undo that Turn.

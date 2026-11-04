@@ -5,7 +5,7 @@ import type { Seat } from "../config.ts";
 import type { Content } from "../content.ts";
 import type { CardDef } from "../defs.ts";
 import type { GameEvent } from "../events.ts";
-import { createUnit, destroyedTowers, findUnit, unitAt, type GameState, type Unit } from "../state.ts";
+import { createUnit, destroyedTowers, findUnit, unitAt, type Countdown, type GameState, type Unit } from "../state.ts";
 import { healFrom } from "./damage.ts";
 import { addBuff } from "./status.ts";
 
@@ -48,6 +48,7 @@ export function validatePlayCard(c: Content, s: GameState, a: ActionOf<"PlayCard
     return "not your Turn";
   }
   if (s.players[a.seat].mana < card.mana) return "not enough mana";
+  if (card.offField && s.players[a.seat].offField.length >= s.config.offFieldLimit) return "too many off-field cards in play";
 
   const p = a.aim.tiles?.[0];
   if (card.target === "none") return null;
@@ -79,6 +80,19 @@ export function applyPlayCard(c: Content, s: GameState, a: ActionOf<"PlayCard">,
   const p = a.aim.tiles?.[0];
   if (card.summon) {
     placeSummon(c, s, card.summon, a.seat, p!, events);
+    return;
+  }
+  // rules.md "Cards": an off-field card buffs the whole team while it is in play (at most offFieldLimit at once).
+  if (card.offField) {
+    const player = s.players[a.seat];
+    const id = `F${s.nextObjectId++}`;
+    const count: Countdown = card.offField.per === "team" ? { per: "team", seat: a.seat } : { per: "turn" };
+    player.offField.push({ id, cardId: card.id, turnsLeft: card.offField.turns, count, appliedTurn: s.turn });
+    events.push({ type: "OffFieldPlayed", seat: a.seat, id, cardId: card.id });
+    for (const u of s.units) {
+      if (u.dead || u.owner !== a.seat) continue;
+      for (const b of card.offField.buffs) addBuff(s, null, u, { ...b, turns: card.offField.turns, ...(card.offField.per ? { per: card.offField.per } : {}), name: id }, events);
+    }
     return;
   }
   if (card.manaGain) {

@@ -66,6 +66,8 @@ export const fixtures: Content = {
     { id: "pupCard", name: "Pup", icon: "P", text: "", kind: "unit", mana: 3, maxCopies: 4, target: "tile", summon: "pup" },
     { id: "potion", name: "Potion", icon: "H", text: "", kind: "spell", mana: 1, maxCopies: 2, target: "ally", heal: 6 },
     { id: "orb", name: "Orb", icon: "O", text: "", kind: "spell", mana: 0, maxCopies: 4, target: "none", manaGain: 2 },
+    // An off-field card: ATK +1 for the whole team for 2 Turns.
+    { id: "banner", name: "Banner", icon: "F", text: "", kind: "offField", mana: 0, maxCopies: 4, target: "none", offField: { turns: 2, buffs: [{ stat: "atk", amount: 1, turns: 2 }] } },
   ],
   items: [
     { id: "charm", name: "Charm", icon: "C", text: "", price: 300, tier: 1, mods: { tenacity: 100 } },

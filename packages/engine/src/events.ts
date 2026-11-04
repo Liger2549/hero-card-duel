@@ -61,4 +61,7 @@ export type GameEvent =
   | { type: "UnitSummoned"; unitId: string; defId: string; owner: Seat; to: Pos }
   | { type: "ManaGained"; seat: Seat; amount: number }
   | { type: "ItemBought"; unitId: string; itemId: string; replaced: string | null; gold: number }
-  | { type: "ItemSold"; unitId: string; itemId: string; gold: number };
+  | { type: "ItemSold"; unitId: string; itemId: string; gold: number } // unitId "stash" = the stash
+  | { type: "ItemMoved"; seat: Seat; itemId: string; from: string; to: string }
+  | { type: "OffFieldPlayed"; seat: Seat; id: string; cardId: string }
+  | { type: "OffFieldEnded"; seat: Seat; id: string };

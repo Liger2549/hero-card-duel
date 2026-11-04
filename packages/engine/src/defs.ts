@@ -189,7 +189,7 @@ export interface CardDef {
   name: string;
   icon: string;
   text: string;
-  kind: "unit" | "spell";
+  kind: "unit" | "spell" | "offField"; // offField: stays in play off the board (rules.md "Cards")
   mana: number;
   maxCopies: number; // how many of this card one deck may hold
   target: "none" | "tile" | "allyHero" | "ally"; // tile = placement (board.md "Placement")
@@ -197,6 +197,8 @@ export interface CardDef {
   heal?: number;
   buffs?: readonly Buff[];
   manaGain?: number;
+  // Off-field cards: buffs for the whole team while the card is in play, for this many Turns.
+  offField?: { turns: number; per?: "turn" | "team"; buffs: readonly Buff[] };
 }
 
 export type ItemStat =

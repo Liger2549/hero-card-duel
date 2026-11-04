@@ -145,6 +145,17 @@ export interface PlayerState {
   gold: number;
   deck: string[]; // card ids; the next card drawn is the last one
   hand: string[];
+  stash: string[]; // rules.md "Shop and Items": items not on a hero
+  offField: OffFieldCard[]; // rules.md "Cards": off-field cards in play
+}
+
+// An off-field card in play. Its team buffs carry the same name, so they end (or are removed) with it.
+export interface OffFieldCard {
+  id: string; // also the name of its buffs
+  cardId: string;
+  turnsLeft: number;
+  count: Countdown;
+  appliedTurn: number;
 }
 
 // rules.md "Tower HP"

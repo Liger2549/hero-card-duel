@@ -152,16 +152,24 @@ export function validatePrepMove(s: GameState, a: ActionOf<"PrepMove">): string 
   if (!inZone(s.config, a.seat, u.pos, destroyed)) return "unit is outside its zone";
   if (!inZone(s.config, a.seat, a.to, destroyed)) return "target is outside the zone";
   if (samePos(u.pos, a.to)) return "already on that tile";
-  if (unitAt(s, a.to)) return "tile is taken";
+  const other = unitAt(s, a.to);
+  if (other && (other.owner !== a.seat || other.prepMoved)) return "tile is taken";
   return null;
 }
 
 export function applyPrepMove(s: GameState, a: ActionOf<"PrepMove">, events: GameEvent[]): void {
   const u = findUnit(s, a.unitId)!;
   const from = u.pos!;
+  const ally = unitAt(s, a.to);
   u.pos = a.to;
   u.prepMoved = true;
   events.push({ type: "UnitPrepMoved", unitId: u.id, from, to: a.to });
+  // board.md "Preparation Phase Steps": a swap with an ally in the zone is that ally's Preparation move too.
+  if (ally) {
+    ally.pos = from;
+    ally.prepMoved = true;
+    events.push({ type: "UnitPrepMoved", unitId: ally.id, from: a.to, to: from });
+  }
 }
 
 // A unit moved by a skill, not a step: no mana, no Remaining Move, no undo.

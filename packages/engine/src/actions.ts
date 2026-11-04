@@ -16,7 +16,7 @@ import {
   validatePick,
 } from "./rules/draft.ts";
 import { applyPrepMove, applyStep, applyUndo, validatePrepMove, validateStep, validateUndo } from "./rules/movement.ts";
-import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "./rules/shop.ts";
+import { applyBuyItem, applyMoveItem, applySellItem, validateBuyItem, validateMoveItem, validateSellItem } from "./rules/shop.ts";
 import { hookApi, notify, resumeChoice } from "./rules/interject.ts";
 import { checkWin } from "./rules/status.ts";
 import type { Aim } from "./rules/targeting.ts";
@@ -47,7 +47,8 @@ export type Action =
   | { type: "PlaceHero"; seat: Seat; unitId: string; to: Pos }
   | { type: "PrepMove"; seat: Seat; unitId: string; to: Pos }
   | { type: "BuyItem"; seat: Seat; unitId: string; itemId: string }
-  | { type: "SellItem"; seat: Seat; unitId: string; itemId: string }
+  | { type: "SellItem"; seat: Seat; unitId: string; itemId: string } // unitId "stash" = buy into / sell from the stash
+  | { type: "MoveItem"; seat: Seat; itemId: string; from: string; to: string } // a hero's id or "stash"
   | { type: "Ready"; seat: Seat }
   | { type: "PrepTimeUp" }
   // Combat Phase (PlayCard also in the Preparation Phase, for unit cards)
@@ -94,6 +95,8 @@ export function validate(s: GameState, a: Action, c: Content): string | null {
       return validateBuyItem(c, s, a);
     case "SellItem":
       return validateSellItem(s, a);
+    case "MoveItem":
+      return validateMoveItem(c, s, a);
     case "Ready":
       return validateReady(s, a);
     case "PrepTimeUp":
@@ -156,6 +159,9 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       break;
     case "SellItem":
       applySellItem(c, s, a, events);
+      break;
+    case "MoveItem":
+      applyMoveItem(c, s, a, events);
       break;
     case "Ready":
       applyReady(c, s, a, events);
