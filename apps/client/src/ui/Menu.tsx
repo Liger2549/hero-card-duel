@@ -1,4 +1,5 @@
 import { content } from "@hcd/content";
+import { draftable } from "@hcd/engine";
 import { useState } from "react";
 import { session } from "../session.ts";
 import { loadName, saveName } from "../storage.ts";
@@ -16,7 +17,7 @@ export function Menu({ go }: { go: (p: Page) => void }) {
     <div className="menu">
       <Dayband now={-1} />
       <h1 className="title">Hero Card Duel</h1>
-      <p className="lead">เกมดวลฮีโร่และการ์ดบนกระดาน 9x9 ฮีโร่ {content.heroes.length} ตัว</p>
+      <p className="lead">เกมดวลฮีโร่และการ์ดบนกระดาน 9x9 ฮีโร่ {draftable(content).length} ตัว</p>
       <div className="row">
         <label>
           ชื่อผู้เล่น{" "}

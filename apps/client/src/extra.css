@@ -7,6 +7,8 @@
 .float.good { color: var(--heal); }
 @keyframes rise { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -120%; } }
 
+/* Board objects: Scanner, Core, Lantern (engine BoardObject). */
+.obj { position: absolute; bottom: 1px; left: 3px; font-size: 12px; line-height: 1; pointer-events: none; }
 /* How many times a tile was chosen (e.g. Valen's swords, docs/ui.md). */
 .badge { position: absolute; top: 1px; right: 3px; font-size: 11px; font-weight: 700; color: var(--ink); background: var(--hl);
   border-radius: 6px; padding: 0 4px; z-index: 2; }

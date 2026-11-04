@@ -415,6 +415,11 @@ function Board(props: {
       if (fx) c.push(`fx-${fx.kind}`);
       cells.push(
         <button key={`${k}-${fx ? seq : 0}`} className={c.join(" ")} onClick={() => onClick(p)} aria-label={`ช่อง ${x + 1} แถว ${y + 1}`}>
+          {s.objects.filter((o) => o.pos.x === x && o.pos.y === y).map((o) => (
+            <span key={o.id} className="obj" title={o.kind}>
+              {OBJECT_ICONS[o.kind] ?? "◆"}
+            </span>
+          ))}
           {u && <Token s={s} u={u} />}
           {picked > 0 && <span className="badge">×{picked}</span>}
           {fx?.texts.map((t, i) => (
@@ -433,9 +438,16 @@ function Board(props: {
   );
 }
 
+// Board objects (engine state.ts "BoardObject").
+const OBJECT_ICONS: Record<string, string> = { scanner: "📡", core: "💣", lantern: "🏮" };
+
 function statusIcons(u: Unit): string {
-  return u.dots.map((d) => (d.id === "voidmark" ? "🌀" : "🔥")).join("") + Object.keys(u.cc).map((k) => CCI[k]).join("");
+  const special = (u.stealth ? "👻" : "") + (u.lockedOut ? "🪽" : "");
+  return special + u.dots.map((d) => (d.id === "voidmark" ? "🌀" : "🔥")).join("") + Object.keys(u.cc).map((k) => CCI[k]).join("");
 }
+
+// Hero commands (engine UnitHooks.commands).
+const COMMAND_NAMES: Record<string, string> = { endStealth: "ปิดล่องหน (ฟรี ไม่จบเทิร์น)" };
 
 function Token({ s, u }: { s: GameState; u: Unit }) {
   const d = unitDef(content, u.defId);
@@ -710,6 +722,14 @@ function UnitInfo({ s, u, mine, act, onAct }: { s: GameState; u: Unit; mine: boo
                   onClick={() => onAct({ type: "ability", unitId: u.id, ref, picks: [] })}
                 />
               );
+            })}
+            {Object.keys(unitDef(content, u.defId).hooks?.commands ?? {}).map((command) => {
+              const action: Action = { type: "UnitCommand", seat: u.owner, unitId: u.id, command };
+              return validate(s, action, content) === null ? (
+                <button key={command} className="ab" onClick={() => session.dispatch(action)}>
+                  <span className="an">{COMMAND_NAMES[command] ?? command}</span>
+                </button>
+              ) : null;
             })}
           </>
         ) : (

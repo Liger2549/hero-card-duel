@@ -198,7 +198,8 @@ export interface CardDef {
   buffs?: readonly Buff[];
   manaGain?: number;
   // Off-field cards: buffs for the whole team while the card is in play, for this many Turns.
-  offField?: { turns: number; per?: "turn" | "team"; buffs: readonly Buff[] };
+  // once: the team on the board when it is played. aura: also units summoned while it is in play.
+  offField?: { turns: number; per?: "turn" | "team"; mode?: "once" | "aura"; buffs: readonly Buff[] };
 }
 
 export type ItemStat =

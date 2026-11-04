@@ -215,7 +215,7 @@ describe("Zoran", () => {
     expect(get(after, "valen1").shields).toMatchObject([{ amount: 3, turnsLeft: -1, name: "lantern:zoran0" }]); // 15% of 20
     expect(get(after, "valen1").hp).toBe(12); // 10% of 20
     expect(get(after, "eira2").dots[0]).toMatchObject({ id: "nocturnalFlame", sourceId: "zoran0" });
-    expect(get(after, "zoran0").vars.lanternPulses).toBe(3);
+    expect(after.objects).toMatchObject([{ kind: "lantern", pos: { x: 4, y: 6 }, vars: { pulses: 3 } }]);
   });
 });
 

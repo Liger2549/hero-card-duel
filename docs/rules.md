@@ -27,6 +27,7 @@
 - **Off-field cards (การ์ดนอกสนาม)**: cards that stay in play off the board after they are played (e.g. a buff for the whole team).
   - Up to 4 active at once per player.
   - Each card states how long it lasts.
+  - Each card also states its kind: **once** (buffs the team on the board when played) or **aura** (also buffs units that arrive while it is in play).
   - The enemy can remove one only with a skill or card made for that.
 
 ## Shop and Items (from the prototype, for now)

@@ -15,6 +15,12 @@ export function placeSummon(c: Content, s: GameState, defId: string, owner: Seat
   u.pos = p;
   s.units.push(u);
   events.push({ type: "UnitSummoned", unitId: u.id, defId: u.defId, owner: u.owner, to: p });
+  // An aura off-field card in play buffs it too, for the Turns the card has left.
+  for (const f of s.players[owner].offField) {
+    const off = cardDef(c, f.cardId).offField!;
+    if (off.mode !== "aura") continue;
+    for (const b of off.buffs) addBuff(s, null, u, { ...b, turns: f.turnsLeft, ...(off.per ? { per: off.per } : {}), name: f.id }, events);
+  }
   return u;
 }
 

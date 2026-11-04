@@ -2,10 +2,10 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
-## 2026-11-04 — Stash, off-field cards, Preparation swap in the engine (Claude's readings, to confirm)
+## 2026-11-04 — Stash, off-field cards, Preparation swap in the engine
 
 - **Stash**: items can be bought straight into it, moved between it and heroes, and sold from it (Preparation Phase only). An item moved onto a hero heals the Max HP it adds; moved off, HP above the new Max HP is cut.
-- **Off-field cards**: the card's buffs go to the team's heroes and units on the board when it is played, for the card's Turns. A unit summoned later does not get them.
+- **Off-field cards** come in two kinds, set on each card (owner, 2026-11-04): **once** buffs the team on the board when it is played; **aura** also buffs units that arrive while it is in play. Both last the card's Turns.
 
 ## 2026-11-04 — All 12 heroes in the engine
 

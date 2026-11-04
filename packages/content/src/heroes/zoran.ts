@@ -1,4 +1,4 @@
-import { applyDot, chebyshev, giveShield, healFrom, manhattan, pctOf, stat, type HookApi, type Unit } from "@hcd/engine";
+import { applyDot, chebyshev, giveShield, healFrom, manhattan, pctOf, placeObject, removeObject, stat, type HookApi, type Unit } from "@hcd/engine";
 import { defineHero, pctSum } from "../define.ts";
 import { nocturnalFlame } from "../statuses.ts";
 
@@ -24,20 +24,21 @@ function guidingLight(api: HookApi, e: { unitId: string; hp: number; amount: num
   else api.interject("Guiding Light", "guidingLight", { data: { allies: t.id } });
 }
 
-// Vigil Lantern: a zone on a tile (Zoran's vars), 4 pulses of Zoran's team: one when summoned, then one in each of
-// the next 3 Turns of his team. It has its own Speed (50% of Zoran's) and Action Count. Pulse: allies in the 3x3
-// area get an added shield of 15% Max HP (kept while the lantern is up) and heal 10% Max HP; enemies get Nocturnal Flame.
+// Vigil Lantern: a board object that cannot be hit (vars.pulses left, vars.actions). 4 pulses of Zoran's team: one
+// when summoned, then one in each of the next 3 Turns of his team. It has its own Speed (50% of Zoran's) and Action
+// Count. Pulse: allies in the 3x3 area get an added shield of 15% Max HP (kept while the lantern is up) and heal
+// 10% Max HP; enemies get Nocturnal Flame.
+const lanternOf = (api: HookApi) => api.s.objects.find((o) => o.kind === "lantern" && o.ownerId === api.self.id);
 function queuePulse(api: HookApi): void {
-  const v = api.self.vars;
-  v.lanternActions = (v.lanternActions ?? 0) + 1;
+  const o = lanternOf(api)!;
+  o.vars.actions = (o.vars.actions ?? 0) + 1;
   const speed = Math.max(pctOf(stat(api.c, api.self, "speed"), 50), 1);
-  api.interject("Vigil Lantern", "pulse", { actionValue: Math.floor((v.lanternActions * 10000 + speed - 1) / speed) });
+  api.interject("Vigil Lantern", "pulse", { actionValue: Math.floor((o.vars.actions * 10000 + speed - 1) / speed) });
 }
 function lanternGone(api: HookApi): void {
   const { s, self } = api;
-  delete self.vars.lanternX;
-  delete self.vars.lanternY;
-  self.vars.lanternPulses = 0;
+  const o = lanternOf(api);
+  if (o) removeObject(s, o, api.events);
   // Lantern shields end together 2 Turns of Zoran's team after the lantern is gone.
   for (const u of s.units) for (const sh of u.shields) if (sh.name === `lantern:${self.id}`) Object.assign(sh, { turnsLeft: 2, count: { per: "team", seat: self.owner }, appliedTurn: s.turn });
 }
@@ -62,8 +63,8 @@ export const zoran = defineHero({
       const self = api.self;
       if (e.type === "Damaged") guidingLight(api, e);
       if (e.type === "RoundStarted") self.vars.wicks = Math.min((self.vars.wicks ?? 1) + 1, 2);
-      if (e.type === "TurnStarted" && e.seat === self.owner && (self.vars.lanternPulses ?? 0) > 0) queuePulse(api);
-      if (e.type === "UnitDied" && e.unitId === self.id && self.vars.lanternX !== undefined) lanternGone(api);
+      if (e.type === "TurnStarted" && e.seat === self.owner && (lanternOf(api)?.vars.pulses ?? 0) > 0) queuePulse(api);
+      if (e.type === "UnitDied" && e.unitId === self.id && lanternOf(api)) lanternGone(api);
     },
     interjects: {
       guidingLight(api, p) {
@@ -75,9 +76,9 @@ export const zoran = defineHero({
       },
       pulse(api) {
         const { s, self } = api;
-        const v = self.vars;
-        if (v.lanternX === undefined) return;
-        const at = { x: v.lanternX, y: v.lanternY! };
+        const o = lanternOf(api);
+        if (!o) return;
+        const at = o.pos;
         for (const u of s.units) {
           if (u.dead || !u.pos || chebyshev(u.pos, at) > 1) continue;
           if (u.owner === self.owner) {
@@ -85,8 +86,8 @@ export const zoran = defineHero({
             healFrom(api.c, self, u, pctOf(maxHp(api), 10), api.events);
           } else burn(api, u);
         }
-        v.lanternPulses = (v.lanternPulses ?? 1) - 1;
-        if (v.lanternPulses <= 0) lanternGone(api);
+        o.vars.pulses = (o.vars.pulses ?? 1) - 1;
+        if (o.vars.pulses <= 0) lanternGone(api);
       },
     },
     specials: {
@@ -99,9 +100,9 @@ export const zoran = defineHero({
       },
       // A new lantern replaces the old one. Its first pulse resolves when this Turn ends.
       lantern(api, { aim }) {
-        if (api.self.vars.lanternX !== undefined) lanternGone(api);
-        const p = aim.tiles![0]!;
-        Object.assign(api.self.vars, { lanternX: p.x, lanternY: p.y, lanternPulses: 4, lanternActions: 0 });
+        if (lanternOf(api)) lanternGone(api);
+        const o = placeObject(api.s, api.self, "lantern", aim.tiles![0]!, null, -1, { per: "turn" }, api.events);
+        o.vars = { pulses: 4, actions: 0 };
         queuePulse(api);
       },
     },

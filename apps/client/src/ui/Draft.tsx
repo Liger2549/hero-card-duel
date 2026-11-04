@@ -1,5 +1,5 @@
 import { content } from "@hcd/content";
-import { TimesOfDay } from "@hcd/engine";
+import { draftable, TimesOfDay } from "@hcd/engine";
 import { session, type Snapshot } from "../session.ts";
 import { actingSeat, Countdown, Dayband, HeroCard, PatternLegend, sideClass, sideName } from "./common.tsx";
 
@@ -58,7 +58,7 @@ export function Draft({ snap }: { snap: Snapshot }) {
         ))}
       </div>
       <div className="hgrid">
-        {content.heroes.map((h) => {
+        {draftable(content).map((h) => {
           const t = takenBy(h.id);
           return (
             <HeroCard
