@@ -1,7 +1,10 @@
 // A room before the game: players, Normal / Custom rules, Start and Leave (rules.md "Match config").
-import { alternatingOrder, checkConfig, type MatchConfig, type Seat, type TowerStage } from "@hcd/engine";
+import { alternatingOrder, checkConfig, normalConfig, type MatchConfig, type Seat, type TowerStage } from "@hcd/engine";
 import { session, type Snapshot } from "../session.ts";
 import { Dayband } from "./common.tsx";
+
+// Every timer 0 = no clock (engine config.ts "timers").
+const NO_CLOCK: MatchConfig["timers"] = { timeOfDay: 0, ban: 0, pick: 0, firstPrep: 0, majorPrep: 0 };
 
 export function Lobby({ snap }: { snap: Snapshot }) {
   const lobby = snap.lobby;
@@ -83,6 +86,7 @@ const toOrder = (text: string): Seat[] => [...text.toUpperCase()].filter((ch): c
 function CustomSettings({ config: c, editable }: { config: MatchConfig; editable: boolean }) {
   const set = (patch: Partial<MatchConfig>) => session.setConfig({ ...c, ...patch });
   const dis = !editable;
+  const noClock = Object.values(c.timers).every((n) => n === 0);
   const setHeroes = (seat: Seat, n: number) => {
     const heroesPerPlayer = { ...c.heroesPerPlayer, [seat]: n };
     set({ heroesPerPlayer, pickOrder: alternatingOrder(heroesPerPlayer.A, heroesPerPlayer.B) });
@@ -101,6 +105,9 @@ function CustomSettings({ config: c, editable }: { config: MatchConfig; editable
         <label>
           <input type="checkbox" checked={c.skipBans} disabled={dis} onChange={(e) => set({ skipBans: e.target.checked })} /> ไม่มีการแบน
         </label>
+        <label>
+          <input type="checkbox" checked={noClock} disabled={dis} onChange={(e) => set({ timers: e.target.checked ? NO_CLOCK : normalConfig.timers })} /> ไม่จับเวลา
+        </label>
       </div>
       <div className="row">
         <label>
@@ -114,9 +121,9 @@ function CustomSettings({ config: c, editable }: { config: MatchConfig; editable
       </div>
       <p className="muted">พิมพ์ A (ผู้เล่น 1) และ B (ผู้เล่น 2) ตามลำดับ เช่น ABAB</p>
       <div className="row">
-        <Num label="เวลาเลือกช่วงเวลา (วิ)" value={c.timers.timeOfDay} min={1} disabled={dis} onChange={(n) => set({ timers: { ...c.timers, timeOfDay: n } })} />
-        <Num label="เวลาแบนต่อครั้ง" value={c.timers.ban} min={1} disabled={dis} onChange={(n) => set({ timers: { ...c.timers, ban: n } })} />
-        <Num label="เวลาพิกต่อครั้ง" value={c.timers.pick} min={1} disabled={dis} onChange={(n) => set({ timers: { ...c.timers, pick: n } })} />
+        <Num label="เวลาเลือกช่วงเวลา (วิ)" value={c.timers.timeOfDay} min={1} disabled={dis || noClock} onChange={(n) => set({ timers: { ...c.timers, timeOfDay: n } })} />
+        <Num label="เวลาแบนต่อครั้ง" value={c.timers.ban} min={1} disabled={dis || noClock} onChange={(n) => set({ timers: { ...c.timers, ban: n } })} />
+        <Num label="เวลาพิกต่อครั้ง" value={c.timers.pick} min={1} disabled={dis || noClock} onChange={(n) => set({ timers: { ...c.timers, pick: n } })} />
       </div>
 
       <h4>รอบและทรัพยากร</h4>
@@ -126,8 +133,8 @@ function CustomSettings({ config: c, editable }: { config: MatchConfig; editable
         <Num label="ทองต่อรอบ" value={c.goldPerRound} disabled={dis} onChange={(n) => set({ goldPerRound: n })} />
       </div>
       <div className="row">
-        <Num label="เวลาเตรียมรอบแรก (วิ)" value={c.timers.firstPrep} min={1} disabled={dis} onChange={(n) => set({ timers: { ...c.timers, firstPrep: n } })} />
-        <Num label="เวลาเตรียมรอบต่อไป" value={c.timers.majorPrep} min={1} disabled={dis} onChange={(n) => set({ timers: { ...c.timers, majorPrep: n } })} />
+        <Num label="เวลาเตรียมรอบแรก (วิ)" value={c.timers.firstPrep} min={1} disabled={dis || noClock} onChange={(n) => set({ timers: { ...c.timers, firstPrep: n } })} />
+        <Num label="เวลาเตรียมรอบต่อไป" value={c.timers.majorPrep} min={1} disabled={dis || noClock} onChange={(n) => set({ timers: { ...c.timers, majorPrep: n } })} />
       </div>
       <div className="row">
         <Num label="การ์ดรอบแรก" value={c.cardsFirstRound} disabled={dis} onChange={(n) => set({ cardsFirstRound: n })} />

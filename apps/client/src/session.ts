@@ -84,9 +84,10 @@ const empty: Snapshot = {
 // Seconds for the current draft step or Preparation Phase (rules.md), or null when there is no clock.
 function stepSeconds(s: GameState): number | null {
   const t = s.config.timers;
-  if (s.phase === "draft") return s.draft!.stage === "timeOfDay" ? t.timeOfDay : s.draft!.stage === "ban" ? t.ban : t.pick;
-  if (s.phase === "prep") return s.round === 1 ? t.firstPrep : t.majorPrep;
-  return null;
+  let secs = 0;
+  if (s.phase === "draft") secs = s.draft!.stage === "timeOfDay" ? t.timeOfDay : s.draft!.stage === "ban" ? t.ban : t.pick;
+  if (s.phase === "prep") secs = s.round === 1 ? t.firstPrep : t.majorPrep;
+  return secs > 0 ? secs : null; // 0 = no clock
 }
 const stepKey = (s: GameState) => `${s.phase}|${s.draft?.stage}|${s.draft?.banIndex}|${s.draft?.pickIndex}|${s.round}`;
 

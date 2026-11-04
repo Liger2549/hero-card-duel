@@ -6,7 +6,7 @@ Things to design or decide later. Not rules yet; move them into the rule docs wh
 
 1. **Repeated skill use** (owner is designing it): a cooldown, or more mana for each repeat. Still to decide: which one, how much, and whether the count is per Turn or per Round.
 2. **Manual interjects are not designed yet** (2026-11-04): `combat.md` "Manual Interject" comes from the C++ docs; the owner has not thought it through and no hero uses it. For now it fires at its locked tile even if the target walked away. Revisit when a hero needs it.
-3. **Prototype heroes were not designed by the owner**: Rocco, Konrad and Eira were taken as is from the prototype to fill the draft. Their details (and the Footman) may change when the owner looks at them.
+3. **Prototype heroes were not designed by the owner**: Rocco, Konrad and Eira, and the 11 heroes of `heroes/prototype-set.md`, were taken as is from the prototype to fill the draft. Their details (and the Footman and Shade) may change or be removed when the owner looks at them.
 
 ## Board
 

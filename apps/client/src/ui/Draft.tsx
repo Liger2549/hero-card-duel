@@ -1,5 +1,6 @@
 import { content } from "@hcd/content";
 import { draftable, TimesOfDay } from "@hcd/engine";
+import { useState } from "react";
 import { session, type Snapshot } from "../session.ts";
 import { actingSeat, Countdown, Dayband, HeroCard, PatternLegend, sideClass, sideName } from "./common.tsx";
 
@@ -11,6 +12,7 @@ export function Draft({ snap }: { snap: Snapshot }) {
   const me = snap.mySeat ?? due;
   const myStep = me === due;
   const ban = d.stage === "ban";
+  const [info, setInfo] = useState<string | null>(null); // hero whose details are open
   const icon = (id: string) => content.heroes.find((h) => h.id === id)!.icon;
   const takenBy = (id: string) => {
     for (const seat of ["A", "B"] as const) {
@@ -46,7 +48,13 @@ export function Draft({ snap }: { snap: Snapshot }) {
         />
       </header>
       <p className="status" style={{ marginTop: 10 }}>
-        {status} · เหลือ <Countdown deadline={snap.deadline} /> วินาที
+        {status}
+        {snap.deadline !== null && (
+          <>
+            {" "}
+            · เหลือ <Countdown deadline={snap.deadline} /> วินาที
+          </>
+        )}
       </p>
       <div className="picks">
         {(["A", "B"] as const).map((seat) => (
@@ -57,22 +65,40 @@ export function Draft({ snap }: { snap: Snapshot }) {
           </div>
         ))}
       </div>
-      <div className="hgrid">
+      {/* Square icons to pick or ban; the ⓘ button opens the hero's details. */}
+      <div className="dgrid">
         {draftable(content).map((h) => {
           const t = takenBy(h.id);
           return (
-            <HeroCard
-              key={h.id}
-              hero={h}
-              cls={t === "ban" ? "bn" : t ? `tk ${sideClass(t)}` : ""}
-              {...(t === "ban" ? { label: "ถูกแบน" } : {})}
-              disabled={!!t || d.stage === "timeOfDay" || !myStep}
-              onClick={() => session.dispatch(ban ? { type: "Ban", seat: me, heroId: h.id } : { type: "Pick", seat: me, heroId: h.id })}
-            />
+            <div key={h.id} className={`dtile ${t === "ban" ? "bn" : t ? `tk ${sideClass(t)}` : ""}`}>
+              <button
+                className="dpick"
+                disabled={!!t || d.stage === "timeOfDay" || !myStep}
+                onClick={() => session.dispatch(ban ? { type: "Ban", seat: me, heroId: h.id } : { type: "Pick", seat: me, heroId: h.id })}
+                title={h.name}
+              >
+                <span className="di">{h.icon}</span>
+                <span className="dn">{h.name}</span>
+                {t === "ban" && <span className="dtag">แบน</span>}
+              </button>
+              <button className="dinfo" onClick={() => setInfo(h.id)} aria-label={`ดูรายละเอียด ${h.name}`}>
+                i
+              </button>
+            </div>
           );
         })}
       </div>
-      <PatternLegend />
+      {info && (
+        <div className="dmodal" onClick={() => setInfo(null)}>
+          <div className="dbox" onClick={(e) => e.stopPropagation()}>
+            <button className="ghost dclose" onClick={() => setInfo(null)}>
+              ปิด
+            </button>
+            <HeroCard hero={content.heroes.find((h) => h.id === info)!} />
+            <PatternLegend />
+          </div>
+        </div>
+      )}
       {snap.status && <p className="warn">{snap.status}</p>}
     </>
   );

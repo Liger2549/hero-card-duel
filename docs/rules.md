@@ -88,7 +88,7 @@ A tower's HP is set by **stages**. Each stage starts at a round and lasts until 
 
 There are 2 match modes:
 - **Normal**: the standard rules in these docs, unchanged. 4 heroes per player, 2 towers to win.
-- **Custom room**: the room can change the match config for that match (e.g. heroes per player, towers to win, tower config, mana, gold, timers), set its own **ban order and pick order** (e.g. ABAB), and can **skip the bans**. Each player can have their own number of heroes; the pick order then defaults to A B A B ... with the side that needs more heroes picking the rest at the end.
+- **Custom room**: the room can change the match config for that match (e.g. heroes per player, towers to win, tower config, mana, gold, timers), turn the clocks off (no time limit for the draft and the Preparation Phase), set its own **ban order and pick order** (e.g. ABAB), and can **skip the bans**. Each player can have their own number of heroes; the pick order then defaults to A B A B ... with the side that needs more heroes picking the rest at the end.
 - A room shows the players (with their names); the host starts the match.
 - A hero's Base Bounty comes from the hero (`heroes/README.md`), not from the match config.
 

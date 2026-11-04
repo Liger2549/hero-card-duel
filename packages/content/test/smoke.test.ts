@@ -4,6 +4,7 @@ import {
   apply,
   botAction,
   candidateAims,
+  draftable,
   newMatch,
   normalConfig,
   validate,
@@ -68,7 +69,7 @@ describe("whole matches with the real heroes (smoke test)", () => {
       }
       expect(s.phase).toBe("over");
       expect(s.winner).not.toBeNull();
-    });
+    }, 30_000); // whole matches take a few seconds
   }
 });
 
@@ -84,6 +85,36 @@ describe("the AI (engine botAction) with the real heroes", () => {
         s = r.state;
       }
       expect(s.winner).not.toBeNull();
-    });
+    }, 30_000); // whole matches take a few seconds
+  }
+});
+
+describe("every hero plays a whole match (smoke test)", () => {
+  // Groups of 8 draftable heroes; the bans are left blank and each pick takes the group's next hero.
+  const ids = draftable(content).map((h) => h.id);
+  for (let g = 0; g * 8 < ids.length; g++) {
+    const group = [...ids.slice(g * 8, g * 8 + 8), ...ids].slice(0, 8);
+    for (const seed of [21, 22]) {
+      it(`${group.join(", ")} (seed ${seed})`, () => {
+        let s = newMatch(normalConfig, seed, { A: starterDeck, B: starterDeck });
+        let next = 0;
+        for (let n = 0; n < 3000 && s.phase !== "over"; n++) {
+          let a = timeUpBot(s);
+          if (s.phase === "draft" && !s.choice) {
+            const picks = (["A", "B"] as const).map((seat): Action => ({ type: "Pick", seat, heroId: group[next]! }));
+            const ok = picks.find((p) => validate(s, p, content) === null);
+            if (ok) {
+              a = ok;
+              next++;
+            }
+          }
+          const r = apply(s, a, content);
+          if (!r.ok) throw new Error(`round ${s.round}, ${a.type}: ${r.error}`);
+          s = r.state;
+        }
+        for (const id of group) expect(s.units.some((u) => u.defId === id || (id === "pley" && u.defId === "pleyDemon"))).toBe(true);
+        expect(s.winner).not.toBeNull();
+      }, 30_000);
+    }
   }
 });

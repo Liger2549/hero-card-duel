@@ -11,3 +11,12 @@ export const nocturnalFlame = (turns: number): Extract<OnHit, { type: "dot" }> =
   duration: turns,
   breakPerTick: 1,
 });
+
+// Burn: a Round DOT of 1 (Ember, from the prototype).
+export const burn = (rounds: number): Extract<OnHit, { type: "dot" }> => ({
+  type: "dot",
+  id: "burn",
+  kind: "round",
+  damage: 1,
+  duration: rounds,
+});

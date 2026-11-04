@@ -1,6 +1,6 @@
 # Prototype Heroes (archive)
 
-The 14 heroes from the old prototype, taken out of the game on 2026-11-03 when the engine moved to the docs' skill notation. Kept as ideas for new heroes. Their rules follow the prototype, not the current docs. The original data is in git history (`packages/content/src/heroes/idea.ts` and `new.ts`, commit 2e88677).
+The 14 heroes from the old prototype, taken out of the game on 2026-11-03 when the engine moved to the docs' skill notation. Kept as ideas for new heroes. All 14 are back in the draft as of 2026-11-04: 3 on their own sheets (Rocco, Konrad, Eira) and 11 in `../prototype-set.md`. Their rules follow the prototype, not the current docs. The original data is in git history (`packages/content/src/heroes/idea.ts` and `new.ts`, commit 2e88677).
 
 ## 🩸 นักดาบโลหิต (`blood`)
 

@@ -2,6 +2,17 @@
 
 Answers the owner gave to rule questions, newest first. The rule docs already include them; this file says when and why they changed.
 
+## 2026-11-04 — Prototype Set and the new draft page
+
+- The owner asked for every remaining prototype hero in the draft, adapted the way Claude prefers ("เอาแบบที่นายชอบเลย"). The 11 heroes keep their prototype values with names by Claude: `heroes/prototype-set.md`. Claude's choices where the prototype was loose:
+  - Kage's Stealth bonus applies only to hits that already deal damage.
+  - Misty's Smoke Screen can be cast with no enemy in the area; Smoke is a board object (`statuses.md`).
+  - Misty rises on the tile where she died, or the first free tile next to it.
+  - Morgan's ATK bonus and Ember's Day bonus are worked out when each Combat Phase starts.
+  - Support skills that pick an ally may pick the caster too.
+- **Draft page**: heroes are square icons; each has its own details button. No "owner's idea / new" labels on hero cards.
+- **No clock** (owner): a Custom room can turn the clocks off (every timer 0). Normal mode keeps them.
+
 ## 2026-11-04 — Stash, off-field cards, Preparation swap in the engine
 
 - **Stash**: items can be bought straight into it, moved between it and heroes, and sold from it (Preparation Phase only). An item moved onto a hero heals the Max HP it adds; moved off, HP above the new Max HP is cut.

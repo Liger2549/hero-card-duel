@@ -20,6 +20,11 @@ DOT rules (kinds, formula, stacking): `combat.md` "Damage over Time".
 - **Erosion**: while Voidmark is active, the enemy's DEF is reduced by 1 + 20% DOT Boost (DEF cannot go below 0).
 - **Used by**: Serie (each tick that deals damage gives her +1 Singularity, see her Passive).
 
+### Burn (เผาไหม้)
+- **Kind**: Round DOT
+- **Damage per tick**: 1 (from the prototype)
+- **Used by**: Ember (Prototype Set)
+
 ## Other Statuses
 
 ### Physical ATK +N
@@ -49,3 +54,9 @@ DOT rules (kinds, formula, stacking): `combat.md` "Damage over Time".
   - This damage is not an Action. The enemy's Turn goes on as if no Action had started (they can still move and act).
   - Stealth ends.
 - **Used by**: Falka (Vanishing Point)
+
+### Smoke (ควัน)
+- A board object on a tile, not a status on a unit. It lasts the Turns its skill states, counted every Turn.
+- While a unit stands in smoke laid by its own team, enemies cannot pick it with a Lock-on (normal attacks included). Area skills that do not pick it still hit it.
+- Units can stand in and walk through smoke.
+- **Used by**: Misty (Prototype Set)

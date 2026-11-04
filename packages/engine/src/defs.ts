@@ -87,6 +87,8 @@ export interface HitForm {
   picks?: number; // several picked tiles, may repeat (e.g. Valen's swords); default 1
   blocked?: boolean; // cannot shoot over units (board.md "Blocked Shots")
   self?: boolean; // the caster's own tile is part of the area (e.g. a heal that includes the caster)
+  pickSelf?: boolean; // the caster's own tile may be picked (e.g. a heal on "an ally in range, yourself included")
+  board?: boolean; // the whole board (e.g. "every ally"); no grid or range
 }
 
 // board.md "Falloff". each: −N for every step after the first. steps: total reduction at step 2, 3, … (last repeats).

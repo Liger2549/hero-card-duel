@@ -146,7 +146,8 @@ export function candidateAims(s: GameState, user: Unit, form: HitForm, towers = 
   for (let y = towers ? -1 : 0; y < s.config.boardHeight + (towers ? 1 : 0); y++) {
     for (let x = 0; x < s.config.boardWidth; x++) {
       const onBoard = y >= 0 && y < s.config.boardHeight;
-      if (onBoard && !inRange(form.range, from, { x, y })) continue;
+      const own = form.pickSelf && x === from.x && y === from.y;
+      if (onBoard && !own && !inRange(form.range, from, { x, y })) continue;
       const tiles = Array.from({ length: form.picks ?? 1 }, () => ({ x, y }));
       for (const dir of dirs) aims.push(withDir({ tiles }, dir));
     }
@@ -162,6 +163,15 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim, o
   if (dir && !dirs.includes(dir)) return "choose a direction";
   const area: Area = { tiles: [], enemies: [], allies: [], objects: [] };
 
+  // The whole board.
+  if (form.board) {
+    const cells: (Cell & { step: number })[] = [];
+    for (let y = 0; y < s.config.boardHeight; y++) for (let x = 0; x < s.config.boardWidth; x++) cells.push({ x: x - at.x, y: y - at.y, mark: "X", lane: 0, step: 1 });
+    collect(s, user, { ...form, grid: ["C"] }, at, cells, 0, area, opts);
+    if (form.hit === "allies" || form.hit === "both") if (!area.allies.includes(user)) area.allies.push(user);
+    return area;
+  }
+
   if (form.range) {
     const n = form.picks ?? 1;
     const picks = aim.tiles ?? [];
@@ -169,12 +179,14 @@ export function resolveArea(s: GameState, user: Unit, form: HitForm, aim: Aim, o
     if (dirs.length && !dir) return "choose a direction";
     for (const p of picks) {
       if (!inBounds(s.config, p)) return "choose a tile";
-      if (!inRange(form.range, at, p)) return "out of range";
+      if (!(form.pickSelf && samePos(p, at)) && !inRange(form.range, at, p)) return "out of range";
       if (form.blocked && shotBlocked(s, at, p)) return "a unit is in the way";
       // Lock-on cannot pick an enemy in Stealth (statuses.md), or a tile that only holds an enemy object (e.g. a Scanner).
       const there = unitAt(s, p);
       if (there && there.stealth && there.owner !== user.owner) return "cannot target a unit in Stealth";
       if (!there && s.objects.some((o) => o.hp !== null && o.owner !== user.owner && samePos(o.pos, p))) return "cannot target that";
+      // An object with vars.shroud (e.g. a smoke screen) keeps its team's units on that tile from enemy Lock-on.
+      if (there && there.owner !== user.owner && s.objects.some((o) => o.vars.shroud === 1 && o.owner === there.owner && samePos(o.pos, p))) return "that unit is hidden in smoke";
     }
     picks.forEach((p, index) => collect(s, user, form, p, cellsFacing(form, dir), index, area, opts));
   } else {

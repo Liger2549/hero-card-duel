@@ -29,3 +29,19 @@
 .info h3 { margin-top: 14px; }
 .menu .sbar { margin: 6px 0; }
 .nick { width: 12em; letter-spacing: 0; text-transform: none; }
+
+/* Draft: square hero icons; ⓘ opens the details. */
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 10px; }
+.dtile { position: relative; aspect-ratio: 1; }
+.dpick { width: 100%; height: 100%; border: 2px solid transparent; border-radius: 12px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 4px; color: var(--ink); }
+.dpick:not(:disabled):hover { border-color: var(--hl); }
+.dpick .di { font-size: 30px; line-height: 1; }
+.dpick .dn { font-size: 11px; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.dtile.bn .dpick { opacity: 0.35; }
+.dtile.tk.s0 .dpick { border-color: var(--p1); }
+.dtile.tk.s1 .dpick { border-color: var(--p2); }
+.dtag { position: absolute; bottom: 4px; font-size: 10px; font-weight: 700; color: var(--p2); }
+.dinfo { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 700; padding: 0; line-height: 1; }
+.dmodal { position: fixed; inset: 0; background: rgb(0 0 0 / 45%); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.dbox { background: var(--surface); border-radius: 14px; padding: 14px; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; }
+.dclose { float: right; }

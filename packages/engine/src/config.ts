@@ -64,7 +64,7 @@ export interface MatchConfig {
   tokensFirstRound: number;
   tokensPerRound: number;
 
-  // Seconds. The server runs the clocks; the engine only gets the time-up actions.
+  // Seconds; 0 = no clock (Custom room only). The server runs the clocks; the engine only gets the time-up actions.
   timers: {
     timeOfDay: number;
     ban: number;

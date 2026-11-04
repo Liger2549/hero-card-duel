@@ -439,7 +439,7 @@ function Board(props: {
 }
 
 // Board objects (engine state.ts "BoardObject").
-const OBJECT_ICONS: Record<string, string> = { scanner: "📡", core: "💣", lantern: "🏮" };
+const OBJECT_ICONS: Record<string, string> = { scanner: "📡", core: "💣", lantern: "🏮", smoke: "🌫️" };
 
 function statusIcons(u: Unit): string {
   const special = (u.stealth ? "👻" : "") + (u.lockedOut ? "🪽" : "");
@@ -479,7 +479,11 @@ function StatusText({ s, snap, me, act, myTurn }: { s: GameState; snap: Snapshot
         {s.round === 1
           ? "วางฮีโร่ทั้ง 4 ตัวในสองแถวฝั่งของคุณ (แตะชื่อฮีโร่แล้วแตะช่อง) ลงยูนิตจากการ์ดได้ และซื้อของได้"
           : "ช่วงเตรียมตัว ลงยูนิตจากการ์ดได้ และย้ายฮีโร่ได้ตัวละ 1 ครั้งในเขตตัวเอง (แตะตัวแล้วแตะช่อง)"}{" "}
-        · เหลือ <Countdown deadline={snap.deadline} /> วินาที
+        {snap.deadline !== null && (
+          <>
+            · เหลือ <Countdown deadline={snap.deadline} /> วินาที
+          </>
+        )}
       </>
     );
   }

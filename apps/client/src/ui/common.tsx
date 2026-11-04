@@ -234,7 +234,6 @@ export function AbilityCard(props: {
   );
 }
 
-const ORIGIN = { own: "ฮีโร่ของคุณ", idea: "จากไอเดียของคุณ", new: "ตัวใหม่" };
 
 // One hero with stats, passive and every ability (prototype draft card; also the hero page).
 export function HeroCard(props: { hero: HeroDef; cls?: string; label?: string; disabled?: boolean; onClick?: () => void }) {
@@ -243,7 +242,7 @@ export function HeroCard(props: { hero: HeroDef; cls?: string; label?: string; d
   const refs: AbilityRef[] = ["normal", ...h.skills.map((_, k) => k), "ultimate"];
   const body = (
     <>
-      <span className={`org ${h.origin}`}>{label ?? ORIGIN[h.origin]}</span>
+      {label && <span className="org">{label}</span>}
       <span className="hn">
         <span>{h.icon}</span>
         <span>

@@ -15,7 +15,8 @@ The rule docs were copied from the user's C++ project (`../card-game/docs`) on 2
 - `docs/ui.md` — match screen layout and pages.
 - `docs/heroes/README.md` — hero system, hero file template and defaults (stats in formulas are the skill owner's; Max Ult Points = usage when not stated).
 - `docs/heroes/*.md` — finished heroes: Valen, Bianca, Serie, Karas, Falka, Linnet, Zoran, Pley (two forms: Ribu / Pley), Leilani, and Rocco, Konrad, Eira (taken as is from the prototype). Implement heroes exactly as written.
-- `docs/heroes/archive/prototype-heroes.md` — the prototype's 14 other heroes, out of the game. Ideas only, not rules.
+- `docs/heroes/prototype-set.md` — 11 more prototype heroes (Dante, Ember, Kage, Misty, Silas, Morgan, Wren, Crystal, Lyra, Brooke, Jade), back in the draft with prototype values and Claude's names. Not the owner's design; may change.
+- `docs/heroes/archive/prototype-heroes.md` — the prototype's original 14 heroes as they were. Ideas only, not rules.
 - New hero drafts arrive in Thai (often as `h<N>.md`). To finish one: propose names first without editing, ask only real rule gaps, then format it like the finished heroes with Thai names in brackets.
 - `docs/decisions.md` — the user's answers to rule questions, with dates.
 - `docs/ideas.md` — open questions and ideas not decided yet. Ask the user before building anything listed there.
