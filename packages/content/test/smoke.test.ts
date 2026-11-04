@@ -16,6 +16,7 @@ import { content, starterDeck } from "../src/index.ts";
 
 // A simple bot: use an ability that deals damage if it can, else play a card, else step forward (up to 3 steps), else end the Round.
 function timeUpBot(s: GameState): Action {
+  if (s.choice) return { type: "ChoiceTimeUp" };
   if (s.phase === "draft") return { type: "DraftTimeUp" };
   if (s.phase === "prep") return { type: "PrepTimeUp" };
   const seat = s.activeSeat;

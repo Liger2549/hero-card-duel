@@ -31,7 +31,7 @@ Base Bounty : 0
 - Effect:
   - **Close range**: Ribu's Physical damage against enemies in the 5x5 square around him is +30%.
   - **Paradox Gauge (เกจแห่งความย้อนแย้ง)**: max 7. Ribu gains Paradox points instead of Ult Points. Each point gives Pley **Speed +5** and **Life Steal +2**, for the rest of the game. It takes effect when Pley appears, using the points Ribu had at that moment (before the Ultimate spends them).
-  - **Free step**: Ribu gets 1 free step (no mana) every Turn of his team.
+  - **Free step**: Ribu gets 1 free step (no mana) every Turn of his team. It is not kept after that Turn and does not stack.
   - **Ribu dies**: Pley appears on the tile where Ribu died, to avenge him, and strikes with Revenant's Cross (below) for **Physical 2**.
     - Pley appears fresh: Ribu's buffs and items are all gone. Only the Paradox bonuses carry over.
     - Ribu's Volatile Cores are removed.

@@ -98,6 +98,7 @@ There are two kinds of interject.
 
 - **When**: an interject always resolves **when a Turn ends**: right after that Turn's Action. Then the end-of-Turn countdowns run (CC, buffs, shields) and Turn DOTs tick **last**, before the next Turn starts. An interject triggered during a Turn (even by a Free Action) waits until that Turn ends. Interjects that resolve then may trigger more, which resolve right after.
 - A skill that "interjects in a Turn" (e.g. Zoran's lantern, Leilani's wave, Ribu's Core, Pley's dive) resolves when that Turn ends.
+- **A choice while resolving**: some interjects let their player choose something as they resolve (e.g. Pley's dive tile). The game waits for that player; nothing else happens until they choose. When the timer runs out, the skill's time-out pick is used. Then the rest of the Turn's end goes on.
 
 ### Manual Interject (player-activated)
 

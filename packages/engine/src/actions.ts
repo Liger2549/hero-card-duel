@@ -1,5 +1,5 @@
 /// <reference path="./globals.d.ts" />
-import type { Pos } from "./board.ts";
+import { samePos, type Pos } from "./board.ts";
 import type { Seat, TimeOfDay } from "./config.ts";
 import type { AbilityRef, Content } from "./content.ts";
 import type { GameEvent } from "./events.ts";
@@ -17,7 +17,7 @@ import {
 } from "./rules/draft.ts";
 import { applyPrepMove, applyStep, applyUndo, validatePrepMove, validateStep, validateUndo } from "./rules/movement.ts";
 import { applyBuyItem, applySellItem, validateBuyItem, validateSellItem } from "./rules/shop.ts";
-import { hookApi, notify } from "./rules/interject.ts";
+import { hookApi, notify, resumeChoice } from "./rules/interject.ts";
 import { checkWin } from "./rules/status.ts";
 import type { Aim } from "./rules/targeting.ts";
 import {
@@ -27,6 +27,7 @@ import {
   applyPrepTimeUp,
   applyReady,
   endTurn,
+  finishTurn,
   validateEndRound,
   validateEndTurn,
   validatePlaceHero,
@@ -57,7 +58,10 @@ export type Action =
   | { type: "EndTurn"; seat: Seat }
   | { type: "EndRound"; seat: Seat }
   // A hero's own extra command (interject.ts "UnitHooks.commands"), e.g. Falka ending her Stealth. Free; the Turn goes on.
-  | { type: "UnitCommand"; seat: Seat; unitId: string; command: string };
+  | { type: "UnitCommand"; seat: Seat; unitId: string; command: string }
+  // combat.md "Interject": answer an interject that asked its player for a tile (GameState.choice).
+  | { type: "Choose"; seat: Seat; tile: Pos }
+  | { type: "ChoiceTimeUp" };
 
 export type ActionOf<T extends Action["type"]> = Extract<Action, { type: T }>;
 
@@ -66,6 +70,13 @@ export type ApplyResult = { ok: true; state: GameState; events: GameEvent[] } | 
 // Returns why the action is not allowed, or null if it is.
 export function validate(s: GameState, a: Action, c: Content): string | null {
   if (s.phase === "over") return "the game is over";
+  if (s.choice) {
+    if (a.type === "ChoiceTimeUp") return null;
+    if (a.type !== "Choose") return "waiting for a player's choice";
+    if (a.seat !== s.choice.seat) return "not your choice";
+    return s.choice.options.some((p) => samePos(p, a.tile)) ? null : "not one of the options";
+  }
+  if (a.type === "Choose" || a.type === "ChoiceTimeUp") return "nothing to choose";
   switch (a.type) {
     case "ChooseTimeOfDay":
       return validateChooseTimeOfDay(s, a);
@@ -174,6 +185,11 @@ export function apply(state: GameState, a: Action, c: Content): ApplyResult {
       break;
     case "EndRound":
       applyEndRound(c, s, events);
+      break;
+    case "Choose":
+    case "ChoiceTimeUp":
+      resumeChoice(c, s, a.type === "Choose" ? a.tile : s.choice!.fallback, events);
+      finishTurn(c, s, events);
       break;
     case "UnitCommand":
       unitDef(c, findUnit(s, a.unitId)!.defId).hooks!.commands![a.command]!.run(hookApi(c, s, events, findUnit(s, a.unitId)!));

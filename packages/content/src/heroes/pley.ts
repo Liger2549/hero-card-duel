@@ -1,6 +1,7 @@
 import {
   addBuff,
   applyWither,
+  candidateAims,
   chebyshev,
   divRound,
   inBounds,
@@ -9,6 +10,7 @@ import {
   placeObject,
   removeObject,
   resolveAbility,
+  resolveArea,
   stat,
   strike,
   unitAt,
@@ -87,8 +89,8 @@ const ribuHooks: UnitHooks = {
   onEvent(api, e: GameEvent) {
     const { s, self } = api;
     if (self.defId !== "pley") return;
-    // 1 free step every Turn of his team.
-    if (e.type === "TurnStarted" && e.seat === self.owner && !self.dead) self.freeSteps += 1;
+    // 1 free step every Turn of his team: not kept, not stacked.
+    if (e.type === "TurnStarted") self.freeSteps = e.seat === self.owner && !self.dead ? 1 : 0;
     // Each Core interjects in the enemy's Turns: first 1x1, then 2x2.
     if (e.type === "TurnStarted" && e.seat !== self.owner) for (const o of cores(api)) queueCore(api, o.id);
     if (e.type === "UnitDied" && e.unitId === self.id && e.at) becomePley(api, e.at, e.ult, () => 2, false);
@@ -189,7 +191,13 @@ const dive: AbilityDef = {
 // Max HP buffs from his own skills ("halo"), capped at 250% of his Max HP before them (base + items).
 const halo = (api: HookApi, pct: number) => addBuff(api.s, api.self, api.self, { stat: "maxHp", amount: pctOf(stat(api.c, api.self, "atk"), pct), turns: 2, per: "own", name: "halo" }, api.events);
 
-// Where to dive (the player's choice is not in yet; this is the docs' time-out pick): most enemies hit, then most damage.
+// Tiles Pley can dive on: within 2 tiles, and a tile a Lock-on skill may pick.
+const diveOptions = (api: HookApi): Pos[] =>
+  candidateAims(api.s, api.self, dive.form)
+    .map((a) => a.tiles![0]!)
+    .filter((p) => typeof resolveArea(api.s, api.self, dive.form, { tiles: [p] }) !== "string");
+
+// The docs' time-out pick: most enemies hit, then most damage.
 function bestDive(api: HookApi): Pos | null {
   const { s, self } = api;
   let best: { p: Pos; hits: number; damage: number } | null = null;
@@ -251,9 +259,13 @@ export const pleyDemon = defineHero({
       }
     },
     interjects: {
+      // His player picks the centre tile while the interject resolves (time-out: bestDive).
       dive(api) {
-        const p = bestDive(api);
-        if (p) resolveAbility(api.c, api.s, api.self, dive, { tiles: [p] }, api.events);
+        if (!api.picked) {
+          const options = diveOptions(api);
+          if (options.length) return api.ask(options, bestDive(api) ?? options[0]!);
+        }
+        if (api.picked) resolveAbility(api.c, api.s, api.self, dive, { tiles: [api.picked] }, api.events);
         halo(api, 90);
         Object.assign(api.self.vars, { airborne: 0, diveQueued: 0 });
         api.self.lockedOut = false;

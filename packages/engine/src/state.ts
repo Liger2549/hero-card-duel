@@ -108,6 +108,13 @@ export interface BoardObject {
   vars: Record<string, number>;
 }
 
+export interface Choice {
+  seat: Seat;
+  pending: Pending; // the interject that asked
+  options: Pos[];
+  fallback: Pos; // taken when the timer runs out
+}
+
 // combat.md "Interject": an Action waiting to resolve.
 export interface Pending {
   id: number; // also the order it was cast or triggered in
@@ -178,6 +185,9 @@ export interface GameState {
   // statuses.md "Stealth": units hidden from the active player when their Turn started. While a player moves,
   // the game shows nothing new, so this stays fixed for the whole Turn.
   hiddenAtTurnStart: string[];
+  // combat.md "Interject": an interject waiting for its player to choose (e.g. Pley's dive tile). The Turn's end
+  // stops here until a Choose (or ChoiceTimeUp) action.
+  choice: Choice | null;
 
   // Preparation Phase
   ready: Record<Seat, boolean>;

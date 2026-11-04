@@ -43,8 +43,9 @@ DOT rules (kinds, formula, stacking): `combat.md` "Damage over Time".
 - Hidden or shown, **Lock-on** skills and effects (e.g. counter-attacks) cannot target it: they cannot pick its tile as `T`. It is still hit when it stands in the area of any skill, Lock-on or No lock (`board.md` "Anchor").
 - When the unit is hit, Stealth ends.
 - Whether the unit's own attacks end Stealth is stated by the skill that gives it.
-- **Stepping onto a hidden unit**: the game shows nothing while the enemy moves (that would give the position away), and the enemy cannot undo steps that Turn (`board.md` "Undo"). If an enemy steps onto the hidden unit's tile:
-  - The enemy is pushed back to the tile it came from and takes **Physical 130% ATK** (the stealthed unit's ATK). It does not reduce the Break Bar.
+- **What the enemy sees is fixed at the start of their Turn**: the game shows nothing new while they move (that would give the position away). A unit hidden when their Turn started stays hidden all that Turn, even if they walk next to it.
+- **Stepping onto a hidden unit**: the enemy cannot undo steps that Turn (`board.md` "Undo"). If an enemy steps onto the hidden unit's tile:
+  - The step is cancelled: the enemy stays on the tile it came from (its mana for the step is still spent) and takes **Physical 130% ATK** (the stealthed unit's ATK). It does not reduce the Break Bar.
   - This damage is not an Action. The enemy's Turn goes on as if no Action had started (they can still move and act).
   - Stealth ends.
 - **Used by**: Falka (Vanishing Point)

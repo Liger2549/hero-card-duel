@@ -102,6 +102,11 @@ export function Match({ snap }: { snap: Snapshot }) {
     const dirOf = new Map<string, Aim>();
     const all: Pos[] = [];
     for (let y = -1; y <= s.config.boardHeight; y++) for (let x = 0; x < s.config.boardWidth; x++) all.push({ x, y });
+    // An interject waiting for my choice (e.g. Pley's dive): its tiles are the only targets.
+    if (s.choice) {
+      if (s.choice.seat === me) for (const p of s.choice.options) t.add(key(p));
+      return { targets: t, dirOf };
+    }
     if (pv) return { targets: t, dirOf };
     if (act?.type === "move" && actUnit) {
       for (const p of all) if (ok({ type: "Step", seat: me, unitId: actUnit.id, to: p })) t.add(key(p));
@@ -138,6 +143,10 @@ export function Match({ snap }: { snap: Snapshot }) {
   const onTile = (p: Pos) => {
     setError("");
     const k = key(p);
+    if (s.choice) {
+      if (s.choice.seat === me && targets.has(k)) session.dispatch({ type: "Choose", seat: me, tile: p });
+      return;
+    }
     if (pv) {
       // Tapping the previewed area again confirms it.
       if (pv.area.some((q) => key(q) === k)) return session.dispatch(pv.action);

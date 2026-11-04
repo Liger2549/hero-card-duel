@@ -35,6 +35,7 @@ export function baseState(config: MatchConfig, seed: number): GameState {
     objects: [],
     nextObjectId: 1,
     hiddenAtTurnStart: [],
+    choice: null,
     nextUnitId: 1,
     ready: { A: false, B: false },
     nextStarter: config.firstRoundStarter,
@@ -173,7 +174,12 @@ export function applyEndRound(c: Content, s: GameState, events: GameEvent[]): vo
 export function endTurn(c: Content, s: GameState, events: GameEvent[]): void {
   // combat.md "Interject": interjects resolve when the Turn ends; then the end-of-Turn countdowns, DOT last.
   countdownInterjects(s);
-  resolveInterjects(c, s, events);
+  finishTurn(c, s, events);
+}
+
+// The rest of a Turn's end. Stops while an interject waits for its player's choice; Choose comes back here.
+export function finishTurn(c: Content, s: GameState, events: GameEvent[]): void {
+  if (!resolveInterjects(c, s, events)) return;
   endOfTurn(c, s, events);
   notify(c, s, events); // hooks see deaths from DOT before the win check (e.g. Ribu becoming Pley)
   if (checkWin(s, events)) return;

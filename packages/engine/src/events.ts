@@ -45,6 +45,7 @@ export type GameEvent =
   | { type: "InterjectQueued"; id: number; unitId: string; name: string; actionValue: number; turnsLeft: number }
   | { type: "InterjectResolved"; id: number; unitId: string; name: string }
   | { type: "InterjectFizzled"; id: number; unitId: string; name: string }
+  | { type: "ChoiceAsked"; seat: Seat; unitId: string; name: string; options: Pos[] } // an interject waits for its player
   // Towers
   | { type: "TowerShieldBlocked"; seat: Seat; index: number; left: number }
   | { type: "TowerDamaged"; seat: Seat; index: number; amount: number; hp: number }

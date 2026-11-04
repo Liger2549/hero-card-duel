@@ -12,6 +12,8 @@ const STEPS_PER_TURN = 4; // keep mana for attacks
 
 // The next action for `seat`, or null if it is not that seat's move.
 export function botAction(s: GameState, c: Content, seat: Seat): Action | null {
+  // An interject waiting for this seat's choice: take the time-out pick.
+  if (s.choice) return s.choice.seat === seat ? { type: "Choose", seat, tile: s.choice.fallback } : null;
   if (s.phase === "draft") return draftAction(s, c, seat);
   if (s.phase === "prep") return prepAction(s, seat);
   if (s.phase === "combat" && s.activeSeat === seat) return combatAction(s, c, seat);

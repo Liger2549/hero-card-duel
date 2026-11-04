@@ -19,6 +19,11 @@ export interface HookApi {
   // combat.md "Automatic Interject": queue an interject of `self`, resolved by hooks.interjects[key].
   // Ignored while `self` is dead or crowd-controlled ("Fizzle").
   interject(name: string, key: string, opts?: InterjectOptions): void;
+  // Inside an interject: the tile its player chose, once they have (see ask).
+  picked?: Pos;
+  // Inside an interject: stop and let its player choose one of `options` (`fallback` when time runs out).
+  // The interject runs again with `picked` set.
+  ask(options: Pos[], fallback: Pos): void;
 }
 
 export interface SpecialContext {
@@ -58,8 +63,20 @@ export interface UnitHooks {
   interjects?: Readonly<Record<string, (api: HookApi, p: Pending) => void>>;
 }
 
-export function hookApi(c: Content, s: GameState, events: GameEvent[], self: Unit): HookApi {
-  return { c, s, events, self, interject: (name, key, opts) => queueInterject(c, s, self, name, key, events, true, opts) };
+export function hookApi(c: Content, s: GameState, events: GameEvent[], self: Unit, during?: Pending, picked?: Pos): HookApi {
+  return {
+    c,
+    s,
+    events,
+    self,
+    ...(picked ? { picked } : {}),
+    interject: (name, key, opts) => queueInterject(c, s, self, name, key, events, true, opts),
+    ask: (options, fallback) => {
+      if (!during) throw new Error("ask() only works inside an interject");
+      s.choice = { seat: self.owner, pending: during, options, fallback };
+      events.push({ type: "ChoiceAsked", seat: self.owner, unitId: self.id, name: during.name, options });
+    },
+  };
 }
 
 // combat.md "Action Order": counts this Action and returns its Action Value,
@@ -100,20 +117,27 @@ export function queueInterject(
 }
 
 // "Fizzle": the caster died or is crowd-controlled before it resolves.
-function resolvePending(c: Content, s: GameState, p: Pending, events: GameEvent[]): void {
+function resolvePending(c: Content, s: GameState, p: Pending, events: GameEvent[], picked?: Pos): void {
   const u = findUnit(s, p.unitId);
   if (!u || u.dead || Object.keys(u.cc).length > 0) {
     events.push({ type: "InterjectFizzled", id: p.id, unitId: p.unitId, name: p.name });
     return;
   }
-  events.push({ type: "InterjectResolved", id: p.id, unitId: u.id, name: p.name });
+  if (!picked) events.push({ type: "InterjectResolved", id: p.id, unitId: u.id, name: p.name });
   if (p.key === "ability") {
     if (!resolveAbility(c, s, u, abilityOf(c, u.defId, p.ability!)!, p.aim ?? {}, events)) {
       events.push({ type: "InterjectFizzled", id: p.id, unitId: u.id, name: p.name }); // its tiles are no longer reachable
     }
     return;
   }
-  unitDef(c, u.defId).hooks?.interjects?.[p.key]?.(hookApi(c, s, events, u), p);
+  unitDef(c, u.defId).hooks?.interjects?.[p.key]?.(hookApi(c, s, events, u, p, picked), p);
+}
+
+// The player chose (or time ran out): the interject that asked runs again with that tile.
+export function resumeChoice(c: Content, s: GameState, picked: Pos, events: GameEvent[]): void {
+  const ch = s.choice!;
+  s.choice = null;
+  resolvePending(c, s, ch.pending, events, picked);
 }
 
 // How many events of one apply() the hooks have already seen.
@@ -131,13 +155,21 @@ export function notify(c: Content, s: GameState, events: GameEvent[]): void {
 // combat.md "Interject": interjects resolve when a Turn ends, after its Action and its end-of-Turn countdowns.
 // "Resolution Order": lower Action Value first, then the one cast or triggered first. Interjects they
 // trigger resolve right after, until nothing new happens.
-export function resolveInterjects(c: Content, s: GameState, events: GameEvent[]): void {
+// Returns false if an interject is waiting for its player's choice (the rest resolve after it).
+export function resolveInterjects(c: Content, s: GameState, events: GameEvent[]): boolean {
   for (let round = 0; round < 200; round++) {
     notify(c, s, events);
+    if (s.choice) return false;
     const due = s.pending.filter((p) => p.turnsLeft === 0).sort((a, b) => a.actionValue - b.actionValue || a.id - b.id);
-    if (due.length === 0 || s.phase === "over") return;
+    if (due.length === 0 || s.phase === "over") return true;
     s.pending = s.pending.filter((p) => p.turnsLeft !== 0);
-    for (const p of due) resolvePending(c, s, p, events);
+    for (const [i, p] of due.entries()) {
+      resolvePending(c, s, p, events);
+      if (s.choice) {
+        s.pending.push(...due.slice(i + 1)); // still due, after the choice
+        return false;
+      }
+    }
   }
   throw new Error("interjects keep triggering each other");
 }

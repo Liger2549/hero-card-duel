@@ -337,7 +337,14 @@ describe("Pley", () => {
     s = run(s, { type: "Step", seat: "B", unitId: "eira1", to: { x: 4, y: 5 } }).state;
     s = run(s, use("B", "eira1", "normal", { dir: "S" })).state; // hits him in the air: no damage; her attack ends B's Turn
     expect(get(s, "pleyDemon0").hp).toBe(12);
-    expect(get(s, "pleyDemon0").lockedOut).toBe(false); // he dived when B's Turn ended
+    // B's Turn ends: the dive waits for A to pick the centre tile; nothing else can happen meanwhile.
+    expect(s.choice).toMatchObject({ seat: "A", fallback: { x: 4, y: 5 } });
+    expect(apply(s, { type: "EndRound", seat: "B" }, content)).toMatchObject({ ok: false, error: "waiting for a player's choice" });
+    expect(apply(s, { type: "Choose", seat: "A", tile: { x: 8, y: 8 } }, content)).toMatchObject({ ok: false, error: "not one of the options" });
+    s = run(s, { type: "Choose", seat: "A", tile: { x: 4, y: 5 } }).state;
+    expect(s.choice).toBeNull();
+    expect(get(s, "pleyDemon0").lockedOut).toBe(false);
     expect(get(s, "eira1").hp).toBe(22 - 8); // centre on her: Physical 180% of 5 = 9 − DEF 1
+    expect(s.activeSeat).toBe("B"); // the Turn's end went on after the choice (A is out of the Round, so B again)
   });
 });
